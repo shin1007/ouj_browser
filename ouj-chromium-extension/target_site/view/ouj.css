@@ -1,0 +1,25 @@
+.menu-background-color,
+#common-list-content > .item,
+#player-dialog-area {
+    background-color: #EAF6FF;
+}
+ion-icon.icon,
+span.material-icons {
+    color: #0075C1;
+}
+#theme-color,
+.theme-color {
+    background-color: #0075C1;
+}
+#main-color,
+.main-color {
+    background-color: #0075C1;
+    color: rgb(238, 238, 238);
+}
+#main-color-row {
+    border-bottom-color: #8ed3ff;
+}
+#common-list-content .input-wrapper,
+#common-list-title  {
+    border-bottom-color: #0075C1;
+}

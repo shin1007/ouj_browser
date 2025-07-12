@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>放送大学拡張機能</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div id="popup-container">
+        <h1>放送大学拡張機能</h1>
+        <div id="login-section">
+            <button id="auto-login">自動ログイン</button>
+        </div>
+        <div id="video-controls">
+            <h2>再生設定</h2>
+            <button id="play-audio-only">音声のみ再生</button>
+            <button id="remove-intro-outro">オープニング・エンディング削除</button>
+            <label for="playback-speed">再生速度:</label>
+            <select id="playback-speed">
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+            </select>
+        </div>
+        <div id="favorites-section">
+            <h2>お気に入り</h2>
+            <button id="add-to-favorites">お気に入りに追加</button>
+            <button id="view-favorites">お気に入りを表示</button>
+        </div>
+        <div id="next-video-section">
+            <h2>次の動画</h2>
+            <button id="next-video-random">次の動画（ランダム）</button>
+            <button id="next-video-unwatched">未視聴の次の動画</button>
+        </div>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

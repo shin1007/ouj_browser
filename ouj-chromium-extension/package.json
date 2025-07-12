@@ -1,0 +1,42 @@
+{
+  "name": "ouj-chromium-extension",
+  "version": "1.0.0",
+  "description": "A Chrome extension to enhance the usability of Open University Japan's broadcast classes.",
+  "main": "src/background.js",
+  "scripts": {
+    "build": "echo 'Build script placeholder'",
+    "test": "echo 'Test script placeholder'"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/*"
+      ],
+      "js": [
+        "src/content.js"
+      ]
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+  "options_page": "src/options/options.html",
+  "manifest_version": 3,
+  "devDependencies": {
+    "chai": "^5.2.0",
+    "mocha": "^11.7.1"
+  }
+}
