@@ -166,10 +166,10 @@ function addMenuEventListeners() {
         listHtml = '<li>お気に入りはありません</li>';
       }
       panel.innerHTML = `
-        <div style="position:relative;">
+        <div style="position:relative;text-align:left;">
           <button id="close-favorite-list-panel" style="position:absolute;top:8px;left:8px;font-size:20px;background:none;border:none;cursor:pointer;">×</button>
-          <h3 style="margin:0 0 16px 0;">お気に入りコース一覧</h3>
-          <ul style="margin:12px 0 0 0; padding-left:20px;">${listHtml}</ul>
+          <h3 style="margin:0 0 16px 0;text-align:left;">お気に入りコース一覧</h3>
+          <ul style="margin:12px 0 0 0; padding-left:20px;text-align:left;">${listHtml}</ul>
         </div>
       `;
       panel.style.background = '#fff';
