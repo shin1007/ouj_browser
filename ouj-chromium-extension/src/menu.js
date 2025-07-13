@@ -111,9 +111,70 @@ function addMenuEventListeners() {
   }
   
   if (favoritesItem) {
-    favoritesItem.addEventListener('click', () => {
+    favoritesItem.addEventListener('click', async () => {
       console.log("お気に入りメニューがクリックされました");
-      // TODO: お気に入り機能の実装
+      // 既存パネルがあればトグルで消す
+      let panel = document.getElementById('favorite-list-panel');
+      if (panel) {
+        panel.remove();
+        return;
+      }
+      // パネル生成
+      panel = document.createElement('div');
+      panel.id = 'favorite-list-panel';
+      // #mainの幅・スタイルを取得
+      const main = document.getElementById('main');
+      let mainWidth = '800px'; // デフォルト
+      let mainBg = '#fff';
+      let mainFont = '';
+      let mainFontSize = '14px'; // デフォルト
+      if (main) {
+        const style = window.getComputedStyle(main);
+        mainWidth = style.width;
+        mainBg = style.backgroundColor;
+        mainFont = style.fontFamily;
+        mainFontSize = style.fontSize;
+      }
+      panel.style.position = 'absolute';
+      panel.style.top = main ? main.offsetTop + 'px' : '60px';
+      panel.style.left = main ? main.offsetLeft + 'px' : '0';
+      panel.style.width = mainWidth;
+      panel.style.background = mainBg;
+      panel.style.fontFamily = mainFont;
+      panel.style.fontSize = mainFontSize;
+      panel.style.border = '1px solid #888';
+      panel.style.borderRadius = '8px';
+      panel.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+      panel.style.padding = '24px 16px 16px 16px';
+      panel.style.zIndex = 9999;
+      panel.style.maxHeight = '80vh';
+      panel.style.overflowY = 'auto';
+
+      // お気に入りIDリスト取得
+      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+      // カテゴリデータ取得
+      let categories = await window.getCategoriesData();
+      if (!Array.isArray(categories)) categories = [];
+      // ID→カテゴリ名辞書
+      const idToName = {};
+      categories.forEach(cat => { idToName[cat.categoryId] = cat.name; });
+      // 一覧HTML生成
+      let listHtml = '';
+      if (favorites.length) {
+        listHtml = favorites.map(id => `<li>${idToName[id] || id}</li>`).join('');
+      } else {
+        listHtml = '<li>お気に入りはありません</li>';
+      }
+      panel.innerHTML = `
+        <div style="position:relative;">
+          <button id="close-favorite-list-panel" style="position:absolute;top:8px;left:8px;font-size:20px;background:none;border:none;cursor:pointer;">×</button>
+          <h3 style="margin:0 0 16px 0;">お気に入りコース一覧</h3>
+          <ul style="margin:12px 0 0 0; padding-left:20px;">${listHtml}</ul>
+        </div>
+      `;
+      panel.style.background = '#fff';
+      document.body.appendChild(panel);
+      document.getElementById('close-favorite-list-panel').onclick = () => panel.remove();
     });
   }
 }
