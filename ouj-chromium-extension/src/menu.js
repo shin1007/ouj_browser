@@ -161,7 +161,7 @@ function addMenuEventListeners() {
       // 一覧HTML生成
       let listHtml = '';
       if (favorites.length) {
-        listHtml = favorites.map(id => `<li>${idToName[id] || id}</li>`).join('');
+        listHtml = favorites.map(id => `<li style="cursor:pointer;padding:8px 0;border-bottom:1px solid #eee;" onclick="window.location.href='https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=' + '${id}'">${idToName[id] || id}</li>`).join('');
       } else {
         listHtml = '<li>お気に入りはありません</li>';
       }
