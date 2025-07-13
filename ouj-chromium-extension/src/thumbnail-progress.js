@@ -1,0 +1,186 @@
+// サムネイルに再生進捗バーを表示する機能
+
+/**
+ * 動画の再生進捗を取得する
+ * @param {string} contentId - 動画のコンテンツID
+ * @returns {Promise<number>} 再生進捗率（0-1の値）
+ */
+async function getVideoProgress(contentId) {
+  try {
+    const response = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.currentTimeRate || 0;
+  } catch (error) {
+    console.log(`getVideoProgress: 動画 ${contentId} の再生進捗取得に失敗:`, error);
+    return 0;
+  }
+}
+
+/**
+ * サムネイルに進捗バーを追加する
+ * @param {HTMLElement} thumbnailElement - サムネイル要素
+ * @param {number} progress - 再生進捗率（0-1の値）
+ */
+function addProgressBarToThumbnail(thumbnailElement, progress) {
+  // 既に進捗バーが追加されている場合はスキップ
+  if (thumbnailElement.querySelector('.progress-bar')) {
+    return;
+  }
+
+  // 進捗バーのコンテナを作成
+  const progressContainer = document.createElement('div');
+  progressContainer.className = 'progress-bar-container';
+  progressContainer.style.cssText = `
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 10;
+  `;
+
+  // 進捗バーを作成
+  const progressBar = document.createElement('div');
+  progressBar.className = 'progress-bar';
+  progressBar.style.cssText = `
+    height: 100%;
+    background: #ff0000;
+    width: ${Math.max(0, Math.min(100, progress * 100))}%;
+    transition: width 0.3s ease;
+  `;
+
+  progressContainer.appendChild(progressBar);
+  thumbnailElement.appendChild(progressContainer);
+}
+
+/**
+ * サムネイル要素からコンテンツIDを抽出する
+ * @param {HTMLElement} thumbnailElement - サムネイル要素
+ * @returns {string|null} コンテンツID
+ */
+function extractContentIdFromThumbnail(thumbnailElement) {
+  // img.thumb-imgのsrc属性からcontentIdを抽出
+  const img = thumbnailElement.querySelector('img.thumb-img');
+  if (img && img.src) {
+    const match = img.src.match(/\/vod-contents\/(\d+)\//);
+    if (match) {
+      return match[1];
+    }
+  }
+  // 既存の親要素探索も残す
+  let currentElement = thumbnailElement;
+  while (currentElement && currentElement !== document.body) {
+    if (currentElement.tagName === 'ION-ITEM' && currentElement.getAttribute('data-content-id')) {
+      return currentElement.getAttribute('data-content-id');
+    }
+    const contentIdMatch = currentElement.innerHTML.match(/contentId["\s]*:["\s]*(\d+)/);
+    if (contentIdMatch) {
+      return contentIdMatch[1];
+    }
+    currentElement = currentElement.parentElement;
+  }
+  return null;
+}
+
+/**
+ * サムネイルに進捗バーを表示するメイン関数
+ */
+async function showThumbnailProgress() {
+  // サムネイル要素を取得
+  const thumbnails = document.querySelectorAll('.thumb-main');
+  
+  for (const thumbnail of thumbnails) {
+    try {
+      // コンテンツIDを抽出
+      const contentId = extractContentIdFromThumbnail(thumbnail);
+      if (!contentId) {
+        console.log('showThumbnailProgress: コンテンツIDが見つかりませんでした');
+        continue;
+      }
+      
+      // 再生進捗を取得
+      const progress = await getVideoProgress(contentId);
+      
+      // 進捗が0より大きい場合のみ進捗バーを表示
+      if (progress > 0) {
+        addProgressBarToThumbnail(thumbnail, progress);
+        console.log(`showThumbnailProgress: 動画 ${contentId} の進捗 ${(progress * 100).toFixed(1)}% を表示`);
+      }
+    } catch (error) {
+      console.error('showThumbnailProgress: エラーが発生しました:', error);
+    }
+  }
+}
+
+/**
+ * サムネイルの進捗バーを更新する
+ */
+async function updateThumbnailProgress() {
+  const progressBars = document.querySelectorAll('.progress-bar');
+  
+  for (const progressBar of progressBars) {
+    const container = progressBar.closest('.progress-bar-container');
+    const thumbnail = container?.parentElement;
+    
+    if (thumbnail) {
+      const contentId = extractContentIdFromThumbnail(thumbnail);
+      if (contentId) {
+        const progress = await getVideoProgress(contentId);
+        progressBar.style.width = `${Math.max(0, Math.min(100, progress * 100))}%`;
+      }
+    }
+  }
+}
+
+/**
+ * ページ読み込み時にサムネイル進捗を表示する
+ */
+function initializeThumbnailProgress() {
+  // 初期表示
+  showThumbnailProgress();
+  
+  // 定期的に更新（5分ごと）
+  setInterval(updateThumbnailProgress, 5 * 60 * 1000);
+  
+  // DOM変更を監視して新しいサムネイルが追加されたときに進捗を表示
+  const observer = new MutationObserver((mutations) => {
+    let shouldUpdate = false;
+    
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'childList') {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.classList?.contains('thumb-main') || node.querySelector?.('.thumb-main')) {
+              shouldUpdate = true;
+            }
+          }
+        });
+      }
+    });
+    
+    if (shouldUpdate) {
+      setTimeout(showThumbnailProgress, 100); // 少し遅延させてDOMの構築を待つ
+    }
+  });
+  
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+}
+
+// グローバル関数として公開
+window.showThumbnailProgress = showThumbnailProgress;
+window.updateThumbnailProgress = updateThumbnailProgress;
+window.initializeThumbnailProgress = initializeThumbnailProgress;
+
+// ページ読み込み時に初期化
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeThumbnailProgress);
+} else {
+  initializeThumbnailProgress();
+} 
