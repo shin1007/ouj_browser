@@ -41,7 +41,9 @@ function main() {
   const pageType = detectOujPageType();
   if (pageType === 'login') {
     // ログイン画面の処理
-    return
+    console.log("ログイン画面を検出しました。自動ログイン監視を開始します。");
+    window.waitForPasswordAndLogin();
+    return;
   }
   window.waitForLogoAndInsertMenu();
 
@@ -57,13 +59,14 @@ function main() {
       // コース選択画面
       // TODO: ・お気に入りされているかの確認
       // ・お気に入りボタンを追加
-      window.waitThenAddFavToCourseList();
+      window.waitThenAddFavBtnToCategoryList();
     } else if (pageType === 'video-select') {
       // 動画選択画面
-      // TODO: ・どれくらい再生されているのかを取得
-      // TODO: ・どこまで再生したかの表示
       // TODO: ・お気に入りされているかの確認
       // TODO: ・お気に入りボタンを追加
+      window.addFavoriteButtonToCategoryTop();
+      // TODO: ・どれくらい再生されているのかを取得
+      // TODO: ・どこまで再生したかの表示
     } else {
       // その他の処理
       console.log("特に何もしません。");
@@ -75,7 +78,10 @@ function safeMain() {
   const missing = [];
   if (typeof window.waitForLogoAndInsertMenu !== 'function') missing.push('waitForLogoAndInsertMenu');
   if (typeof window.getCategoriesData !== 'function') missing.push('getCategoriesData');
-  if (typeof window.waitThenAddFavToCourseList !== 'function') missing.push('waitThenAddFavToCourseList');
+  if (typeof window.waitThenAddFavBtnToCategoryList !== 'function') missing.push('waitThenAddFavToCategoryList');
+  if (typeof window.addFavoriteButtonToCategoryTop !== 'function') missing.push('addFavoriteButtonToCategoryTop');
+  if (typeof window.getCurrentCategoryId !== 'function') missing.push('getCurrentCategoryId');
+  if (typeof window.getFavorites !== 'function') missing.push('getFavorites');
   
   if (missing.length > 0) {
     if (safeMain._warned !== missing.join(',')) {

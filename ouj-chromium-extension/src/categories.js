@@ -70,5 +70,32 @@ async function getChildIds(categoryNum) {
   return filtered.map(item => ({ categoryId: item.categoryId, name: item.name }));
 }
 
+/**
+ * 現在のURLのhashからcaパラメータを取得し、カテゴリIDを文字列として返す
+ * @returns {string} 現在のカテゴリID（文字列）
+ */
+function getCurrentCategoryId() {
+  const hash = window.location.hash;
+  console.log("getCurrentCategoryId - hash:", hash);
+  
+  // hashのcaを取得
+  const params = hash.split('?')[1];
+  if (!params) {
+    console.error("getCurrentCategoryId: URLパラメータが見つかりません");
+    return null;
+  }
+  
+  const caMatch = params.match(/ca=(\d+)/);
+  if (!caMatch) {
+    console.error("getCurrentCategoryId: caパラメータが見つかりません");
+    return null;
+  }
+  
+  const categoryId = caMatch[1];
+  console.log("getCurrentCategoryId - categoryId:", categoryId);
+  return categoryId;
+}
+
 window.getCategoriesData = getCategoriesData;
 window.getChildIds = getChildIds;
+window.getCurrentCategoryId = getCurrentCategoryId;

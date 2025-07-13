@@ -1,32 +1,30 @@
 // ログインページのURLをチェック
-function autoFillAndSubmit() {
-
+function waitForPasswordAndLogin() {
     const usernameField = document.getElementById("username");
     const passwordField = document.getElementById("password");
     const loginButton = document.querySelector('button[name="submitBtn"][type="submit"]');
 
-    if (usernameField && passwordField && loginButton) {
-        alert("OUJ自動ログイン拡張機能が実行中です！");
-
-        // ブラウザのオートフィルをトリガーする
-        usernameField.focus(); // ユーザー名フィールドにフォーカスを当てる
-        usernameField.select(); // ユーザー名フィールドを選択状態にする
-
-        
-        // オートフィルが完了するまで少し待つ
-        // 環境によってこの遅延は調整が必要かもしれません
-        setTimeout(() => {
-            // パスワードフィールドがオートフィルで埋められているか確認
-            if (passwordField.value.length > 0) {
-                loginButton.click(); // ログインボタンをクリックしてフォームを送信
-            } else {
-                console.log("OUJ Auto Login: パスワードがオートフィルされませんでした。手動で入力してください。");
-                // オートフィルされなかった場合の処理（例えば、ユーザーに通知するなど）
-            }
-        }, 500); // 500ミリ秒（0.5秒）待機
-    } else {
+    if (!(usernameField && passwordField && loginButton)) {
         console.log("OUJ Auto Login: ログイン要素が見つかりませんでした。");
+        return;
     }
+
+    // alert("OUJ自動ログイン拡張機能が実行中です！\n\nパスワード欄が自動入力されたら自動でログインします。");
+
+    // 監視
+    const interval = setInterval(() => {
+        if (passwordField.value.length > 0) {
+            clearInterval(interval);
+            console.log("パスワード欄が埋まりました。自動でログインします。");
+            loginButton.click();
+        }
+    }, 200);
+
+    // 30秒で監視終了
+    setTimeout(() => {
+        clearInterval(interval);
+        console.log("自動ログイン監視を終了しました。");
+    }, 30000);
 }
 
-window.autoFillAndSubmit = autoFillAndSubmit;
+window.waitForPasswordAndLogin = waitForPasswordAndLogin;

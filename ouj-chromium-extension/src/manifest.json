@@ -6,7 +6,8 @@
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "autofill"
   ],
   "host_permissions": ["https://v.ouj.ac.jp/*"],
   "background": {
@@ -16,10 +17,14 @@
     {
       "matches": ["*://*.ouj.ac.jp/*"],
       "js": ["login.js",
+      "utils/helpers.js",
       "categories.js",
       "menu.js",
       "course-select.js",
-      "content.js"]
+      "video-select.js",
+      "video.js",
+      "content.js"
+    ]
     }
   ],
   "action": {

@@ -34,12 +34,11 @@ const removeIntroAndOutro = (videoElement) => {
     videoElement.currentTime = videoElement.duration - 10; // Skip last 10 seconds as an example
 };
 
-export {
-    savePlaybackPosition,
-    getPlaybackPosition,
-    saveFavorite,
-    getFavorites,
-    readTitleAloud,
-    clearVideoElements,
-    removeIntroAndOutro
-};
+// グローバル関数として公開
+window.savePlaybackPosition = savePlaybackPosition;
+window.getPlaybackPosition = getPlaybackPosition;
+window.saveFavorite = saveFavorite;
+window.getFavorites = getFavorites;
+window.readTitleAloud = readTitleAloud;
+window.clearVideoElements = clearVideoElements;
+window.removeIntroAndOutro = removeIntroAndOutro;

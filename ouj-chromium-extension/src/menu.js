@@ -10,7 +10,7 @@ const MENU_CONFIG = {
 // メニューHTMLを生成する関数
 function createMenuHTML() {
   const titleHTML = `
-    <ion-item aria-hidden="true" class="item-header item item-block item-md">
+    <ion-item aria-hidden="true" class="item-header item item-block item-md" id="menu-title">
       <div class="item-inner">
         <div class="input-wrapper"><!---->
           <ion-label class="label label-md">
@@ -65,10 +65,18 @@ function waitForLogoAndInsertMenu() {
   const logo = document.querySelector('img.logo-img[src="./assets/images/icon_logo.png"]');
   if (!logo) {
     setTimeout(waitForLogoAndInsertMenu, 100);
+    console.log("ロゴが見つかりませんでした。100ms後に再試行します。");
     return;
   }
   
   console.log("ロゴが見つかりました。メニューを挿入します。");
+  // 既に挿入されている場合は何もしない
+  if (document.getElementById('menu-title')) {
+    console.log("メニューがすでに存在します。");
+    return;
+  } 
+
+  
   
   // メニュー要素を作成
   const menuContainer = document.createElement('div');
