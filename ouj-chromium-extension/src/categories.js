@@ -68,6 +68,43 @@ function getCurrentCategoryId() {
   return categoryId;
 }
 
+/**
+ * 指定されたカテゴリIDの親カテゴリ名を取得する
+ * @param {number|string} categoryId - カテゴリID
+ * @returns {Promise<string|null>} 親カテゴリ名、またはnull
+ */
+async function getParentCategoryName(categoryId) {
+  try {
+    const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
+    const cachedData = result[CATEGORIES_STORAGE_KEY];
+    
+    // 新しいキャッシュ構造に対応
+    const data = cachedData && cachedData.data ? cachedData.data : cachedData;
+    
+    if (!Array.isArray(data)) return null;
+    
+    // 指定されたカテゴリIDのカテゴリを検索
+    const category = data.find(item => 
+      item.categoryId.toString() === categoryId.toString() || 
+      item.categoryId === parseInt(categoryId, 10)
+    );
+    
+    if (!category || !category.parentId) return null;
+    
+    // 親カテゴリを検索
+    const parentCategory = data.find(item => 
+      item.categoryId.toString() === category.parentId.toString() || 
+      item.categoryId === parseInt(category.parentId, 10)
+    );
+    
+    return parentCategory ? parentCategory.name : null;
+  } catch (error) {
+    console.error("getParentCategoryName: 親カテゴリ名の取得に失敗しました:", error);
+    return null;
+  }
+}
+
 window.getCategoriesData = getCategoriesData;
 window.getChildIds = getChildIds;
 window.getCurrentCategoryId = getCurrentCategoryId;
+window.getParentCategoryName = getParentCategoryName;

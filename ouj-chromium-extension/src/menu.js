@@ -104,23 +104,27 @@ function addMenuEventListeners() {
   
   if (historyItem) {
     historyItem.addEventListener('click', () => {
-      console.log("履歴メニューがクリックされました");
+      console.log("addMenuEventListeners: 履歴メニューがクリックされました");
       // TODO: 履歴機能の実装
     });
   }
   
   if (favoritesItem) {
     favoritesItem.addEventListener('click', async () => {
-      console.log("お気に入りメニューがクリックされました");
-      // 既存パネルがあればトグルで消す
+      console.log("addMenuEventListeners: お気に入りメニューがクリックされました");
+      // 既存パネルがあれば削除
       let panel = document.getElementById('favorite-list-panel');
       if (panel) {
         panel.remove();
-        return;
       }
       // パネル生成
       panel = document.createElement('div');
       panel.id = 'favorite-list-panel';
+      panel.className = 'favorite-panel';
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-labelledby', 'favorite-panel-title');
+      panel.setAttribute('aria-modal', 'true');
+      
       // #mainの幅・スタイルを取得
       const main = document.getElementById('main');
       let mainWidth = '800px'; // デフォルト
@@ -134,46 +138,233 @@ function addMenuEventListeners() {
         mainFont = style.fontFamily;
         mainFontSize = style.fontSize;
       }
-      panel.style.position = 'absolute';
-      panel.style.top = main ? main.offsetTop + 'px' : '60px';
-      panel.style.left = main ? main.offsetLeft + 'px' : '0';
-      panel.style.width = mainWidth;
-      panel.style.background = '#fff';
-      panel.style.fontFamily = mainFont;
-      panel.style.fontSize = mainFontSize;
-      panel.style.border = '1px solid #888';
-      panel.style.borderRadius = '8px';
-      panel.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-      panel.style.padding = '24px 16px 16px 16px';
-      panel.style.zIndex = 9999;
-      panel.style.maxHeight = '80vh';
-      panel.style.overflowY = 'auto';
+      
+      // モダンなスタイルを適用
+      Object.assign(panel.style, {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 'min(90vw, 600px)',
+        maxWidth: mainWidth,
+        background: '#ffffff',
+        fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontSize: mainFontSize || '14px',
+        border: 'none',
+        borderRadius: '12px',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        padding: '0',
+        zIndex: '9999',
+        maxHeight: '80vh',
+        overflow: 'hidden',
+        opacity: '0',
+        transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      });
 
       // お気に入りIDリスト取得
       const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-      // カテゴリデータ取得
-      let categories = await window.getCategoriesData();
+      // キャッシュされたカテゴリデータを取得
+      const result = await chrome.storage.local.get(['cachedCategoriesData']);
+      const cachedData = result.cachedCategoriesData;
+      let categories = [];
+      
+      if (cachedData && cachedData.data) {
+        categories = cachedData.data;
+        console.log("addMenuEventListeners: お気に入り表示: キャッシュされたカテゴリデータを使用しました");
+      } else {
+        // キャッシュがない場合のみAPIから取得
+        categories = await window.getCategoriesData();
+        console.log("addMenuEventListeners: お気に入り表示: APIからカテゴリデータを取得しました");
+      }
+      
       if (!Array.isArray(categories)) categories = [];
-      // ID→カテゴリ名辞書
+      // ID→カテゴリ名辞書（文字列と数値の両方に対応）
       const idToName = {};
-      categories.forEach(cat => { idToName[cat.categoryId] = cat.name; });
+      categories.forEach(cat => { 
+        // 文字列と数値の両方のキーで保存
+        idToName[cat.categoryId] = cat.name;
+        idToName[cat.categoryId.toString()] = cat.name;
+      });
+      
+      console.log("addMenuEventListeners: カテゴリデータ:", categories);
+      console.log("addMenuEventListeners: お気に入りID:", favorites);
+      console.log("addMenuEventListeners: ID→名前辞書:", idToName);
+      
       // 一覧HTML生成
       let listHtml = '';
       if (favorites.length) {
-        listHtml = favorites.map(id => `<li style="cursor:pointer;padding:8px 0;border-bottom:1px solid #eee;" onclick="window.location.href='https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=' + '${id}'">${idToName[id] || id}</li>`).join('');
+        // 各お気に入りについて親カテゴリ名も取得
+        const favoriteItemsWithParent = await Promise.all(favorites.map(async (id) => {
+          const categoryName = idToName[id];
+          console.log(`addMenuEventListeners: ID ${id} のカテゴリ名: ${categoryName}`);
+          
+          // 親カテゴリ名を取得
+          const parentCategoryName = await window.getParentCategoryName(id);
+          console.log(`addMenuEventListeners: ID ${id} の親カテゴリ名: ${parentCategoryName}`);
+          
+          // カテゴリ名が見つからない場合は「不明なコース」と表示
+          const displayName = categoryName || `不明なコース (ID: ${id})`;
+          
+          return {
+            id: id,
+            categoryName: displayName,
+            parentCategoryName: parentCategoryName || 'その他',
+            hasParent: !!parentCategoryName
+          };
+        }));
+        
+        // 親カテゴリごとにグループ化
+        const groupedFavorites = {};
+        favoriteItemsWithParent.forEach(item => {
+          const parentKey = item.parentCategoryName;
+          if (!groupedFavorites[parentKey]) {
+            groupedFavorites[parentKey] = [];
+          }
+          groupedFavorites[parentKey].push(item);
+        });
+        
+        // グループ化されたHTMLを生成（親カテゴリ名の冒頭数値でソート）
+        const sortedGroups = Object.entries(groupedFavorites).sort(([aName], [bName]) => {
+          const aNum = parseInt(aName.match(/^\d+/)?.[0] || '0', 10);
+          const bNum = parseInt(bName.match(/^\d+/)?.[0] || '0', 10);
+          return aNum - bNum;
+        });
+        
+        const groupHtmls = sortedGroups.map(([parentName, items]) => {
+          // 各グループ内で項目名の冒頭数値で昇順ソート
+          const sortedItems = items.sort((a, b) => {
+            const aNum = parseInt(a.categoryName.match(/^\d+/)?.[0] || '0', 10);
+            const bNum = parseInt(b.categoryName.match(/^\d+/)?.[0] || '0', 10);
+            return aNum - bNum;
+          });
+          
+          const itemsHtml = sortedItems.map(item => {
+            if (item.hasParent) {
+              return `<li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${parentName}の${item.categoryName}を開く">
+                <div class="favorite-item-content">
+                  <div class="favorite-child-category">${item.categoryName}</div>
+                </div>
+                <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </li>`;
+            } else {
+              return `<li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${item.categoryName}を開く">
+                <div class="favorite-item-content">
+                  <div class="favorite-child-category">${item.categoryName}</div>
+                </div>
+                <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </li>`;
+            }
+          }).join('');
+          
+          return `
+            <div class="favorite-group">
+              <div class="favorite-group-header">${parentName}</div>
+              <ul class="favorite-group-list">${itemsHtml}</ul>
+            </div>
+          `;
+        });
+        
+        listHtml = groupHtmls.join('');
       } else {
-        listHtml = '<li>お気に入りはありません</li>';
+        listHtml = '<li class="favorite-empty">お気に入りはありません</li>';
       }
       panel.innerHTML = `
-        <div style="position:relative;text-align:left;">
-          <button id="close-favorite-list-panel" style="position:absolute;top:8px;right:8px;font-size:20px;background:none;border:none;cursor:pointer;">×</button>
-          <h3 style="margin:0 0 16px 0;text-align:left;">お気に入りコース一覧</h3>
-          <ul style="margin:12px 0 0 0; padding-left:20px;text-align:left;">${listHtml}</ul>
+        <div class="favorite-panel-header">
+          <h3 id="favorite-panel-title" class="favorite-panel-title">お気に入りコース一覧</h3>
+          <button id="close-favorite-list-panel" class="favorite-panel-close" aria-label="パネルを閉じる">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="favorite-panel-content">
+          <ul class="favorite-list">${listHtml}</ul>
         </div>
       `;
-      panel.style.background = '#fff';
       document.body.appendChild(panel);
-      document.getElementById('close-favorite-list-panel').onclick = () => panel.remove();
+      
+      // アニメーション効果を追加
+      requestAnimationFrame(() => {
+        panel.style.opacity = '1';
+        panel.style.transform = 'translate(-50%, -50%) scale(1)';
+      });
+      
+      // お気に入り項目のクリックイベントリスナー
+      const favoriteItems = panel.querySelectorAll('.favorite-item');
+      favoriteItems.forEach((item, index) => {
+        // クリックイベント
+        item.addEventListener('click', (event) => {
+          event.preventDefault();
+          const categoryId = item.getAttribute('data-category-id');
+          if (categoryId) {
+            console.log(`addMenuEventListeners: お気に入り項目がクリックされました。カテゴリID: ${categoryId}`);
+            // パネルを閉じてからページ遷移
+            closePanel();
+            // 少し遅延させてからページ遷移（アニメーション完了を待つ）
+            setTimeout(() => {
+              window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=${categoryId}`;
+            }, 200);
+          }
+        });
+        
+        // キーボードナビゲーション
+        item.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            item.click();
+          } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            const nextItem = favoriteItems[index + 1];
+            if (nextItem) nextItem.focus();
+          } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            const prevItem = favoriteItems[index - 1];
+            if (prevItem) prevItem.focus();
+          }
+        });
+      });
+      
+      // パネルを閉じる共通関数
+      const closePanel = () => {
+        panel.style.opacity = '0';
+        panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
+        setTimeout(() => {
+          panel.remove();
+          document.removeEventListener('click', closePanelOnOutsideClick);
+          document.removeEventListener('keydown', closePanelOnEscape);
+        }, 200);
+      };
+      
+      // パネル外クリックで閉じる機能
+      const closePanelOnOutsideClick = (event) => {
+        if (!panel.contains(event.target)) {
+          closePanel();
+        }
+      };
+      
+      // エスケープキーで閉じる機能
+      const closePanelOnEscape = (event) => {
+        if (event.key === 'Escape') {
+          closePanel();
+        }
+      };
+      
+      // イベントリスナーを追加（少し遅延させてパネル表示後のクリックを検知）
+      setTimeout(() => {
+        document.addEventListener('click', closePanelOnOutsideClick);
+        document.addEventListener('keydown', closePanelOnEscape);
+      }, 100);
+      
+      // 閉じるボタンのイベントリスナー
+      document.getElementById('close-favorite-list-panel').onclick = () => {
+        closePanel();
+      };
     });
   }
 }

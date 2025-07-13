@@ -16,6 +16,7 @@
   "content_scripts": [
     {
       "matches": ["*://*.ouj.ac.jp/*"],
+      "css": ["favorite-panel.css"],
       "js": ["login.js",
       "utils/helpers.js",
       "categories.js",

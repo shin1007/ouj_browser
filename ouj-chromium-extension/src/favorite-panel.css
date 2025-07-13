@@ -1,0 +1,277 @@
+/* お気に入りパネルの現代的なスタイル */
+
+.favorite-panel {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.favorite-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 12px 12px 0 0;
+}
+
+.favorite-panel-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.favorite-panel-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  color: #6b7280;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.favorite-panel-close:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.favorite-panel-close:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.favorite-panel-content {
+  padding: 16px 24px 24px 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.favorite-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.favorite-group {
+  margin-bottom: 24px;
+}
+
+.favorite-group:last-child {
+  margin-bottom: 0;
+}
+
+.favorite-group-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.favorite-group-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.favorite-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 12px 16px;
+  margin: 4px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  background: #ffffff;
+}
+
+.favorite-item:hover {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.favorite-item:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.favorite-item:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+}
+
+.favorite-item-content {
+  flex: 1;
+  margin-right: 12px;
+  text-align: left;
+}
+
+.favorite-parent-category {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+  font-weight: 400;
+  margin-bottom: 2px;
+  text-align: left;
+}
+
+.favorite-child-category {
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.5;
+  font-weight: 500;
+  text-align: left;
+}
+
+.favorite-item-text {
+  flex: 1;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.5;
+  font-weight: 500;
+  text-align: left;
+  margin-right: 12px;
+}
+
+.favorite-item-icon {
+  color: #9ca3af;
+  transition: color 0.2s ease;
+}
+
+.favorite-item:hover .favorite-item-icon {
+  color: #6b7280;
+}
+
+.favorite-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: #6b7280;
+  font-style: italic;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 2px dashed #d1d5db;
+}
+
+/* スクロールバーのスタイリング */
+.favorite-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.favorite-panel-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.favorite-panel-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.favorite-panel-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .favorite-panel {
+    width: 95vw !important;
+    max-width: none !important;
+    margin: 20px;
+  }
+  
+  .favorite-panel-header {
+    padding: 16px 20px 12px 20px;
+  }
+  
+  .favorite-panel-content {
+    padding: 12px 20px 20px 20px;
+  }
+  
+  .favorite-item {
+    padding: 10px 12px;
+  }
+  
+  .favorite-item-text {
+    font-size: 13px;
+  }
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .favorite-panel {
+    background: #1f2937 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .favorite-panel-header {
+    background: #111827;
+    border-bottom-color: #374151;
+  }
+  
+  .favorite-panel-title {
+    color: #f9fafb;
+  }
+  
+  .favorite-panel-close {
+    color: #9ca3af;
+  }
+  
+  .favorite-panel-close:hover {
+    background: #374151;
+    color: #d1d5db;
+  }
+  
+  .favorite-item {
+    background: #374151;
+  }
+  
+  .favorite-group-header {
+    color: #9ca3af;
+    border-bottom-color: #374151;
+  }
+  
+  .favorite-item:hover {
+    background: #4b5563;
+    border-color: #6b7280;
+  }
+  
+  .favorite-parent-category {
+    color: #9ca3af;
+  }
+  
+  .favorite-child-category {
+    color: #d1d5db;
+  }
+  
+  .favorite-item-text {
+    color: #d1d5db;
+  }
+  
+  .favorite-item-icon {
+    color: #6b7280;
+  }
+  
+  .favorite-item:hover .favorite-item-icon {
+    color: #9ca3af;
+  }
+  
+  .favorite-empty {
+    background: #374151;
+    color: #9ca3af;
+    border-color: #6b7280;
+  }
+} 
