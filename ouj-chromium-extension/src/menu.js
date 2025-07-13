@@ -139,7 +139,7 @@ function addMenuEventListeners() {
       panel.style.top = main ? main.offsetTop + 'px' : '60px';
       panel.style.left = main ? main.offsetLeft + 'px' : '0';
       panel.style.width = mainWidth;
-      panel.style.background = mainBg;
+      panel.style.background = '#fff';
       panel.style.fontFamily = mainFont;
       panel.style.fontSize = mainFontSize;
       panel.style.border = '1px solid #888';
@@ -167,7 +167,7 @@ function addMenuEventListeners() {
       }
       panel.innerHTML = `
         <div style="position:relative;text-align:left;">
-          <button id="close-favorite-list-panel" style="position:absolute;top:8px;left:8px;font-size:20px;background:none;border:none;cursor:pointer;">×</button>
+          <button id="close-favorite-list-panel" style="position:absolute;top:8px;right:8px;font-size:20px;background:none;border:none;cursor:pointer;">×</button>
           <h3 style="margin:0 0 16px 0;text-align:left;">お気に入りコース一覧</h3>
           <ul style="margin:12px 0 0 0; padding-left:20px;text-align:left;">${listHtml}</ul>
         </div>
