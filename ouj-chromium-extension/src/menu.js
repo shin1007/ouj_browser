@@ -59,20 +59,19 @@ function createMenuHTML() {
 
 // ロゴを待ってメニューを挿入する処理
 function waitForLogoAndInsertMenu() {
-  console.log("メニュー挿入処理を開始");
   
   // ロゴの存在確認
   const logo = document.querySelector('img.logo-img[src="./assets/images/icon_logo.png"]');
   if (!logo) {
     setTimeout(waitForLogoAndInsertMenu, 100);
-    console.log("ロゴが見つかりませんでした。100ms後に再試行します。");
+    console.log("waitForLogoAndInsertMenu: ロゴが見つかりませんでした。100ms後に再試行します。");
     return;
   }
   
-  console.log("ロゴが見つかりました。メニューを挿入します。");
+  console.log("waitForLogoAndInsertMenu: ロゴが見つかりました。メニューを挿入します。");
   // 既に挿入されている場合は何もしない
   if (document.getElementById('menu-title')) {
-    console.log("メニューがすでに存在します。");
+    console.log("waitForLogoAndInsertMenu: メニューがすでに存在します。");
     return;
   } 
 
@@ -89,12 +88,12 @@ function waitForLogoAndInsertMenu() {
   if (settingList) {
     // 設定リストの前に挿入
     settingList.parentNode.insertBefore(menuList, settingList);
-    console.log("メニューを正常に挿入しました");
+    console.log("waitForLogoAndInsertMenu: メニューを正常に挿入しました");
     
     // イベントリスナーを追加
     addMenuEventListeners();
   } else {
-    console.error("挿入位置が見つかりませんでした");
+    console.log("waitForLogoAndInsertMenu: 挿入位置が見つかりませんでした");
   }
 }
 

@@ -1,8 +1,6 @@
 
 // コース一覧の各動画にお気に入りボタンを追加
 async function addFavoriteButtonsToCategoryList() {
-  // 関数の開始をコンソールにログ出力
-  console.log("addFavoriteButtonsToCategoryList: 開始");
   
   // 現在のURLのcaパラメータを取得をcategoryNumとして、子のcategoryIdを取得
   // hash以降のcaを取得（https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=10ではca=10）
@@ -10,7 +8,6 @@ async function addFavoriteButtonsToCategoryList() {
   // ハッシュのcaを取得
 
   const hash = window.location.hash;
-  console.log("hash:", hash);
   // hashのcaを取得。
   const params = hash.split('?')[1];
   const ca = params.split('ca=')[1];
@@ -94,7 +91,6 @@ async function addFavoriteButtonsToCategoryList() {
 }
 
 async function waitThenAddFavBtnToCategoryList() {
-  console.log("waitThenAddFavToCategoryList: 開始");
   
   // getChildIds関数が利用可能かチェック
   if (typeof window.getChildIds !== 'function') {

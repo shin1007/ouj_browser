@@ -1,14 +1,14 @@
 // 画面種別を判定する関数
 function detectOujPageType() {
   const url = window.location.href;
-  console.log("現在のURL:", url);
+  console.log("detectOujPageType: 現在のURL:", url);
   if (url.includes('https://sso.ouj.ac.jp/cas/login')) {
-    console.log("【ログイン画面】");
+    console.log("detectOujPageType: 【ログイン画面】");
     return 'login';
   }
   if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/player?co=')) {
     const coNum = url.split('co=')[1];
-    console.log("【動画再生画面】動画ID:", coNum);
+    console.log("detectOujPageType: 【動画再生画面】動画ID:", coNum);
     return 'player';
   }
   if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=')) {
@@ -18,21 +18,21 @@ function detectOujPageType() {
       const caNum = parseInt(match[1], 10);
       if (!isNaN(caNum)) {
         if (caNum < 100 ) {
-          console.log("【コース選択画面】カテゴリID:", caNum);
+          console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
           return 'course-select'; // コース選択画面
         } else if (480 < caNum && caNum < 500) {
-          console.log("【コース選択画面】カテゴリID:", caNum);
+          console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
           return 'course-select'; // コース選択画面
         } else {
-          console.log("【動画選択画面】カテゴリID:", caNum);
+          console.log("detectOujPageType: 【動画選択画面】カテゴリID:", caNum);
           return 'video-select'; // 講座選択画面
         }
       }
     }
-    console.log("【動画選択画面】ca=があるが値が取れない場合");
+    console.log("detectOujPageType: 【動画選択画面】ca=があるが値が取れない場合");
     return 'vod-select'; // ca=があるが値が取れない場合
   }
-  console.log("【そのほか】不明");
+  console.log("detectOujPageType: 【そのほか】不明");
   return ''; // 何も含まない場合
 }
 
@@ -41,7 +41,7 @@ function main() {
   const pageType = detectOujPageType();
   if (pageType === 'login') {
     // ログイン画面の処理
-    console.log("ログイン画面を検出しました。自動ログイン監視を開始します。");
+    console.log("main: ログイン画面を検出しました。自動ログイン監視を開始します。");
     window.waitForPasswordAndLogin();
     return;
   }
@@ -49,29 +49,29 @@ function main() {
 
   // ログイン画面ではない場合
   window.getCategoriesData().then(categories => {
-    console.log("categories:", categories);
     if (pageType === 'player') {
       // 動画再生画面の処理
       // TODO: ・再生速度の調整（記憶させておいたもの）
-      // TODO: ・OPEDスキップ
-      // TODO: ・自動で次を再生
-      window.startEndingDetection();
+      // TODO: ・OPスキップ
+      // ・EDスキップ
+      // ・自動で次を再生
+      window.initializeVideoPlayer();
       
     } else if (pageType === 'course-select') {
       // コース選択画面
-      // TODO: ・お気に入りされているかの確認
+      // ・お気に入りされているかの確認
       // ・お気に入りボタンを追加
       window.waitThenAddFavBtnToCategoryList();
     } else if (pageType === 'video-select') {
       // 動画選択画面
-      // TODO: ・お気に入りされているかの確認
-      // TODO: ・お気に入りボタンを追加
+      // ・お気に入りされているかの確認
+      // ・お気に入りボタンを追加
       window.addFavoriteButtonToCategoryTop();
       // TODO: ・どれくらい再生されているのかを取得
       // TODO: ・どこまで再生したかの表示
     } else {
       // その他の処理
-      console.log("特に何もしません。");
+      console.log("main: 特に何もしません。");
     }
   });
 }
