@@ -55,6 +55,8 @@ function main() {
       // TODO: ・再生速度の調整（記憶させておいたもの）
       // TODO: ・OPEDスキップ
       // TODO: ・自動で次を再生
+      window.startEndingDetection();
+      
     } else if (pageType === 'course-select') {
       // コース選択画面
       // TODO: ・お気に入りされているかの確認

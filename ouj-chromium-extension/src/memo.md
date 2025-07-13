@@ -78,70 +78,16 @@ https://v.ouj.ac.jp/view/ouj/#/navi/player?co=33648&ct=V&ca=30374
 817: 068 舞台芸術の魅力（’１７） 1554891p
 832: 037 乳幼児・児童の心理臨床（’１７） 1529218p
 
-<ion-list class="menu-list list list-md" role="list" aria-label="カテゴリー">
+<div class="vjs-current-time vjs-time-control vjs-control">
+    <div class="vjs-current-time-display" aria-live="off">
+        <span class="vjs-control-text">現在時間</span>
+            00:24
+    </div>
+</div>
 
-            <ion-item aria-hidden="true" class="item-header item item-block item-md"><div class="item-inner"><div class="input-wrapper"><!----><ion-label class="label label-md"> 
-                <div class="icon-text">
-                    <div class="top-text-area">
-                        カテゴリー
-                    </div>
-                </div>
-            </ion-label></div><!----></div><div class="button-effect"></div></ion-item>
-            <!----><ion-item class="item-selectable item item-block item-md"><div class="item-inner"><div class="input-wrapper"><!----><ion-label class="label label-md">
-                <button id="link-item-button" class="">
-                    <div class="icon-text">
-                        <div class="icon-area">
-                            <ion-icon aria-hidden="true" name="folder" role="img" class="icon icon-md ion-md-folder item-icon" aria-label="folder"></ion-icon>
-                        </div>
-                        <div class="text-area">
-                            01 教養学部
-                        </div>
-                    </div>
-                </button>
-            </ion-label></div><!----></div><div class="button-effect"></div></ion-item><ion-item class="item-selectable item item-block item-md"><div class="item-inner"><div class="input-wrapper"><!----><ion-label class="label label-md">
-                <button id="link-item-button">
-                    <div class="icon-text">
-                        <div class="icon-area">
-                            <ion-icon aria-hidden="true" name="folder" role="img" class="icon icon-md ion-md-folder item-icon" aria-label="folder"></ion-icon>
-                        </div>
-                        <div class="text-area">
-                            02 大学院
-                        </div>
-                    </div>
-                </button>
-            </ion-label></div><!----></div><div class="button-effect"></div></ion-item><ion-item class="item-selectable item item-block item-md"><div class="item-inner"><div class="input-wrapper"><!----><ion-label class="label label-md">
-                <button id="link-item-button">
-                    <div class="icon-text">
-                        <div class="icon-area">
-                            <ion-icon aria-hidden="true" name="folder" role="img" class="icon icon-md ion-md-folder item-icon" aria-label="folder"></ion-icon>
-                        </div>
-                        <div class="text-area">
-                            03 夏季集中科目
-                        </div>
-                    </div>
-                </button>
-            </ion-label></div><!----></div><div class="button-effect"></div></ion-item><ion-item class="item-selectable item item-block item-md"><div class="item-inner"><div class="input-wrapper"><!----><ion-label class="label label-md">
-                <button id="link-item-button">
-                    <div class="icon-text">
-                        <div class="icon-area">
-                            <ion-icon aria-hidden="true" name="folder" role="img" class="icon icon-md ion-md-folder item-icon" aria-label="folder"></ion-icon>
-                        </div>
-                        <div class="text-area">
-                            04 ラジオ番組の字幕付加実験
-                        </div>
-                    </div>
-                </button>
-
-            </ion-label></div><!----></div><div class="button-effect"></div></ion-item><ion-item class="item-selectable item item-block item-md"><div class="item-inner"><div class="input-wrapper"><!----><ion-label class="label label-md">
-                <button id="link-item-button">
-                    <div class="icon-text">
-                        <div class="icon-area">
-                            <ion-icon aria-hidden="true" name="folder" role="img" class="icon icon-md ion-md-folder item-icon" aria-label="folder"></ion-icon>
-                        </div>
-                        <div class="text-area">
-                            05 特別講義
-                        </div>
-                    </div>
-                </button>
-            </ion-label></div><!----></div><div class="button-effect"></div></ion-item>
-        </ion-list>
+<div class="vjs-duration vjs-time-control vjs-control">
+    <div class="vjs-duration-display" aria-live="off">
+        <span class="vjs-control-text">再生時間</span>
+            45:00
+    </div>
+</div>
