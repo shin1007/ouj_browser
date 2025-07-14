@@ -180,9 +180,19 @@ async function fetchNextVideoFromFavorites() {
   }
 }
 
+// 現在の動画IDを取得する関数
+function getCurrentVideoId() {
+  const url = window.location.href;
+  const matchCo = url.match(/co=(\d+)/);
+  return matchCo ? matchCo[1] : null;
+}
+
 // お気に入りコースから未再生動画を取得する関数
 async function getAvailableVideosFromFavorites(favorites) {
   const availableVideos = [];
+  const currentVideoId = getCurrentVideoId();
+  
+  console.log(`getAvailableVideosFromFavorites: 現在の動画ID: ${currentVideoId}`);
   
   for (const favoriteId of favorites) {
     try {
@@ -206,6 +216,12 @@ async function getAvailableVideosFromFavorites(favorites) {
         if (viewingLogFailed) {
           console.log(`getAvailableVideosFromFavorites: コース ${favoriteId} で再生状況取得に失敗したため、以降の動画をスキップします`);
           break;
+        }
+        
+        // 現在の動画の場合は再生完了として扱う
+        if (video.contentId == currentVideoId) {
+          console.log(`getAvailableVideosFromFavorites: 現在の動画 ${video.contentId} (${video.title}) は再生完了として扱います`);
+          continue;
         }
         
         try {
@@ -257,7 +273,6 @@ async function getAvailableVideosFromFavorites(favorites) {
       console.error(`getAvailableVideosFromFavorites: コース ${favoriteId} の処理に失敗:`, error);
     }
   }
-  
   return availableVideos;
 }
 
@@ -508,3 +523,4 @@ window.addVideoSettingsPanel = addVideoSettingsPanel;
 window.fetchNextVideoFromSameCourse = fetchNextVideoFromSameCourse;
 window.fetchNextVideoFromFavorites = fetchNextVideoFromFavorites;
 window.getAvailableVideosFromFavorites = getAvailableVideosFromFavorites;
+window.getCurrentVideoId = getCurrentVideoId;
