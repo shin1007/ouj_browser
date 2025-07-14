@@ -106,6 +106,7 @@ const fetchWithCache = async (url, cacheKey) => {
     }
 };
 
+
 // グローバル関数として公開
 window.savePlaybackPosition = savePlaybackPosition;
 window.getPlaybackPosition = getPlaybackPosition;

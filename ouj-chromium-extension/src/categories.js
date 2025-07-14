@@ -104,7 +104,28 @@ async function getParentCategoryName(categoryId) {
   }
 }
 
+/**
+ * categoriesデータの中でparentIdとして使われているcategoryIdを重複なく列挙して返す
+ * @returns {Promise<number[]>} parentIdとして使われているcategoryIdの配列
+ */
+async function parentCategories() {
+  const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
+  const cachedData = result[CATEGORIES_STORAGE_KEY];
+  const data = cachedData && cachedData.data ? cachedData.data : cachedData;
+  if (!Array.isArray(data)) return [];
+
+  // parentIdとして使われている値を列挙
+  const parentIdSet = new Set();
+  data.forEach(item => {
+    if (typeof item.parentId === 'number' && item.parentId !== 0) {
+      parentIdSet.add(item.parentId);
+    }
+  });
+  return Array.from(parentIdSet);
+}
+
 window.getCategoriesData = getCategoriesData;
 window.getChildIds = getChildIds;
 window.getCurrentCategoryId = getCurrentCategoryId;
 window.getParentCategoryName = getParentCategoryName;
+window.parentCategories = parentCategories;

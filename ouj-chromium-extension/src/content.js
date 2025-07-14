@@ -16,18 +16,43 @@ function detectOujPageType() {
     const match = url.match(/vod\?ca=(\d+)/);
     if (match) {
       const caNum = parseInt(match[1], 10);
-      if (!isNaN(caNum)) {
-        if (caNum < 100 ) {
-          console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
-          return 'course-select'; // コース選択画面
-        } else if (480 < caNum && caNum < 500) {
-          console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
-          return 'course-select'; // コース選択画面
-        } else {
-          console.log("detectOujPageType: 【動画選択画面】カテゴリID:", caNum);
-          return 'video-select'; // 講座選択画面
-        }
+      if (isNaN(caNum)) {
+        console.log("detectOujPageType: 【動画選択画面】ca=があるが値が取れない場合");
+        return 'vod-select'; // ca=があるが値が取れない場合
       }
+        // parentCategories()を使って判定
+      if (typeof window.parentCategories === 'function') {
+        // 非同期なのでPromiseを返す
+        return window.parentCategories().then(parentIds => {
+          console.log("detectOujPageType: parentCategoriesに含まれるかの確認:", parentIds);
+          if (parentIds.includes(caNum)) {
+            console.log("detectOujPageType: parentCategoriesに含まれるため【コース選択画面】カテゴリID:", caNum);
+            return 'course-select';
+          }
+          // 既存の判定も残す
+          if (caNum < 100 ) {
+            console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
+            return 'course-select'; // コース選択画面
+          } else if (480 < caNum && caNum < 500) {
+            console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
+            return 'course-select'; // コース選択画面
+          } else {
+            console.log("detectOujPageType: 【動画選択画面】カテゴリID:", caNum);
+            return 'video-select'; // 講座選択画面
+          }
+        });
+      }
+      // // parentCategoriesが未定義の場合は従来通り
+      // if (caNum < 100 ) {
+      //   console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
+      //   return 'course-select'; // コース選択画面
+      // } else if (480 < caNum && caNum < 500) {
+      //   console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
+      //   return 'course-select'; // コース選択画面
+      // } else {
+      //   console.log("detectOujPageType: 【動画選択画面】カテゴリID:", caNum);
+      //   return 'video-select'; // 講座選択画面
+      // }
     }
     console.log("detectOujPageType: 【動画選択画面】ca=があるが値が取れない場合");
     return 'vod-select'; // ca=があるが値が取れない場合
@@ -36,9 +61,12 @@ function detectOujPageType() {
   return ''; // 何も含まない場合
 }
 
-function main() {
+async function main() {
   // 画面種別を判定して処理を分岐
-  const pageType = detectOujPageType();
+  let pageType = detectOujPageType();
+  if (pageType instanceof Promise) {
+    pageType = await pageType;
+  }
   if (pageType === 'login') {
     // ログイン画面の処理
     console.log("main: ログイン画面を検出しました。自動ログイン監視を開始します。");

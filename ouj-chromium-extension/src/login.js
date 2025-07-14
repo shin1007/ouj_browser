@@ -33,7 +33,10 @@ function detectLoginSuccess() {
     const currentUrl = window.location.href;
     
     // ログインページ以外のページに移動した場合、ログイン成功とみなす
-    if (!currentUrl.includes('/login') && !currentUrl.includes('login.html')) {
+    if (currentUrl.includes('/login') || currentUrl.includes('login.html')) {
+        console.log("detectLoginSuccess: ログインページにいるので、キャッシュされたカテゴリデータを削除しません。");
+        return;
+    } else {
         console.log("detectLoginSuccess: ログイン成功を検知しました。キャッシュされたカテゴリデータを削除します。");
         clearCachedCategoriesData();
     }
@@ -72,12 +75,18 @@ if (document.readyState === 'loading') {
 
 // URL変更を監視してログイン成功を検知
 let lastUrl = window.location.href;
+let wasLoginPage = lastUrl.includes('/login') || lastUrl.includes('login.html');
 const urlObserver = new MutationObserver(() => {
     const currentUrl = window.location.href;
+    const isLoginPage = currentUrl.includes('/login') || currentUrl.includes('login.html');
     if (currentUrl !== lastUrl) {
+        // 直前がログインページ、かつ現在がログインページ以外の場合のみ発火
+        if (wasLoginPage && !isLoginPage) {
+            console.log("urlObserver: ログインページからログインページ以外に遷移したことを検知しました: " + currentUrl);
+            detectLoginSuccess();
+        }
         lastUrl = currentUrl;
-        console.log("urlObserver: URL変更を検知しました:", currentUrl);
-        detectLoginSuccess();
+        wasLoginPage = isLoginPage;
     }
 });
 
