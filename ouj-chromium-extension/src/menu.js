@@ -147,7 +147,7 @@ function addMenuEventListeners() {
         transform: 'translate(-50%, -50%)',
         width: 'min(90vw, 600px)',
         maxWidth: mainWidth,
-        background: '#ffffff',
+        background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
         fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSize: mainFontSize || '14px',
         border: 'none',
@@ -191,89 +191,114 @@ function addMenuEventListeners() {
       console.log("addMenuEventListeners: カテゴリデータ:", categories);
       console.log("addMenuEventListeners: お気に入りID:", favorites);
       console.log("addMenuEventListeners: ID→名前辞書:", idToName);
-      
-      // 一覧HTML生成
-      let listHtml = '';
-      if (favorites.length) {
-        // 各お気に入りについて親カテゴリ名も取得
-        const favoriteItemsWithParent = await Promise.all(favorites.map(async (id) => {
-          const categoryName = idToName[id];
-          console.log(`addMenuEventListeners: ID ${id} のカテゴリ名: ${categoryName}`);
-          
-          // 親カテゴリ名を取得
-          const parentCategoryName = await window.getParentCategoryName(id);
-          console.log(`addMenuEventListeners: ID ${id} の親カテゴリ名: ${parentCategoryName}`);
-          
-          // カテゴリ名が見つからない場合は「不明なコース」と表示
-          const displayName = categoryName || `不明なコース (ID: ${id})`;
-          
-          return {
-            id: id,
-            categoryName: displayName,
-            parentCategoryName: parentCategoryName || 'その他',
-            hasParent: !!parentCategoryName
-          };
-        }));
-        
-        // 親カテゴリごとにグループ化
-        const groupedFavorites = {};
-        favoriteItemsWithParent.forEach(item => {
-          const parentKey = item.parentCategoryName;
-          if (!groupedFavorites[parentKey]) {
-            groupedFavorites[parentKey] = [];
-          }
-          groupedFavorites[parentKey].push(item);
-        });
-        
-        // グループ化されたHTMLを生成（親カテゴリ名の冒頭数値でソート）
-        const sortedGroups = Object.entries(groupedFavorites).sort(([aName], [bName]) => {
-          const aNum = parseInt(aName.match(/^\d+/)?.[0] || '0', 10);
-          const bNum = parseInt(bName.match(/^\d+/)?.[0] || '0', 10);
-          return aNum - bNum;
-        });
-        
-        const groupHtmls = sortedGroups.map(([parentName, items]) => {
-          // 各グループ内で項目名の冒頭数値で昇順ソート
-          const sortedItems = items.sort((a, b) => {
-            const aNum = parseInt(a.categoryName.match(/^\d+/)?.[0] || '0', 10);
-            const bNum = parseInt(b.categoryName.match(/^\d+/)?.[0] || '0', 10);
+
+      // 検索ボックスを追加
+      let searchValue = '';
+      // 検索ボックスのHTML
+      const searchBoxHtml = `
+        <div class="favorite-search-box">
+          <input id="favorite-search-input" type="text" placeholder="コース名・親カテゴリ名で検索">
+        </div>
+      `;
+
+      // お気に入りリストの描画関数
+      async function renderFavoriteList(filter = '') {
+        // 一覧HTML生成
+        let listHtml = '';
+        if (favorites.length) {
+          // 各お気に入りについて親カテゴリ名も取得
+          const favoriteItemsWithParent = await Promise.all(favorites.map(async (id) => {
+            const categoryName = idToName[id];
+            // 親カテゴリ名を取得
+            const parentCategoryName = await window.getParentCategoryName(id);
+            // カテゴリ名が見つからない場合は「不明なコース」と表示
+            const displayName = categoryName || `不明なコース (ID: ${id})`;
+            return {
+              id: id,
+              categoryName: displayName,
+              parentCategoryName: parentCategoryName || 'その他',
+              hasParent: !!parentCategoryName
+            };
+          }));
+
+          // 検索フィルタ適用
+          const filteredItems = filter.trim() ? favoriteItemsWithParent.filter(item => {
+            const keyword = filter.trim().toLowerCase();
+            return item.categoryName.toLowerCase().includes(keyword) || item.parentCategoryName.toLowerCase().includes(keyword);
+          }) : favoriteItemsWithParent;
+
+          // 親カテゴリごとにグループ化
+          const groupedFavorites = {};
+          filteredItems.forEach(item => {
+            const parentKey = item.parentCategoryName;
+            if (!groupedFavorites[parentKey]) {
+              groupedFavorites[parentKey] = [];
+            }
+            groupedFavorites[parentKey].push(item);
+          });
+
+          // グループ化されたHTMLを生成（親カテゴリ名の冒頭数値でソート）
+          const sortedGroups = Object.entries(groupedFavorites).sort(([aName], [bName]) => {
+            const aNum = parseInt(aName.match(/^\d+/)?.[0] || '0', 10);
+            const bNum = parseInt(bName.match(/^\d+/)?.[0] || '0', 10);
             return aNum - bNum;
           });
-          
-          const itemsHtml = sortedItems.map(item => {
-            if (item.hasParent) {
-              return `<li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${parentName}の${item.categoryName}を開く">
-                <div class="favorite-item-content">
-                  <div class="favorite-child-category">${item.categoryName}</div>
-                </div>
-                <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M9 18l6-6-6-6"/>
-                </svg>
-              </li>`;
-            } else {
-              return `<li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${item.categoryName}を開く">
-                <div class="favorite-item-content">
-                  <div class="favorite-child-category">${item.categoryName}</div>
-                </div>
-                <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M9 18l6-6-6-6"/>
-                </svg>
-              </li>`;
-            }
-          }).join('');
-          
-          return `
-            <div class="favorite-group">
-              <div class="favorite-group-header">${parentName}</div>
-              <ul class="favorite-group-list">${itemsHtml}</ul>
-            </div>
-          `;
-        });
-        
-        listHtml = groupHtmls.join('');
-      } else {
-        listHtml = '<li class="favorite-empty">お気に入りはありません</li>';
+
+          const groupHtmls = sortedGroups.map(([parentName, items]) => {
+            // 各グループ内で項目名の冒頭数値で昇順ソート
+            const sortedItems = items.sort((a, b) => {
+              const aNum = parseInt(a.categoryName.match(/^\d+/)?.[0] || '0', 10);
+              const bNum = parseInt(b.categoryName.match(/^\d+/)?.[0] || '0', 10);
+              return aNum - bNum;
+            });
+
+            const itemsHtml = sortedItems.map(item => {
+              if (item.hasParent) {
+                return `<li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${parentName}の${item.categoryName}を開く">
+                  <div class="favorite-item-content">
+                    <div class="favorite-child-category">${item.categoryName}</div>
+                  </div>
+                  <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </li>`;
+              } else {
+                return `<li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${item.categoryName}を開く">
+                  <div class="favorite-item-content">
+                    <div class="favorite-child-category">${item.categoryName}</div>
+                  </div>
+                  <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </li>`;
+              }
+            }).join('');
+
+            return `
+              <div class="favorite-group">
+                <div class="favorite-group-header">${parentName}</div>
+                <ul class="favorite-group-list">${itemsHtml}</ul>
+              </div>
+            `;
+          });
+
+          listHtml = groupHtmls.join('');
+          if (!filteredItems.length) {
+            listHtml = '<li class="favorite-empty">該当するお気に入りはありません</li>';
+          }
+        } else {
+          listHtml = '<li class="favorite-empty">お気に入りはありません</li>';
+        }
+        // パネルのリスト部分を書き換え
+        const listContainer = panel.querySelector('.favorite-list');
+        if (listContainer) {
+          listContainer.innerHTML = listHtml;
+        }
+        // 再度イベントリスナーを付与
+        attachFavoriteItemListeners();
       }
+
+      // パネルHTML
       panel.innerHTML = `
         <div class="favorite-panel-header">
           <h3 id="favorite-panel-title" class="favorite-panel-title">お気に入りコース一覧</h3>
@@ -283,52 +308,67 @@ function addMenuEventListeners() {
             </svg>
           </button>
         </div>
+        ${searchBoxHtml}
         <div class="favorite-panel-content">
-          <ul class="favorite-list">${listHtml}</ul>
+          <ul class="favorite-list"></ul>
         </div>
       `;
       document.body.appendChild(panel);
-      
+
       // アニメーション効果を追加
       requestAnimationFrame(() => {
         panel.style.opacity = '1';
         panel.style.transform = 'translate(-50%, -50%) scale(1)';
       });
-      
+
       // お気に入り項目のクリックイベントリスナー
-      const favoriteItems = panel.querySelectorAll('.favorite-item');
-      favoriteItems.forEach((item, index) => {
-        // クリックイベント
-        item.addEventListener('click', (event) => {
-          event.preventDefault();
-          const categoryId = item.getAttribute('data-category-id');
-          if (categoryId) {
-            console.log(`addMenuEventListeners: お気に入り項目がクリックされました。カテゴリID: ${categoryId}`);
-            // パネルを閉じてからページ遷移
-            closePanel();
-            // 少し遅延させてからページ遷移（アニメーション完了を待つ）
-            setTimeout(() => {
-              window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=${categoryId}`;
-            }, 200);
-          }
+      function attachFavoriteItemListeners() {
+        const favoriteItems = panel.querySelectorAll('.favorite-item');
+        favoriteItems.forEach((item, index) => {
+          // クリックイベント
+          item.addEventListener('click', (event) => {
+            event.preventDefault();
+            const categoryId = item.getAttribute('data-category-id');
+            if (categoryId) {
+              console.log(`addMenuEventListeners: お気に入り項目がクリックされました。カテゴリID: ${categoryId}`);
+              // パネルを閉じてからページ遷移
+              closePanel();
+              // 少し遅延させてからページ遷移（アニメーション完了を待つ）
+              setTimeout(() => {
+                window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=${categoryId}`;
+              }, 200);
+            }
+          });
+
+          // キーボードナビゲーション
+          item.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              item.click();
+            } else if (event.key === 'ArrowDown') {
+              event.preventDefault();
+              const nextItem = favoriteItems[index + 1];
+              if (nextItem) nextItem.focus();
+            } else if (event.key === 'ArrowUp') {
+              event.preventDefault();
+              const prevItem = favoriteItems[index - 1];
+              if (prevItem) prevItem.focus();
+            }
+          });
         });
-        
-        // キーボードナビゲーション
-        item.addEventListener('keydown', (event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            item.click();
-          } else if (event.key === 'ArrowDown') {
-            event.preventDefault();
-            const nextItem = favoriteItems[index + 1];
-            if (nextItem) nextItem.focus();
-          } else if (event.key === 'ArrowUp') {
-            event.preventDefault();
-            const prevItem = favoriteItems[index - 1];
-            if (prevItem) prevItem.focus();
-          }
+      }
+
+      // 検索ボックスのイベントリスナー
+      const searchInput = panel.querySelector('#favorite-search-input');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          searchValue = e.target.value;
+          renderFavoriteList(searchValue);
         });
-      });
+      }
+
+      // 初回リスト描画
+      renderFavoriteList('');
       
       // パネルを閉じる共通関数
       const closePanel = () => {
