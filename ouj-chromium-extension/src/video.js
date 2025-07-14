@@ -25,6 +25,9 @@ async function initializeVideoPlayer() {
   
   // キーボードショートカットを設定
   setupPlaybackSpeedShortcuts();
+  
+  // 音量自動調整機能を開始
+  startVolumeNormalization();
 }
 
 // 動画下部に設定パネルを追加する関数
@@ -57,6 +60,7 @@ function addVideoSettingsPanel() {
       const autoPlayEnabled = localStorage.getItem('autoPlayEnabled') !== 'false';
       const autoNextVideoEnabled = localStorage.getItem('autoNextVideoEnabled') !== 'false';
       const playbackSpeed = localStorage.getItem('playbackSpeed') || '1';
+      const volumeNormalizationEnabled = localStorage.getItem('volumeNormalizationEnabled') !== 'false';
       
       panel.innerHTML = `
         <div style="margin-bottom: 10px; font-weight: bold; color: #333; text-decoration: underline;">動画再生設定</div>
@@ -81,6 +85,10 @@ function addVideoSettingsPanel() {
         <div style="margin-bottom: 8px;">
           <input type="checkbox" id="auto-next-video" ${autoNextVideoEnabled ? 'checked' : ''}>
           <label for="auto-next-video" style="margin-left: 5px; cursor: pointer; color: #333;">動画終了時に自動で次の動画に進む</label>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <input type="checkbox" id="volume-normalization" ${volumeNormalizationEnabled ? 'checked' : ''}>
+          <label for="volume-normalization" style="margin-left: 5px; cursor: pointer; color: #333;">音量の自動調整<span style="font-size: 11px; color: #666;">（OPEDや場面転換時の音量急上昇を緩やかにする）</span></label>
         </div>
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
         <div style="margin-bottom: 8px;">
@@ -122,6 +130,15 @@ function addVideoSettingsPanel() {
           const enabled = event.target.checked;
           localStorage.setItem('autoNextVideoEnabled', enabled.toString());
           console.log('addVideoSettingsPanel: 自動次の動画遷移設定を保存しました:', enabled);
+        });
+      }
+      
+      const volumeNormalizationCheckbox = panel.querySelector('#volume-normalization');
+      if (volumeNormalizationCheckbox) {
+        volumeNormalizationCheckbox.addEventListener('change', (event) => {
+          const enabled = event.target.checked;
+          localStorage.setItem('volumeNormalizationEnabled', enabled.toString());
+          console.log('addVideoSettingsPanel: 音量自動調整設定を保存しました:', enabled);
         });
       }
       
@@ -890,6 +907,124 @@ function setupPlaybackSpeedShortcuts() {
   });
 }
 
+// 音量自動調整機能
+function startVolumeNormalization() {
+  console.log('startVolumeNormalization: 音量自動調整機能を開始します');
+  
+  // 音量自動調整設定をチェック（デフォルトは有効）
+  const volumeNormalizationEnabled = localStorage.getItem('volumeNormalizationEnabled') !== 'false';
+  console.log('startVolumeNormalization: 音量自動調整設定:', volumeNormalizationEnabled ? '有効' : '無効');
+  
+  if (!volumeNormalizationEnabled) {
+    console.log('startVolumeNormalization: 音量自動調整が無効化されているため、スキップします');
+    return;
+  }
+  
+  // 動画要素を待って音量監視を開始する関数
+  function waitForVideoAndMonitorVolume() {
+    const video = document.querySelector('video');
+    
+    if (video) {
+      console.log('startVolumeNormalization: 動画要素が見つかりました。音量監視を開始します');
+      
+      let lastVolume = video.volume;
+      let volumeHistory = [];
+      const maxHistorySize = 10;
+      
+      // 音量監視の間隔（ミリ秒）
+      const monitorInterval = 500;
+      
+      const volumeMonitor = setInterval(() => {
+        if (!video || video.paused) {
+          return;
+        }
+        
+        const currentVolume = video.volume;
+        volumeHistory.push(currentVolume);
+        
+        // 履歴サイズを制限
+        if (volumeHistory.length > maxHistorySize) {
+          volumeHistory.shift();
+        }
+        
+        // 音量の急激な変化を検出
+        const volumeChange = Math.abs(currentVolume - lastVolume);
+        const averageVolume = volumeHistory.reduce((sum, vol) => sum + vol, 0) / volumeHistory.length;
+        
+        // 音量が急激に変化した場合（0.1以上の変化）
+        if (volumeChange > 0.1) {
+          console.log('startVolumeNormalization: 音量の急激な変化を検出:', {
+            previous: lastVolume.toFixed(2),
+            current: currentVolume.toFixed(2),
+            change: volumeChange.toFixed(2)
+          });
+          
+          // 音量を徐々に調整
+          normalizeVolume(video, lastVolume, currentVolume);
+        }
+        
+        // 平均音量が基準を超えた場合（0.8以上）
+        if (averageVolume > 0.8 && volumeHistory.length >= 5) {
+          console.log('startVolumeNormalization: 平均音量が高すぎます:', averageVolume.toFixed(2));
+          
+          // 音量を下げる
+          const targetVolume = Math.min(currentVolume * 0.7, 0.6);
+          adjustVolumeGradually(video, currentVolume, targetVolume);
+        }
+        
+        lastVolume = currentVolume;
+      }, monitorInterval);
+      
+      // 監視を停止する関数を返す
+      return () => {
+        clearInterval(volumeMonitor);
+        console.log('startVolumeNormalization: 音量監視を停止しました');
+      };
+      
+    } else {
+      console.log('startVolumeNormalization: 動画要素が見つかりません。100ms後に再試行します');
+      setTimeout(waitForVideoAndMonitorVolume, 100);
+    }
+  }
+  
+  // 音量監視の待機を開始
+  waitForVideoAndMonitorVolume();
+}
+
+// 音量を正規化する関数
+function normalizeVolume(video, previousVolume, currentVolume) {
+  const targetVolume = Math.min(currentVolume, 0.6); // 最大0.6に制限
+  
+  if (currentVolume > targetVolume) {
+    console.log('normalizeVolume: 音量を調整します:', currentVolume.toFixed(2), '→', targetVolume.toFixed(2));
+    adjustVolumeGradually(video, currentVolume, targetVolume);
+  }
+}
+
+// 音量を徐々に調整する関数
+function adjustVolumeGradually(video, fromVolume, toVolume) {
+  const duration = 2000; // 2秒かけて調整
+  const steps = 20;
+  const stepDuration = duration / steps;
+  const volumeStep = (toVolume - fromVolume) / steps;
+  
+  let currentStep = 0;
+  
+  const adjustInterval = setInterval(() => {
+    if (currentStep >= steps || !video || video.paused) {
+      clearInterval(adjustInterval);
+      return;
+    }
+    
+    const newVolume = fromVolume + (volumeStep * currentStep);
+    video.volume = Math.max(0, Math.min(1, newVolume));
+    
+    currentStep++;
+  }, stepDuration);
+  
+  console.log('adjustVolumeGradually: 音量を徐々に調整中:', fromVolume.toFixed(2), '→', toVolume.toFixed(2));
+}
+
 // グローバル関数として公開
 window.calculatePlaybackPercentage = calculatePlaybackPercentage;
 window.startPlaybackProgressMonitoring = startPlaybackProgressMonitoring;
@@ -914,3 +1049,6 @@ window.applyPlaybackSpeed = applyPlaybackSpeed;
 window.showPlaybackSpeedNotification = showPlaybackSpeedNotification;
 window.applySavedPlaybackSpeed = applySavedPlaybackSpeed;
 window.setupPlaybackSpeedShortcuts = setupPlaybackSpeedShortcuts;
+window.startVolumeNormalization = startVolumeNormalization;
+window.normalizeVolume = normalizeVolume;
+window.adjustVolumeGradually = adjustVolumeGradually;
