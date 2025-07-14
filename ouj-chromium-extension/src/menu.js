@@ -2,7 +2,7 @@
 const MENU_CONFIG = {
   title: "拡張機能",
   items: [
-    { id: "history", text: "履歴", icon: "time" },
+    // { id: "history", text: "履歴", icon: "time" },
     { id: "favorites", text: "お気に入り", icon: "star" }
   ]
 };
