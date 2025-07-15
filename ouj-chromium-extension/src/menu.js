@@ -594,8 +594,22 @@ function addMenuEventListeners() {
         </div>
       `;
 
+      // ピン止め状態の取得・保存
+      function getPinnedFavorites() {
+        try {
+          return JSON.parse(localStorage.getItem('pinnedFavorites') || '[]');
+        } catch (e) {
+          return [];
+        }
+      }
+      function setPinnedFavorites(pinned) {
+        localStorage.setItem('pinnedFavorites', JSON.stringify(pinned));
+      }
+
       // お気に入りリストの描画関数
       async function renderFavoriteList(filter = '') {
+        // ピン止め情報を取得
+        const pinnedFavorites = getPinnedFavorites();
         // 一覧HTML生成
         let listHtml = '';
         if (favorites.length) {
@@ -610,7 +624,8 @@ function addMenuEventListeners() {
               id: id,
               categoryName: displayName,
               parentCategoryName: parentCategoryName || 'その他',
-              hasParent: !!parentCategoryName
+              hasParent: !!parentCategoryName,
+              pinned: pinnedFavorites.includes(id)
             };
           }));
 
@@ -620,9 +635,13 @@ function addMenuEventListeners() {
             return item.categoryName.toLowerCase().includes(keyword) || item.parentCategoryName.toLowerCase().includes(keyword);
           }) : favoriteItemsWithParent;
 
-          // 親カテゴリごとにグループ化
+          // ピン止めと非ピン止めで分ける
+          const pinnedItems = filteredItems.filter(item => item.pinned);
+          const unpinnedItems = filteredItems.filter(item => !item.pinned);
+
+          // 親カテゴリごとにグループ化（非ピン止めのみ）
           const groupedFavorites = {};
-          filteredItems.forEach(item => {
+          unpinnedItems.forEach(item => {
             const parentKey = item.parentCategoryName;
             if (!groupedFavorites[parentKey]) {
               groupedFavorites[parentKey] = [];
@@ -632,41 +651,56 @@ function addMenuEventListeners() {
 
           // グループ化されたHTMLを生成（親カテゴリ名の冒頭数値でソート）
           const sortedGroups = Object.entries(groupedFavorites).sort(([aName], [bName]) => {
-            const aNum = parseInt(aName.match(/^\d+/)?.[0] || '0', 10);
-            const bNum = parseInt(bName.match(/^\d+/)?.[0] || '0', 10);
+            const aNum = parseInt(aName.match(/^[0-9]+/)?.[0] || '0', 10);
+            const bNum = parseInt(bName.match(/^[0-9]+/)?.[0] || '0', 10);
             return aNum - bNum;
           });
 
+          // ピン止めリストHTML
+          let pinnedHtml = '';
+          if (pinnedItems.length) {
+            pinnedHtml = `
+              <div class="favorite-group">
+                <div class="favorite-group-header" style="display:flex;align-items:center;gap:6px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M6 3v12l6-3 6 3V3"/></svg>
+                  ピン止め
+                </div>
+                <ul class="favorite-group-list">
+                  ${pinnedItems.map(item => `
+                    <li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${item.categoryName}を開く">
+                      <div class="favorite-item-content">
+                        <div class="favorite-child-category">${item.categoryName}</div>
+                      </div>
+                      <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="ピンを外す" title="ピンを外す" style="background:none;border:none;cursor:pointer;padding:0 8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="${item.pinned ? '#ffd600' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>
+                      </button>
+                      <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            `;
+          }
+
+          // 通常グループHTML
           const groupHtmls = sortedGroups.map(([parentName, items]) => {
             // 各グループ内で項目名の冒頭数値で昇順ソート
             const sortedItems = items.sort((a, b) => {
-              const aNum = parseInt(a.categoryName.match(/^\d+/)?.[0] || '0', 10);
-              const bNum = parseInt(b.categoryName.match(/^\d+/)?.[0] || '0', 10);
+              const aNum = parseInt(a.categoryName.match(/^[0-9]+/)?.[0] || '0', 10);
+              const bNum = parseInt(b.categoryName.match(/^[0-9]+/)?.[0] || '0', 10);
               return aNum - bNum;
             });
-
             const itemsHtml = sortedItems.map(item => {
-              if (item.hasParent) {
                 return `<li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${parentName}の${item.categoryName}を開く">
                   <div class="favorite-item-content">
                     <div class="favorite-child-category">${item.categoryName}</div>
                   </div>
-                  <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 18l6-6-6-6"/>
-                  </svg>
+                <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="${item.pinned ? 'ピンを外す' : 'ピン止め'}" title="${item.pinned ? 'ピンを外す' : 'ピン止め'}" style="background:none;border:none;cursor:pointer;padding:0 8px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="${item.pinned ? '#ffd600' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>
+                </button>
+                <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
                 </li>`;
-              } else {
-                return `<li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${item.categoryName}を開く">
-                  <div class="favorite-item-content">
-                    <div class="favorite-child-category">${item.categoryName}</div>
-                  </div>
-                  <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 18l6-6-6-6"/>
-                  </svg>
-                </li>`;
-              }
             }).join('');
-
             return `
               <div class="favorite-group">
                 <div class="favorite-group-header">${parentName}</div>
@@ -675,7 +709,7 @@ function addMenuEventListeners() {
             `;
           });
 
-          listHtml = groupHtmls.join('');
+          listHtml = pinnedHtml + groupHtmls.join('');
           if (!filteredItems.length) {
             listHtml = '<li class="favorite-empty">該当するお気に入りはありません</li>';
           }
@@ -689,6 +723,26 @@ function addMenuEventListeners() {
         }
         // 再度イベントリスナーを付与
         attachFavoriteItemListeners();
+        attachPinButtonListeners();
+      }
+
+      // ピンボタンのイベントリスナー
+      function attachPinButtonListeners() {
+        const pinButtons = panel.querySelectorAll('.favorite-pin-btn');
+        pinButtons.forEach(button => {
+          button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const categoryId = button.getAttribute('data-category-id');
+            let pinned = getPinnedFavorites();
+            if (pinned.includes(categoryId)) {
+              pinned = pinned.filter(id => id !== categoryId);
+            } else {
+              pinned.push(categoryId);
+            }
+            setPinnedFavorites(pinned);
+            renderFavoriteList(searchValue);
+          });
+        });
       }
 
       // パネルHTML
