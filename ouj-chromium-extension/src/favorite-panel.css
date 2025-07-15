@@ -314,3 +314,346 @@
     box-shadow: 0 0 0 2px rgba(96,165,250,0.12);
   }
 } 
+
+/* 履歴パネルの現代的なスタイル */
+
+.history-panel {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.history-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 12px 12px 0 0;
+}
+
+.history-panel-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.history-panel-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  color: #6b7280;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-panel-close:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.history-panel-close:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.history-panel-content {
+  padding: 16px 24px 24px 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 12px 16px;
+  margin: 4px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  background: #ffffff;
+}
+
+.history-item:hover {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.history-item:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.history-item:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+}
+
+.history-item-content {
+  flex: 1;
+  margin-right: 12px;
+  text-align: left;
+}
+
+.history-title {
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.5;
+  font-weight: 500;
+  text-align: left;
+  margin-bottom: 4px;
+}
+
+.history-date {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+  font-weight: 400;
+  text-align: left;
+}
+
+.history-item-icon {
+  color: #9ca3af;
+  transition: color 0.2s ease;
+}
+
+.history-item:hover .history-item-icon {
+  color: #6b7280;
+}
+
+.history-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: #6b7280;
+  font-style: italic;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 2px dashed #d1d5db;
+}
+
+/* スクロールバーのスタイリング */
+.history-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.history-panel-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.history-panel-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.history-panel-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .history-panel {
+    width: 95vw !important;
+    max-width: none !important;
+    margin: 20px;
+  }
+  
+  .history-panel-header {
+    padding: 16px 20px 12px 20px;
+  }
+  
+  .history-panel-content {
+    padding: 12px 20px 20px 20px;
+  }
+  
+  .history-item {
+    padding: 10px 12px;
+  }
+  
+  .history-title {
+    font-size: 13px;
+  }
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .history-panel {
+    background: #1f2937 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .history-panel-header {
+    background: #111827;
+    border-bottom-color: #374151;
+  }
+  
+  .history-panel-title {
+    color: #f9fafb;
+  }
+  
+  .history-panel-close {
+    color: #9ca3af;
+  }
+  
+  .history-panel-close:hover {
+    background: #374151;
+    color: #d1d5db;
+  }
+  
+  .history-item {
+    background: #374151;
+  }
+  
+  .history-item:hover {
+    background: #4b5563;
+    border-color: #6b7280;
+  }
+  
+  .history-title {
+    color: #f9fafb;
+  }
+  
+  .history-date {
+    color: #9ca3af;
+  }
+  
+  .history-item-icon {
+    color: #6b7280;
+  }
+  
+  .history-item:hover .history-item-icon {
+    color: #9ca3af;
+  }
+  
+  .history-empty {
+    background: #374151;
+    border-color: #6b7280;
+    color: #9ca3af;
+  }
+} 
+
+/* 履歴グループのスタイル */
+.history-group {
+  margin-bottom: 24px;
+}
+
+.history-group:last-child {
+  margin-bottom: 0;
+}
+
+.history-group-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.history-group-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .history-group-header {
+    color: #9ca3af;
+    border-bottom-color: #374151;
+  }
+}
+
+/* 履歴削除ボタンのスタイル */
+.history-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  color: #9ca3af;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+}
+
+.history-delete-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.history-delete-btn:focus {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+
+.history-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-clear-all-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  color: #9ca3af;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-clear-all-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.history-clear-all-btn:focus {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .history-delete-btn {
+    color: #6b7280;
+  }
+  
+  .history-delete-btn:hover {
+    background: #7f1d1d;
+    color: #fca5a5;
+  }
+  
+  .history-clear-all-btn {
+    color: #9ca3af;
+  }
+  
+  .history-clear-all-btn:hover {
+    background: #7f1d1d;
+    color: #fca5a5;
+  }
+} 

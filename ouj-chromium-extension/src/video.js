@@ -11,6 +11,36 @@ async function initializeVideoPlayer() {
   // 動画下部に設定パネルを追加
   addVideoSettingsPanel();
   
+  // 履歴に追加
+  if (window.addHistoryEntry) {
+    try {
+      const url = window.location.href;
+      const matchCa = url.match(/ca=(\d+)/);
+      
+      // コース名を取得
+      let courseName = 'コース';
+      if (matchCa) {
+        try {
+          const categories = await window.getCategoriesData();
+          const category = categories.find(cat => cat.categoryId.toString() === matchCa[1]);
+          if (category) {
+            courseName = category.name;
+          }
+        } catch (error) {
+          console.error('initializeVideoPlayer: コース名取得でエラーが発生しました:', error);
+        }
+      }
+      
+      // コース全体を履歴に保存
+      const historyId = matchCa ? matchCa[1] : 'unknown';
+      
+      window.addHistoryEntry(historyId, courseName);
+      console.log(`initializeVideoPlayer: 履歴に追加しました。コースID: ${historyId}, コース名: ${courseName}`);
+    } catch (error) {
+      console.error('initializeVideoPlayer: 履歴追加でエラーが発生しました:', error);
+    }
+  }
+  
   // エンディング検出を開始
   window.startEndingDetection();
   

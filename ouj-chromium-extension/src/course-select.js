@@ -83,6 +83,7 @@ async function addFavoriteButtonsToCategoryList() {
     
     // タイトルの右側に追加
     item.parentNode.appendChild(favBtn);
+    
     // コンソールにログ出力
   }
   
@@ -113,6 +114,26 @@ async function waitThenAddFavBtnToCategoryList() {
   }
   
   await addFavoriteButtonsToCategoryList();
+  
+  // 現在のページ（親カテゴリ）を履歴に追加
+  if (window.addHistoryEntry) {
+    try {
+      const hash = window.location.hash;
+      const params = hash.split('?')[1];
+      const ca = params.split('ca=')[1];
+      const currentCategoryNum = parseInt(ca, 10);
+      
+      const categories = await window.getCategoriesData();
+      const category = categories.find(cat => cat.categoryId === currentCategoryNum);
+      const title = category ? category.name : `コース (ID: ${currentCategoryNum})`;
+      
+      window.addHistoryEntry(currentCategoryNum.toString(), title);
+      console.log(`waitThenAddFavBtnToCategoryList: 現在のページを履歴に追加しました。カテゴリID: ${currentCategoryNum}, タイトル: ${title}`);
+    } catch (error) {
+      console.error('waitThenAddFavBtnToCategoryList: 履歴追加でエラーが発生しました:', error);
+    }
+  }
+  
   console.log("お気に入りボタンを追加しました");
 }
 window.waitThenAddFavBtnToCategoryList = waitThenAddFavBtnToCategoryList;
