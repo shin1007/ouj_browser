@@ -168,10 +168,10 @@ function addMenuEventListeners() {
 
       // 検索ボックスを追加
       let searchValue = '';
-      // 検索ボックスのHTML
+      // 検索ボックスのHTML（履歴）
       const searchBoxHtml = `
-        <div class="history-search-box">
-          <input id="history-search-input" type="text" placeholder="コース名・親カテゴリ名で検索">
+        <div class="history-search-box" style="background: #232c3a; border-radius: 10px; padding: 10px 18px; margin: 0 24px 14px 24px; box-shadow: 0 2px 8px rgba(30,40,60,0.18); border: 1.5px solid #3a4658;">
+          <input id="history-search-input" type="text" placeholder="コース名・親カテゴリ名で検索" style="width: 100%; background: #232c3a; color: #fff; border: none; outline: none; font-size: 16px; padding: 10px 12px; border-radius: 6px; letter-spacing: 0.5px;">
         </div>
       `;
 
@@ -565,10 +565,10 @@ function addMenuEventListeners() {
 
       // 検索ボックスを追加
       let searchValue = '';
-      // 検索ボックスのHTML
+      // 検索ボックスのHTML（お気に入り）
       const searchBoxHtml = `
-        <div class="favorite-search-box">
-          <input id="favorite-search-input" type="text" placeholder="コース名・親カテゴリ名で検索">
+        <div class="favorite-search-box" style="background: #232c3a; border-radius: 10px; padding: 10px 18px; margin: 0 24px 14px 24px; box-shadow: 0 2px 8px rgba(30,40,60,0.18); border: 1.5px solid #3a4658;">
+          <input id="favorite-search-input" type="text" placeholder="コース名・親カテゴリ名で検索" style="width: 100%; background: #232c3a; color: #fff; border: none; outline: none; font-size: 16px; padding: 10px 12px; border-radius: 6px; letter-spacing: 0.5px;">
         </div>
       `;
 
