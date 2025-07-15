@@ -140,6 +140,9 @@ function addMenuEventListeners() {
         transform: 'translate(-50%, -50%)',
         width: 'min(90vw, 600px)',
         maxWidth: mainWidth,
+        minHeight: '480px',
+        maxHeight: '480px',
+        height: '480px',
         background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
         fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSize: mainFontSize || '14px',
@@ -148,7 +151,6 @@ function addMenuEventListeners() {
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         padding: '0',
         zIndex: '9999',
-        maxHeight: '80vh',
         overflow: 'hidden',
         opacity: '0',
         transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
@@ -518,6 +520,9 @@ function addMenuEventListeners() {
         transform: 'translate(-50%, -50%)',
         width: 'min(90vw, 600px)',
         maxWidth: mainWidth,
+        minHeight: '480px',
+        maxHeight: '480px',
+        height: '480px',
         background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
         fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSize: mainFontSize || '14px',
@@ -526,13 +531,30 @@ function addMenuEventListeners() {
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         padding: '0',
         zIndex: '9999',
-        maxHeight: '80vh',
         overflow: 'hidden',
         opacity: '0',
         transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
         backdropFilter: 'blur(10px)',
         border: '1px solid rgba(255, 255, 255, 0.2)'
       });
+      // リスト部分の高さも5件分に合わせて調整
+      setTimeout(() => {
+        const content = panel.querySelector('.favorite-panel-content');
+        if (content) {
+          content.style.height = '320px'; // 1件約64px×5件分
+          content.style.overflowY = 'auto';
+        }
+        // 空表示liにも高さ・中央寄せを適用
+        const emptyLi = panel.querySelector('.favorite-empty');
+        if (emptyLi) {
+          emptyLi.style.minHeight = '100%';
+          emptyLi.style.display = 'flex';
+          emptyLi.style.alignItems = 'center';
+          emptyLi.style.justifyContent = 'center';
+          emptyLi.style.fontSize = '1.2em';
+          emptyLi.style.color = '#b0b8c9';
+        }
+      }, 0);
 
       // お気に入りIDリスト取得
       const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
