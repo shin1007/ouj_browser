@@ -176,7 +176,7 @@ function addMenuEventListeners() {
       `;
 
       // 履歴リストの描画関数
-      async function renderHistoryList(filter = '') {
+      async function renderHistoryList(filter = '', sortType = 'date') {
         let listHtml = '';
         if (history.length) {
           // 各履歴について親カテゴリ名も取得
@@ -197,28 +197,10 @@ function addMenuEventListeners() {
             return title.toLowerCase().includes(keyword) || item.parentCategoryName.toLowerCase().includes(keyword);
           }) : historyItemsWithParent;
 
-          // 親カテゴリごとにグループ化
-          const groupedHistory = {};
-          filteredItems.forEach(item => {
-            const parentKey = item.parentCategoryName;
-            if (!groupedHistory[parentKey]) {
-              groupedHistory[parentKey] = [];
-            }
-            groupedHistory[parentKey].push(item);
-          });
-
-          // グループ化されたHTMLを生成（親カテゴリ名の冒頭数値でソート）
-          const sortedGroups = Object.entries(groupedHistory).sort(([aName], [bName]) => {
-            const aNum = parseInt(aName.match(/^\d+/)?.[0] || '0', 10);
-            const bNum = parseInt(bName.match(/^\d+/)?.[0] || '0', 10);
-            return aNum - bNum;
-          });
-
-          const groupHtmls = sortedGroups.map(([parentName, items]) => {
-            // 各グループ内で日付順でソート（新しい順）
-            const sortedItems = items.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            const itemsHtml = sortedItems.map((item, index) => {
+          if (sortType === 'date') {
+            // 日時順（新しい順）でフラットに表示
+            const sortedItems = filteredItems.sort((a, b) => new Date(b.date) - new Date(a.date));
+            listHtml = sortedItems.map((item, index) => {
               const date = new Date(item.date);
               const dateStr = date.toLocaleDateString('ja-JP', {
                 year: 'numeric',
@@ -228,29 +210,64 @@ function addMenuEventListeners() {
                 minute: '2-digit'
               });
               const title = item.title || `コース (ID: ${item.categoryId})`;
-              
-              if (item.hasParent) {
-                return `<li class="history-item" data-category-id="${item.categoryId}" tabindex="0" role="button" aria-label="${parentName}の${title}を開く">
-                  <div class="history-item-content">
-                    <div class="history-title">${title}</div>
-                    <div class="history-date">${dateStr}</div>
-                  </div>
-                  <button class="history-delete-btn" data-index="${history.indexOf(item)}" aria-label="${title}を履歴から削除" title="削除">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
-                    </svg>
-                  </button>
-                  <svg class="history-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 18l6-6-6-6"/>
+              return `<li class="history-item" data-category-id="${item.categoryId}" tabindex="0" role="button" aria-label="${title}を開く">
+                <div class="history-item-content">
+                  <div class="history-title">${title}</div>
+                  <div class="history-date">${dateStr}</div>
+                </div>
+                <button class="history-delete-btn" data-date="${item.date}" data-category-id="${item.categoryId}" aria-label="${title}を履歴から削除" title="削除">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
                   </svg>
-                </li>`;
-              } else {
+                </button>
+                <svg class="history-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </li>`;
+            }).join('');
+            if (!sortedItems.length) {
+              listHtml = '<li class="history-empty">該当する履歴はありません</li>';
+            }
+          } else {
+            // グループ順（日付ごと）
+            // 日付ごとにグループ化
+            const groupedHistory = {};
+            filteredItems.forEach(item => {
+              const date = new Date(item.date);
+              const dateKey = date.toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+              });
+              if (!groupedHistory[dateKey]) {
+                groupedHistory[dateKey] = [];
+              }
+              groupedHistory[dateKey].push(item);
+            });
+
+            // グループ化されたHTMLを生成（日付降順）
+            const sortedGroups = Object.entries(groupedHistory).sort(([aDate], [bDate]) => {
+              // 日付文字列をDateに変換して降順
+              return new Date(bDate) - new Date(aDate);
+            });
+
+            const groupHtmls = sortedGroups.map(([dateKey, items]) => {
+              // 各グループ内で新しい順にソート
+              const sortedItems = items.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+              const itemsHtml = sortedItems.map((item, index) => {
+                const date = new Date(item.date);
+                const timeStr = date.toLocaleTimeString('ja-JP', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+                const title = item.title || `コース (ID: ${item.categoryId})`;
                 return `<li class="history-item" data-category-id="${item.categoryId}" tabindex="0" role="button" aria-label="${title}を開く">
                   <div class="history-item-content">
                     <div class="history-title">${title}</div>
-                    <div class="history-date">${dateStr}</div>
+                    <div class="history-date">${timeStr}</div>
                   </div>
-                  <button class="history-delete-btn" data-index="${history.indexOf(item)}" aria-label="${title}を履歴から削除" title="削除">
+                  <button class="history-delete-btn" data-date="${item.date}" data-category-id="${item.categoryId}" aria-label="${title}を履歴から削除" title="削除">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
                     </svg>
@@ -259,20 +276,20 @@ function addMenuEventListeners() {
                     <path d="M9 18l6-6-6-6"/>
                   </svg>
                 </li>`;
-              }
-            }).join('');
+              }).join('');
 
-            return `
-              <div class="history-group">
-                <div class="history-group-header">${parentName}</div>
-                <ul class="history-group-list">${itemsHtml}</ul>
-              </div>
-            `;
-          });
+              return `
+                <div class="history-group">
+                  <div class="history-group-header">${dateKey}</div>
+                  <ul class="history-group-list">${itemsHtml}</ul>
+                </div>
+              `;
+            });
 
-          listHtml = groupHtmls.join('');
-          if (!filteredItems.length) {
-            listHtml = '<li class="history-empty">該当する履歴はありません</li>';
+            listHtml = groupHtmls.join('');
+            if (!filteredItems.length) {
+              listHtml = '<li class="history-empty">該当する履歴はありません</li>';
+            }
           }
         } else {
           listHtml = '<li class="history-empty">履歴はありません</li>';
@@ -342,7 +359,10 @@ function addMenuEventListeners() {
         deleteButtons.forEach(button => {
           button.addEventListener('click', (event) => {
             event.stopPropagation();
-            const index = parseInt(button.getAttribute('data-index'));
+            const date = button.getAttribute('data-date');
+            const categoryId = button.getAttribute('data-category-id');
+            // 履歴配列から該当アイテムを検索
+            const index = history.findIndex(item => item.date === date && String(item.categoryId) === String(categoryId));
             const item = history[index];
             if (item) {
               const title = item.title || `コース (ID: ${item.categoryId})`;
@@ -352,7 +372,7 @@ function addMenuEventListeners() {
                 localStorage.setItem('history', JSON.stringify(history));
                 console.log(`addMenuEventListeners: 履歴を削除しました。インデックス: ${index}`);
                 // リストを再描画
-                renderHistoryList();
+                renderHistoryList(searchValue, 'date');
               }
             }
           });
@@ -404,9 +424,10 @@ function addMenuEventListeners() {
         panel.style.transform = 'translate(-50%, -50%) scale(1)';
       });
 
-      // 初回リスト描画
-      renderHistoryList();
-      
+      // 常に日時順（新しい順）で表示
+      let currentSortType = 'date';
+      renderHistoryList('', currentSortType);
+
       // パネルを閉じる共通関数
       const closePanel = () => {
         panel.style.opacity = '0';
@@ -453,7 +474,7 @@ function addMenuEventListeners() {
       if (searchInput) {
         searchInput.addEventListener('input', (e) => {
           searchValue = e.target.value;
-          renderHistoryList(searchValue);
+          renderHistoryList(searchValue, currentSortType);
         });
       }
     });
