@@ -166,8 +166,17 @@ function addMenuEventListeners() {
       
       console.log("addMenuEventListeners: 履歴データ:", history);
 
+      // 検索ボックスを追加
+      let searchValue = '';
+      // 検索ボックスのHTML
+      const searchBoxHtml = `
+        <div class="history-search-box">
+          <input id="history-search-input" type="text" placeholder="コース名・親カテゴリ名で検索">
+        </div>
+      `;
+
       // 履歴リストの描画関数
-      async function renderHistoryList() {
+      async function renderHistoryList(filter = '') {
         let listHtml = '';
         if (history.length) {
           // 各履歴について親カテゴリ名も取得
@@ -181,9 +190,16 @@ function addMenuEventListeners() {
             };
           }));
 
+          // 検索フィルタ適用
+          const filteredItems = filter.trim() ? historyItemsWithParent.filter(item => {
+            const keyword = filter.trim().toLowerCase();
+            const title = item.title || `コース (ID: ${item.categoryId})`;
+            return title.toLowerCase().includes(keyword) || item.parentCategoryName.toLowerCase().includes(keyword);
+          }) : historyItemsWithParent;
+
           // 親カテゴリごとにグループ化
           const groupedHistory = {};
-          historyItemsWithParent.forEach(item => {
+          filteredItems.forEach(item => {
             const parentKey = item.parentCategoryName;
             if (!groupedHistory[parentKey]) {
               groupedHistory[parentKey] = [];
@@ -255,6 +271,9 @@ function addMenuEventListeners() {
           });
 
           listHtml = groupHtmls.join('');
+          if (!filteredItems.length) {
+            listHtml = '<li class="history-empty">該当する履歴はありません</li>';
+          }
         } else {
           listHtml = '<li class="history-empty">履歴はありません</li>';
         }
@@ -355,7 +374,10 @@ function addMenuEventListeners() {
       // パネルHTML
       panel.innerHTML = `
         <div class="history-panel-header">
-          <h3 id="history-panel-title" class="history-panel-title">履歴一覧</h3>
+          <h3 id="history-panel-title" class="history-panel-title">
+            <ion-icon name="time" class="history-panel-icon" aria-hidden="true"></ion-icon>
+            履歴一覧
+          </h3>
           <div class="history-panel-actions">
             <button id="clear-all-history" class="history-clear-all-btn" aria-label="履歴を全て削除" title="全削除">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -369,6 +391,7 @@ function addMenuEventListeners() {
             </button>
           </div>
         </div>
+        ${searchBoxHtml}
         <div class="history-panel-content">
           <ul class="history-list"></ul>
         </div>
@@ -424,6 +447,15 @@ function addMenuEventListeners() {
       document.getElementById('clear-all-history').onclick = () => {
         clearAllHistory();
       };
+
+      // 検索ボックスのイベントリスナー
+      const searchInput = panel.querySelector('#history-search-input');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          searchValue = e.target.value;
+          renderHistoryList(searchValue);
+        });
+      }
     });
   }
   

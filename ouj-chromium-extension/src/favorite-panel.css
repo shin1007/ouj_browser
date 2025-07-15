@@ -337,6 +337,14 @@
   font-weight: 600;
   color: #111827;
   line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-panel-icon {
+  font-size: 20px;
+  color: #6b7280;
 }
 
 .history-panel-close {
@@ -507,6 +515,10 @@
     color: #f9fafb;
   }
   
+  .history-panel-icon {
+    color: #9ca3af;
+  }
+  
   .history-panel-close {
     color: #9ca3af;
   }
@@ -580,6 +592,45 @@
   .history-group-header {
     color: #9ca3af;
     border-bottom-color: #374151;
+  }
+}
+
+/* 履歴検索ボックスのスタイル */
+.history-search-box {
+  padding: 12px 24px 0 24px;
+  background: #f9fafb;
+}
+
+.history-search-box input[type="text"] {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 15px;
+  outline: none;
+  box-sizing: border-box;
+  background: #f9fafb; /* Changed to match header/container */
+  color: #374151;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.history-search-box input[type="text"]:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  .history-search-box {
+    background: #23272e;
+  }
+  .history-search-box input[type="text"] {
+    background: #23272e; /* Changed to match header/container */
+    color: #e5e7eb;
+    border: 1px solid #374151;
+  }
+  .history-search-box input[type="text"]:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 2px rgba(96,165,250,0.12);
   }
 }
 
