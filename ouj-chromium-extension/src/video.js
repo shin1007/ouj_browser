@@ -68,29 +68,40 @@ function addVideoSettingsPanel() {
   }
   
   // 対象要素を待って取得する関数
-  function waitForTargetElement() {
-    const targetElement = document.querySelector('#content-detail-area > div.title');
-    if (targetElement) {
-      console.log('addVideoSettingsPanel: 対象要素が見つかりました: #content-detail-area > div.title');
-      
-      // 設定パネルを作成
-      const panel = document.createElement('div');
-      panel.id = 'video-settings-panel';
-      panel.style.cssText = `
-        margin-top: 15px;
-        padding: 15px;
-        background: #f5f5f5;
-        border-radius: 8px;
-        font-size: 14px;
-        border: 1px solid #ddd;
-      `;
-      
-      // 保存された設定を取得
-      const savedSetting = localStorage.getItem('nextVideoSetting') || 'same-course';
-      const autoPlayEnabled = localStorage.getItem('autoPlayEnabled') !== 'false';
-      const autoNextVideoEnabled = localStorage.getItem('autoNextVideoEnabled') !== 'false';
-      const playbackSpeed = localStorage.getItem('playbackSpeed') || '1';
-      const volumeNormalizationEnabled = localStorage.getItem('volumeNormalizationEnabled') !== 'false';
+  if (typeof window.waitForElement !== 'function') {
+    console.warn('addVideoSettingsPanel: waitForElement関数が見つかりません。100ms後に再試行します。');
+    setTimeout(addVideoSettingsPanel, 100);
+    return;
+  }
+  
+  window.waitForElement('#content-detail-area > div.title', (targetElement) => {
+    console.log('addVideoSettingsPanel: 対象要素が見つかりました: #content-detail-area > div.title');
+    
+    // 設定パネルを作成
+    const panel = document.createElement('div');
+    panel.id = 'video-settings-panel';
+    panel.style.cssText = `
+      margin-top: 15px;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      font-size: 14px;
+      border: 1px solid #ddd;
+    `;
+    
+    // 共通関数の存在をチェック
+    if (typeof window.getSetting !== 'function' || typeof window.getBooleanSetting !== 'function') {
+      console.warn('addVideoSettingsPanel: 設定管理関数が見つかりません。100ms後に再試行します。');
+      setTimeout(addVideoSettingsPanel, 100);
+      return;
+    }
+    
+    // 保存された設定を取得
+    const savedSetting = window.getSetting('nextVideoSetting', 'same-course');
+    const autoPlayEnabled = window.getBooleanSetting('autoPlayEnabled', true);
+    const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
+    const playbackSpeed = window.getSetting('playbackSpeed', '1');
+    const volumeNormalizationEnabled = window.getBooleanSetting('volumeNormalizationEnabled', true);
       
       panel.innerHTML = `
         <div style="margin-bottom: 10px; font-weight: bold; color: #333; text-decoration: underline;">動画再生設定</div>
@@ -139,7 +150,7 @@ function addVideoSettingsPanel() {
       radioButtons.forEach(radio => {
         radio.addEventListener('change', (event) => {
           const setting = event.target.value;
-          localStorage.setItem('nextVideoSetting', setting);
+          window.saveSetting('nextVideoSetting', setting);
           console.log('addVideoSettingsPanel: 次の動画設定を保存しました:', setting);
         });
       });
@@ -149,7 +160,7 @@ function addVideoSettingsPanel() {
       if (autoPlayCheckbox) {
         autoPlayCheckbox.addEventListener('change', (event) => {
           const enabled = event.target.checked;
-          localStorage.setItem('autoPlayEnabled', enabled.toString());
+          window.saveSetting('autoPlayEnabled', enabled);
           console.log('addVideoSettingsPanel: 自動再生設定を保存しました:', enabled);
         });
       }
@@ -158,7 +169,7 @@ function addVideoSettingsPanel() {
       if (autoNextVideoCheckbox) {
         autoNextVideoCheckbox.addEventListener('change', (event) => {
           const enabled = event.target.checked;
-          localStorage.setItem('autoNextVideoEnabled', enabled.toString());
+          window.saveSetting('autoNextVideoEnabled', enabled);
           console.log('addVideoSettingsPanel: 自動次の動画遷移設定を保存しました:', enabled);
         });
       }
@@ -167,7 +178,7 @@ function addVideoSettingsPanel() {
       if (volumeNormalizationCheckbox) {
         volumeNormalizationCheckbox.addEventListener('change', (event) => {
           const enabled = event.target.checked;
-          localStorage.setItem('volumeNormalizationEnabled', enabled.toString());
+          window.saveSetting('volumeNormalizationEnabled', enabled);
           console.log('addVideoSettingsPanel: 音量自動調整設定を保存しました:', enabled);
         });
       }
@@ -177,7 +188,7 @@ function addVideoSettingsPanel() {
       if (playbackSpeedSelect) {
         playbackSpeedSelect.addEventListener('change', (event) => {
           const speed = event.target.value;
-          localStorage.setItem('playbackSpeed', speed);
+          window.saveSetting('playbackSpeed', speed);
           console.log('addVideoSettingsPanel: 再生速度設定を保存しました:', speed);
           
           // 現在再生中の動画に即座に適用
@@ -188,14 +199,7 @@ function addVideoSettingsPanel() {
       // 対象要素の最後に追加
       targetElement.appendChild(panel);
       console.log('addVideoSettingsPanel: 動画設定パネルを追加しました');
-    } else {
-      console.log('addVideoSettingsPanel: 対象要素が見つかりません。100ms後に再試行します: #content-detail-area > div.title');
-      setTimeout(waitForTargetElement, 100);
-    }
-  }
-  
-  // 要素の待機を開始
-  waitForTargetElement();
+    });
 }
 
 // 次の動画IDを取得する関数
@@ -211,7 +215,7 @@ async function fetchNextVideoId() {
     console.log('fetchNextVideoId: 現在の動画ID:', currentVideoId);
     
     // 保存された設定を取得
-    const setting = localStorage.getItem('nextVideoSetting') || 'same-course';
+    const setting = window.getSetting('nextVideoSetting', 'same-course');
     console.log('fetchNextVideoId: 次の動画設定:', setting);
     
     if (setting === 'same-course') {
@@ -264,7 +268,7 @@ async function fetchNextVideoFromSameCourse(currentCourseId, currentVideoId) {
 async function fetchNextVideoFromFavorites() {
   try {
     // お気に入りリストを取得
-    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+    const favorites = window.getSetting('favorites', []);
     console.log('fetchNextVideoFromFavorites: お気に入りリスト:', favorites);
     
     if (favorites.length === 0) {
@@ -545,7 +549,7 @@ function handleEndingDetected() {
     showEndingSkipButton();
     
     // 自動で次の動画に進むオプション（設定で有効な場合）
-    if (localStorage.getItem('autoSkipEnding') === 'true') {
+    if (window.getBooleanSetting('autoSkipEnding', false)) {
       setTimeout(() => {
         skipToNextVideo();
       }, 3000); // 3秒後に自動スキップ
@@ -560,7 +564,7 @@ function startAutoPlay() {
   console.log('startAutoPlay: 自動再生機能を開始します');
   
   // 自動再生設定をチェック（デフォルトは有効）
-  const autoPlayEnabled = localStorage.getItem('autoPlayEnabled') !== 'false';
+  const autoPlayEnabled = window.getBooleanSetting('autoPlayEnabled', true);
   console.log('startAutoPlay: 自動再生設定:', autoPlayEnabled ? '有効' : '無効');
   
   if (!autoPlayEnabled) {
@@ -569,11 +573,16 @@ function startAutoPlay() {
   }
   
   // 動画要素を待って自動再生を実行する関数
-  function waitForVideoAndAutoPlay() {
-    const video = document.querySelector('video');
+  if (typeof window.waitForElement !== 'function') {
+    console.warn('startAutoPlay: waitForElement関数が見つかりません。100ms後に再試行します。');
+    setTimeout(startAutoPlay, 100);
+    return;
+  }
+  
+  window.waitForElement('video', (video) => {
     const videoPlayer = document.querySelector('.video-js');
     
-    if (video && videoPlayer) {
+    if (videoPlayer) {
       console.log('startAutoPlay: 動画要素が見つかりました。自動再生を開始します');
       
       // 動画が読み込まれるまで少し待つ
@@ -592,55 +601,30 @@ function startAutoPlay() {
           } else {
             console.log('startAutoPlay: 動画の準備がまだ完了していません。再試行します');
             // 動画の準備がまだ完了していない場合、再試行
-            setTimeout(waitForVideoAndAutoPlay, 500);
+            window.waitForCondition(() => video.readyState >= 2, () => {
+              video.play().then(() => {
+                console.log('startAutoPlay: 自動再生が成功しました');
+              }).catch((error) => {
+                console.log('startAutoPlay: 自動再生に失敗しました（ユーザーインタラクションが必要な可能性）:', error);
+                showAutoPlayFailedNotification();
+              });
+            }, 500);
           }
         } catch (error) {
           console.error('startAutoPlay: 自動再生中にエラーが発生しました:', error);
         }
       }, 1000); // 1秒待ってから再生開始
-      
-    } else {
-      console.log('startAutoPlay: 動画要素が見つかりません。100ms後に再試行します');
-      setTimeout(waitForVideoAndAutoPlay, 100);
     }
-  }
-  
-  // 自動再生の待機を開始
-  waitForVideoAndAutoPlay();
+  });
 }
 
 // 自動再生失敗時の通知を表示
 function showAutoPlayFailedNotification() {
-  // 既に通知が表示されている場合は何もしない
-  if (document.getElementById('autoplay-failed-notification')) {
+  if (typeof window.showWarningNotification !== 'function') {
+    console.warn('showAutoPlayFailedNotification: 通知関数が見つかりません。');
     return;
   }
-  
-  const notification = document.createElement('div');
-  notification.id = 'autoplay-failed-notification';
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(255, 193, 7, 0.9);
-    color: #333;
-    padding: 10px 15px;
-    border-radius: 5px;
-    font-size: 14px;
-    z-index: 10000;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  `;
-  notification.textContent = '自動再生に失敗しました。手動で再生ボタンを押してください。';
-  
-  document.body.appendChild(notification);
-  
-  // 5秒後に通知を自動削除
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.remove();
-    }
-  }, 5000);
+  window.showWarningNotification('自動再生に失敗しました。手動で再生ボタンを押してください。', 5000);
 }
 
 // 動画終了監視機能
@@ -648,7 +632,7 @@ function startVideoEndMonitoring() {
   console.log('startVideoEndMonitoring: 動画終了監視を開始します');
   
   // 自動次の動画遷移設定をチェック（デフォルトは有効）
-  const autoNextVideoEnabled = localStorage.getItem('autoNextVideoEnabled') !== 'false';
+  const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
   console.log('startVideoEndMonitoring: 自動次の動画遷移設定:', autoNextVideoEnabled ? '有効' : '無効');
   
   if (!autoNextVideoEnabled) {
@@ -657,46 +641,41 @@ function startVideoEndMonitoring() {
   }
   
   // 動画要素を待って終了監視を開始する関数
-  function waitForVideoAndMonitorEnd() {
-    const video = document.querySelector('video');
-    
-    if (video) {
-      console.log('startVideoEndMonitoring: 動画要素が見つかりました。終了監視を開始します');
-      
-      // 動画終了イベントリスナーを追加
-      const handleVideoEnded = () => {
-        console.log('startVideoEndMonitoring: 動画が終了しました');
-        
-        // 次の動画IDが設定されている場合のみ自動遷移
-        if (nextVideoId) {
-          console.log('startVideoEndMonitoring: 次の動画に自動遷移します');
-          
-          // 動画終了通知を表示
-          showVideoEndNotification();
-          
-          // 少し待ってから遷移（ユーザーが終了を確認できるように）
-          setTimeout(() => {
-            skipToNextVideo();
-          }, 2000); // 2秒後に自動遷移
-        } else {
-          console.log('startVideoEndMonitoring: 次の動画がないため、自動遷移しません');
-        }
-      };
-      
-      // 既存のイベントリスナーを削除してから追加（重複を防ぐ）
-      video.removeEventListener('ended', handleVideoEnded);
-      video.addEventListener('ended', handleVideoEnded);
-      
-      console.log('startVideoEndMonitoring: 動画終了イベントリスナーを追加しました');
-      
-    } else {
-      console.log('startVideoEndMonitoring: 動画要素が見つかりません。100ms後に再試行します');
-      setTimeout(waitForVideoAndMonitorEnd, 100);
-    }
+  if (typeof window.waitForElement !== 'function') {
+    console.warn('startVideoEndMonitoring: waitForElement関数が見つかりません。100ms後に再試行します。');
+    setTimeout(startVideoEndMonitoring, 100);
+    return;
   }
   
-  // 動画終了監視の待機を開始
-  waitForVideoAndMonitorEnd();
+  window.waitForElement('video', (video) => {
+    console.log('startVideoEndMonitoring: 動画要素が見つかりました。終了監視を開始します');
+    
+    // 動画終了イベントリスナーを追加
+    const handleVideoEnded = () => {
+      console.log('startVideoEndMonitoring: 動画が終了しました');
+      
+      // 次の動画IDが設定されている場合のみ自動遷移
+      if (nextVideoId) {
+        console.log('startVideoEndMonitoring: 次の動画に自動遷移します');
+        
+        // 動画終了通知を表示
+        showVideoEndNotification();
+        
+        // 少し待ってから遷移（ユーザーが終了を確認できるように）
+        setTimeout(() => {
+          skipToNextVideo();
+        }, 2000); // 2秒後に自動遷移
+      } else {
+        console.log('startVideoEndMonitoring: 次の動画がないため、自動遷移しません');
+      }
+    };
+    
+    // 既存のイベントリスナーを削除してから追加（重複を防ぐ）
+    video.removeEventListener('ended', handleVideoEnded);
+    video.addEventListener('ended', handleVideoEnded);
+    
+    console.log('startVideoEndMonitoring: 動画終了イベントリスナーを追加しました');
+  });
 }
 
 // エンディングスキップボタンを表示
@@ -750,7 +729,7 @@ async function skipToNextVideo() {
       let nextVideoUrl = url.replace(matchCo[0], `co=${nextVideoId}`);
       
       // お気に入りランダム設定の場合、カテゴリIDも更新
-      const setting = localStorage.getItem('nextVideoSetting') || 'same-course';
+      const setting = window.getSetting('nextVideoSetting', 'same-course');
       if (setting === 'favorites-random' && window.nextVideoCategoryId) {
         const matchCa = url.match(/ca=(\d+)/);
         if (matchCa) {
@@ -771,36 +750,11 @@ async function skipToNextVideo() {
 
 // 動画終了時の通知を表示
 function showVideoEndNotification() {
-  // 既に通知が表示されている場合は何もしない
-  if (document.getElementById('video-end-notification')) {
+  if (typeof window.showSuccessNotification !== 'function') {
+    console.warn('showVideoEndNotification: 通知関数が見つかりません。');
     return;
   }
-
-  const notification = document.createElement('div');
-  notification.id = 'video-end-notification';
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 10px 15px;
-    border-radius: 5px;
-    font-size: 14px;
-    z-index: 10000;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  `;
-  notification.textContent = '動画が終了しました。次の動画に自動的に進みます。';
-
-  document.body.appendChild(notification);
-
-  // 5秒後に通知を自動削除
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.remove();
-    }
-  }, 5000);
+  window.showSuccessNotification('動画が終了しました。次の動画に自動的に進みます。', 5000);
 }
 
 // 再生速度を適用する関数
@@ -823,57 +777,33 @@ function applyPlaybackSpeed(speed) {
 
 // 再生速度変更通知を表示
 function showPlaybackSpeedNotification(speed) {
-  // 既に通知が表示されている場合は削除
-  const existingNotification = document.getElementById('playback-speed-notification');
-  if (existingNotification) {
-    existingNotification.remove();
+  if (typeof window.showInfoNotification !== 'function') {
+    console.warn('showPlaybackSpeedNotification: 通知関数が見つかりません。');
+    return;
   }
-
-  const notification = document.createElement('div');
-  notification.id = 'playback-speed-notification';
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: rgba(0, 123, 255, 0.9);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 5px;
-    font-size: 12px;
-    z-index: 10000;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  `;
-  notification.textContent = `再生速度: ${speed}x`;
-
-  document.body.appendChild(notification);
-
-  // 2秒後に通知を自動削除
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.remove();
-    }
-  }, 2000);
+  window.showInfoNotification(`再生速度: ${speed}x`, 2000, { position: 'top-right' });
 }
 
 // 保存された再生速度を動画に適用
 function applySavedPlaybackSpeed() {
-  const savedSpeed = localStorage.getItem('playbackSpeed') || '1';
+  const savedSpeed = window.getSetting('playbackSpeed', '1');
   const speed = parseFloat(savedSpeed);
   
   if (speed !== 1) {
     console.log('applySavedPlaybackSpeed: 保存された再生速度を適用します:', speed);
     
     // 動画要素を待って再生速度を適用
-    function waitForVideoAndApplySpeed() {
-      const video = document.querySelector('video');
-      if (video && video.readyState >= 2) { // HAVE_CURRENT_DATA以上
-        applyPlaybackSpeed(speed);
-      } else {
-        setTimeout(waitForVideoAndApplySpeed, 100);
-      }
+    if (typeof window.waitForElement !== 'function') {
+      console.warn('applySavedPlaybackSpeed: waitForElement関数が見つかりません。100ms後に再試行します。');
+      setTimeout(applySavedPlaybackSpeed, 100);
+      return;
     }
     
-    waitForVideoAndApplySpeed();
+    window.waitForElement('video', (video) => {
+      window.waitForCondition(() => video.readyState >= 2, () => {
+        applyPlaybackSpeed(speed);
+      }, 100);
+    });
   }
 }
 
@@ -923,7 +853,7 @@ function setupPlaybackSpeedShortcuts() {
       if (speedChanged) {
         event.preventDefault();
         applyPlaybackSpeed(newSpeed);
-        localStorage.setItem('playbackSpeed', newSpeed.toString());
+        window.saveSetting('playbackSpeed', newSpeed.toString());
         
         // 設定パネルの選択肢も更新
         const speedSelect = document.querySelector('#playback-speed');
@@ -942,7 +872,7 @@ function startVolumeNormalization() {
   console.log('startVolumeNormalization: 音量自動調整機能を開始します');
   
   // 音量自動調整設定をチェック（デフォルトは有効）
-  const volumeNormalizationEnabled = localStorage.getItem('volumeNormalizationEnabled') !== 'false';
+  const volumeNormalizationEnabled = window.getBooleanSetting('volumeNormalizationEnabled', true);
   console.log('startVolumeNormalization: 音量自動調整設定:', volumeNormalizationEnabled ? '有効' : '無効');
   
   if (!volumeNormalizationEnabled) {
@@ -951,74 +881,69 @@ function startVolumeNormalization() {
   }
   
   // 動画要素を待って音量監視を開始する関数
-  function waitForVideoAndMonitorVolume() {
-    const video = document.querySelector('video');
-    
-    if (video) {
-      console.log('startVolumeNormalization: 動画要素が見つかりました。音量監視を開始します');
-      
-      let lastVolume = video.volume;
-      let volumeHistory = [];
-      const maxHistorySize = 10;
-      
-      // 音量監視の間隔（ミリ秒）
-      const monitorInterval = 500;
-      
-      const volumeMonitor = setInterval(() => {
-        if (!video || video.paused) {
-          return;
-        }
-        
-        const currentVolume = video.volume;
-        volumeHistory.push(currentVolume);
-        
-        // 履歴サイズを制限
-        if (volumeHistory.length > maxHistorySize) {
-          volumeHistory.shift();
-        }
-        
-        // 音量の急激な変化を検出
-        const volumeChange = Math.abs(currentVolume - lastVolume);
-        const averageVolume = volumeHistory.reduce((sum, vol) => sum + vol, 0) / volumeHistory.length;
-        
-        // 音量が急激に変化した場合（0.1以上の変化）
-        if (volumeChange > 0.1) {
-          console.log('startVolumeNormalization: 音量の急激な変化を検出:', {
-            previous: lastVolume.toFixed(2),
-            current: currentVolume.toFixed(2),
-            change: volumeChange.toFixed(2)
-          });
-          
-          // 音量を徐々に調整
-          normalizeVolume(video, lastVolume, currentVolume);
-        }
-        
-        // 平均音量が基準を超えた場合（0.8以上）
-        if (averageVolume > 0.8 && volumeHistory.length >= 5) {
-          console.log('startVolumeNormalization: 平均音量が高すぎます:', averageVolume.toFixed(2));
-          
-          // 音量を下げる
-          const targetVolume = Math.min(currentVolume * 0.7, 0.6);
-          adjustVolumeGradually(video, currentVolume, targetVolume);
-        }
-        
-        lastVolume = currentVolume;
-      }, monitorInterval);
-      
-      // 監視を停止する関数を返す
-      return () => {
-        clearInterval(volumeMonitor);
-        console.log('startVolumeNormalization: 音量監視を停止しました');
-      };
-      
-    } else {
-      console.log('startVolumeNormalization: 動画要素が見つかりません。100ms後に再試行します');
-      setTimeout(waitForVideoAndMonitorVolume, 100);
-    }
+  if (typeof window.waitForElement !== 'function') {
+    console.warn('startVolumeNormalization: waitForElement関数が見つかりません。100ms後に再試行します。');
+    setTimeout(startVolumeNormalization, 100);
+    return;
   }
   
-  // 音量監視の待機を開始
-  waitForVideoAndMonitorVolume();
+  window.waitForElement('video', (video) => {
+    console.log('startVolumeNormalization: 動画要素が見つかりました。音量監視を開始します');
+    
+    let lastVolume = video.volume;
+    let volumeHistory = [];
+    const maxHistorySize = 10;
+    
+    // 音量監視の間隔（ミリ秒）
+    const monitorInterval = 500;
+    
+    const volumeMonitor = setInterval(() => {
+      if (!video || video.paused) {
+        return;
+      }
+      
+      const currentVolume = video.volume;
+      volumeHistory.push(currentVolume);
+      
+      // 履歴サイズを制限
+      if (volumeHistory.length > maxHistorySize) {
+        volumeHistory.shift();
+      }
+      
+      // 音量の急激な変化を検出
+      const volumeChange = Math.abs(currentVolume - lastVolume);
+      const averageVolume = volumeHistory.reduce((sum, vol) => sum + vol, 0) / volumeHistory.length;
+      
+      // 音量が急激に変化した場合（0.1以上の変化）
+      if (volumeChange > 0.1) {
+        console.log('startVolumeNormalization: 音量の急激な変化を検出:', {
+          previous: lastVolume.toFixed(2),
+          current: currentVolume.toFixed(2),
+          change: volumeChange.toFixed(2)
+        });
+        
+        // 音量を徐々に調整
+        normalizeVolume(video, lastVolume, currentVolume);
+      }
+      
+      // 平均音量が基準を超えた場合（0.8以上）
+      if (averageVolume > 0.8 && volumeHistory.length >= 5) {
+        console.log('startVolumeNormalization: 平均音量が高すぎます:', averageVolume.toFixed(2));
+        
+        // 音量を下げる
+        const targetVolume = Math.min(currentVolume * 0.7, 0.6);
+        adjustVolumeGradually(video, currentVolume, targetVolume);
+      }
+      
+      lastVolume = currentVolume;
+    }, monitorInterval);
+    
+    // 監視を停止する関数を返す
+    return () => {
+      clearInterval(volumeMonitor);
+      console.log('startVolumeNormalization: 音量監視を停止しました');
+    };
+  });
 }
 
 // 音量を正規化する関数

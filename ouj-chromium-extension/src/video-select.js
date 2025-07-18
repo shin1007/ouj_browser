@@ -67,13 +67,13 @@ async function addFavoriteButtonToCategoryTop() {
         if (currentlyFavorite) {
             // お気に入りから削除
             const updatedFavorites = currentFavorites.filter(id => id !== categoryId);
-            localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+            window.saveSetting('favorites', updatedFavorites);
             favBtn.innerHTML = '<ion-icon name="star-outline" class="icon icon-md ion-md-star-outline item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
             console.log(`addFavoriteButtonToCategoryTop: お気に入りから削除: カテゴリID ${categoryId}`);
         } else {
             // お気に入りに追加
             const updatedFavorites = [...currentFavorites, categoryId];
-            localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+            window.saveSetting('favorites', updatedFavorites);
             favBtn.innerHTML = '<ion-icon name="star" class="icon icon-md ion-md-star item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
             console.log(`addFavoriteButtonToCategoryTop: お気に入りに追加: カテゴリID ${categoryId}`);
         }

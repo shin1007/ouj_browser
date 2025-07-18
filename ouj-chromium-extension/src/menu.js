@@ -59,42 +59,42 @@ function createMenuHTML() {
 
 // ロゴを待ってメニューを挿入する処理
 function waitForLogoAndInsertMenu() {
+  // 共通関数の存在をチェック
+  if (typeof window.waitForElement !== 'function') {
+    console.warn('waitForLogoAndInsertMenu: waitForElement関数が見つかりません。100ms後に再試行します。');
+    setTimeout(waitForLogoAndInsertMenu, 100);
+    return;
+  }
   
   // ロゴの存在確認
-  const logo = document.querySelector('img.logo-img[src="./assets/images/icon_logo.png"]');
-  if (!logo) {
-    setTimeout(waitForLogoAndInsertMenu, 100);
-    console.log("waitForLogoAndInsertMenu: ロゴが見つかりませんでした。100ms後に再試行します。");
-    return;
-  }
-  
-  console.log("waitForLogoAndInsertMenu: ロゴが見つかりました。メニューを挿入します。");
-  // 既に挿入されている場合は何もしない
-  if (document.getElementById('menu-title')) {
-    console.log("waitForLogoAndInsertMenu: メニューがすでに存在します。");
-    return;
-  } 
-
-  
-  
-  // メニュー要素を作成
-  const menuContainer = document.createElement('div');
-  menuContainer.innerHTML = createMenuHTML();
-  const menuList = menuContainer.firstElementChild;
-  
-  // 挿入位置を特定
-  const settingList = document.querySelector('#menu > menu-navi > ion-content > div.scroll-content > ion-content > div.scroll-content > ion-list:nth-child(3)');
-  
-  if (settingList) {
-    // 設定リストの前に挿入
-    settingList.parentNode.insertBefore(menuList, settingList);
-    console.log("waitForLogoAndInsertMenu: メニューを正常に挿入しました");
+  window.waitForElement('img.logo-img[src="./assets/images/icon_logo.png"]', (logo) => {
+    console.log("waitForLogoAndInsertMenu: ロゴが見つかりました。メニューを挿入します。");
     
-    // イベントリスナーを追加
-    addMenuEventListeners();
-  } else {
-    console.log("waitForLogoAndInsertMenu: 挿入位置が見つかりませんでした");
-  }
+    // 既に挿入されている場合は何もしない
+    if (document.getElementById('menu-title')) {
+      console.log("waitForLogoAndInsertMenu: メニューがすでに存在します。");
+      return;
+    }
+    
+    // メニュー要素を作成
+    const menuContainer = document.createElement('div');
+    menuContainer.innerHTML = createMenuHTML();
+    const menuList = menuContainer.firstElementChild;
+    
+    // 挿入位置を特定
+    const settingList = document.querySelector('#menu > menu-navi > ion-content > div.scroll-content > ion-content > div.scroll-content > ion-list:nth-child(3)');
+    
+    if (settingList) {
+      // 設定リストの前に挿入
+      settingList.parentNode.insertBefore(menuList, settingList);
+      console.log("waitForLogoAndInsertMenu: メニューを正常に挿入しました");
+      
+      // イベントリスナーを追加
+      addMenuEventListeners();
+    } else {
+      console.log("waitForLogoAndInsertMenu: 挿入位置が見つかりませんでした");
+    }
+  });
 }
 
 // メニューのイベントリスナーを追加
@@ -161,7 +161,7 @@ function addMenuEventListeners() {
       // 履歴データを取得
       let history = [];
       try {
-        history = JSON.parse(localStorage.getItem('history') || '[]');
+        history = window.getSetting('history', []);
       } catch (e) {
         history = [];
       }
@@ -371,7 +371,7 @@ function addMenuEventListeners() {
               if (confirm(`「${title}」を履歴から削除しますか？`)) {
                 // 履歴から削除
                 history.splice(index, 1);
-                localStorage.setItem('history', JSON.stringify(history));
+                window.saveSetting('history', history);
                 console.log(`addMenuEventListeners: 履歴を削除しました。インデックス: ${index}`);
                 // リストを再描画
                 renderHistoryList(searchValue, 'date');
@@ -387,7 +387,7 @@ function addMenuEventListeners() {
         
         if (confirm(`履歴を全て削除しますか？（${history.length}件）`)) {
           history = [];
-          localStorage.setItem('history', JSON.stringify(history));
+          window.saveSetting('history', history);
           console.log('addMenuEventListeners: 履歴を全削除しました');
           renderHistoryList();
         }
@@ -557,7 +557,7 @@ function addMenuEventListeners() {
       }, 0);
 
       // お気に入りIDリスト取得
-      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+      const favorites = window.getSetting('favorites', []);
       // キャッシュされたカテゴリデータを取得
       const result = await chrome.storage.local.get(['cachedCategoriesData']);
       const cachedData = result.cachedCategoriesData;
@@ -597,13 +597,13 @@ function addMenuEventListeners() {
       // ピン止め状態の取得・保存
       function getPinnedFavorites() {
         try {
-          return JSON.parse(localStorage.getItem('pinnedFavorites') || '[]');
+          return window.getSetting('pinnedFavorites', []);
         } catch (e) {
           return [];
         }
       }
       function setPinnedFavorites(pinned) {
-        localStorage.setItem('pinnedFavorites', JSON.stringify(pinned));
+        window.saveSetting('pinnedFavorites', pinned);
       }
 
       // お気に入りリストの描画関数
@@ -867,7 +867,7 @@ function addHistoryEntry(categoryId, title = '') {
   };
   let history = [];
   try {
-    history = JSON.parse(localStorage.getItem('history') || '[]');
+    history = window.getSetting('history', []);
   } catch (e) {
     history = [];
   }
@@ -877,7 +877,7 @@ function addHistoryEntry(categoryId, title = '') {
   history.unshift(entry);
   // 最大20件まで
   if (history.length > 20) history = history.slice(0, 20);
-  localStorage.setItem('history', JSON.stringify(history));
+  window.saveSetting('history', history);
   console.log('addHistoryEntry: 履歴を追加しました', entry, history);
 }
 
