@@ -3,7 +3,8 @@ const MENU_CONFIG = {
   title: "拡張機能",
   items: [
     { id: "history", text: "履歴", icon: "time" },
-    { id: "favorites", text: "お気に入り", icon: "star" }
+    { id: "favorites", text: "お気に入り", icon: "star" },
+    { id: "recommend", text: "おすすめ動画", icon: "play" } // 追加
   ]
 };
 
@@ -101,6 +102,7 @@ function waitForLogoAndInsertMenu() {
 function addMenuEventListeners() {
   const historyItem = document.getElementById('history-menu-item');
   const favoritesItem = document.getElementById('favorites-menu-item');
+  const recommendItem = document.getElementById('recommend-menu-item');
   
   if (historyItem) {
     historyItem.addEventListener('click', async () => {
@@ -889,6 +891,219 @@ function addMenuEventListeners() {
       document.getElementById('close-favorite-list-panel').onclick = () => {
         closePanel();
       };
+    });
+  }
+
+  if (recommendItem) {
+    recommendItem.addEventListener('click', async () => {
+      console.log("addMenuEventListeners: おすすめ動画メニューがクリックされました");
+      // 既存パネルがあれば削除
+      let panel = document.getElementById('recommend-list-panel');
+      if (panel) {
+        panel.remove();
+      }
+      // パネル生成
+      panel = document.createElement('div');
+      panel.id = 'recommend-list-panel';
+      panel.className = 'recommend-panel';
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-labelledby', 'recommend-panel-title');
+      panel.setAttribute('aria-modal', 'true');
+      // #mainの幅・スタイルを取得
+      const main = document.getElementById('main');
+      let mainWidth = '800px'; // デフォルト
+      let mainFont = '';
+      let mainFontSize = '14px'; // デフォルト
+      if (main) {
+        const style = window.getComputedStyle(main);
+        mainWidth = style.width;
+        mainFont = style.fontFamily;
+        mainFontSize = style.fontSize;
+      }
+      // モダンなスタイルを適用
+      Object.assign(panel.style, {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 'min(90vw, 600px)',
+        maxWidth: mainWidth,
+        minHeight: '480px',
+        maxHeight: '480px',
+        height: '480px',
+        background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
+        fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontSize: mainFontSize || '14px',
+        border: 'none',
+        borderRadius: '12px',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        padding: '0',
+        zIndex: '9999',
+        overflow: 'hidden',
+        opacity: '0',
+        transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      });
+      // ローディング表示
+      panel.innerHTML = `
+        <div class="panel-header">
+          <h3 id="recommend-panel-title" class="panel-title">
+            <ion-icon name="play" class="panel-icon" aria-hidden="true"></ion-icon>
+            おすすめ動画
+          </h3>
+          <button id="close-recommend-list-panel" class="panel-close" aria-label="パネルを閉じる">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="recommend-panel-content" style="padding: 16px;">
+          <div class="recommend-loading">おすすめ動画を取得中...</div>
+        </div>
+      `;
+      document.body.appendChild(panel);
+      // アニメーション効果を追加
+      requestAnimationFrame(() => {
+        panel.style.opacity = '1';
+        panel.style.transform = 'translate(-50%, -50%) scale(1)';
+      });
+      // パネルを閉じる共通関数
+      const closePanel = () => {
+        panel.style.opacity = '0';
+        panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
+        setTimeout(() => {
+          panel.remove();
+        }, 200);
+      };
+      // パネル外クリックで閉じる機能
+      const closePanelOnOutsideClick = (event) => {
+        if (document.getElementById('confirm-dialog')) return;
+        if (!panel.contains(event.target)) {
+          closePanel();
+        }
+      };
+      // エスケープキーで閉じる機能
+      const closePanelOnEscape = (event) => {
+        if (event.key === 'Escape') {
+          closePanel();
+        }
+      };
+      setTimeout(() => {
+        document.addEventListener('click', closePanelOnOutsideClick);
+        document.addEventListener('keydown', closePanelOnEscape);
+      }, 100);
+      // 閉じるボタンのイベントリスナー
+      document.getElementById('close-recommend-list-panel').onclick = () => {
+        closePanel();
+      };
+      // おすすめ動画リスト生成処理
+      (async () => {
+        let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
+        if (!favorites.length) {
+          panel.querySelector('.recommend-panel-content').innerHTML = '<li class="recommend-empty">お気に入りコースがありません</li>';
+          return;
+        }
+        // カテゴリリストを取得
+        let categories = [];
+        try {
+          if (typeof window.getCategoriesData === 'function') {
+            categories = await window.getCategoriesData();
+          }
+        } catch (e) {}
+        // シャッフル
+        favorites = favorites.slice();
+        for (let i = favorites.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
+        }
+        let recommendList = [];
+        for (const categoryId of favorites) {
+          if (recommendList.length >= 12) break;
+          // コース内動画リスト取得
+          const cacheKey = `cachedVodContents_${categoryId}`;
+          let videos = [];
+          try {
+            if (typeof window.fetchWithCache === 'function') {
+              videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
+            }
+          } catch (e) {}
+          if (!Array.isArray(videos) || !videos.length) continue;
+          // 進捗95%未満の最初の動画を探す
+          let found = null;
+          for (const v of videos) {
+            let progress = 0;
+            try {
+              progress = parseFloat(window.getSetting(`videoProgress_${v.contentId}`, 0));
+            } catch (e) {}
+            if (progress < 0.95) {
+              found = v;
+              break;
+            }
+          }
+          if (found) {
+            recommendList.push(found);
+          }
+        }
+        let isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        let listHtml = recommendList.map(item => {
+          // サムネイル画像
+          const thumb = item.thumbnailUrl || item.imageUrl || '';
+          // コース名（カテゴリ名）
+          let courseName = '';
+          if (Array.isArray(categories) && item.categoryId) {
+            const cat = categories.find(c => c.categoryId == item.categoryId);
+            courseName = cat ? cat.name : '';
+            courseName = courseName.replace(/^[0-9]+\s*/, '');
+            courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+          }
+          // 進捗バー
+          let progress = 0;
+          try {
+            progress = parseFloat(window.getSetting(`videoProgress_${item.contentId}`, 0));
+          } catch (e) {}
+          const progressPercent = Math.floor(progress * 100);
+          // ダーク/ライト配色
+          const cardBg = isDark ? '#232c3a' : '#fff';
+          const cardText = isDark ? '#fff' : '#222';
+          const cardSubText = isDark ? '#b0b8c9' : '#666';
+          const barBg = isDark ? '#374151' : '#e5e7eb';
+          const barFg = isDark ? '#60a5fa' : '#3b82f6';
+          const thumbBg = isDark ? '#444' : '#eee';
+          const borderColor = isDark ? '#2d3748' : '#e5e7eb';
+          // カード全体を<a>にする
+          return `
+            <a href="https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${item.contentId}&ct=V&ca=${item.categoryId}" class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);transition:background 0.2s;cursor:pointer;text-decoration:none;margin-bottom:14px;padding:0;">
+              <div style=\"display:flex;align-items:flex-start;gap:16px;padding:16px 20px;\">
+                <div style=\"display:block;width:96px;height:54px;flex-shrink:0;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);\">
+                  ${thumb ? `<img src=\"${thumb}\" alt=\"サムネイル\" style=\"width:100%;height:100%;object-fit:cover;\">` : `<span style=\\"display:inline-block;width:100%;height:100%;background:${thumbBg};\\"></span>`}
+                </div>
+                <div style=\"flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;\">
+                  <div style=\"display:flex;align-items:baseline;gap:8px;\">
+                    <div style=\"font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;\">${item.title}</div>
+                    <div style=\"font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;\">${courseName}</div>
+                  </div>
+                  <div style=\"font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;line-height:1.5;\">${item.summary ? item.summary : 'サマリー情報なし'}</div>
+                  <div style=\"height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);\">
+                    <div style=\"width:${progressPercent}%;height:100%;background:${barFg};\"></div>
+                  </div>
+                </div>
+              </div>
+            </a>
+          `;
+        }).join('');
+        if (!listHtml) listHtml = `<div class="recommend-empty" style="color:${isDark ? '#fff' : '#222'}">おすすめ動画はありません（全て再生済み）</div>`;
+        panel.querySelector('.recommend-panel-content').innerHTML = `<div class="recommend-list" style="padding:8px 0;">${listHtml}</div>`;
+
+        // 追加: リンククリックでパネルを閉じる
+        const recommendLinks = panel.querySelectorAll('.recommend-card');
+        recommendLinks.forEach(link => {
+          link.addEventListener('click', () => {
+            // パネルを閉じる
+            closePanel();
+          });
+        });
+      })();
     });
   }
 }
