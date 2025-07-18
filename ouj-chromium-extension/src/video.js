@@ -5,11 +5,10 @@ let nextVideoId = null;
 async function initializeVideoPlayer() {
   console.log('動画再生画面の初期化を開始します');
   
-  // 次の動画IDを取得
-  await fetchNextVideoId();
   
-  // 動画下部に設定パネルを追加
-  addVideoSettingsPanel();
+  // videoタグの出現を監視し、出現した瞬間に設定パネルを挿入
+  waitForVideoElementAndInsertPanel();
+
   
   // 履歴に追加
   if (window.addHistoryEntry) {
@@ -40,24 +39,44 @@ async function initializeVideoPlayer() {
       console.error('initializeVideoPlayer: 履歴追加でエラーが発生しました:', error);
     }
   }
-  
-  // エンディング検出を開始
-  window.startEndingDetection();
-  
-  // 自動再生機能を開始
-  startAutoPlay();
-  
-  // 動画終了監視を開始
-  startVideoEndMonitoring();
-  
+    
+  // 音量自動調整機能を開始
+  startVolumeNormalization();
+
   // 保存された再生速度を適用
   applySavedPlaybackSpeed();
   
   // キーボードショートカットを設定
   setupPlaybackSpeedShortcuts();
   
-  // 音量自動調整機能を開始
-  startVolumeNormalization();
+  // 自動再生機能を開始
+  startAutoPlay();
+  
+  // 次の動画IDを取得
+  await fetchNextVideoId();
+
+  // 動画終了監視を開始
+  startVideoEndMonitoring();
+  
+  // エンディング検出を開始
+  window.startEndingDetection();
+  
+}
+
+// videoタグの出現を監視し、出現したら設定パネルを挿入する
+function waitForVideoElementAndInsertPanel() {
+  if (document.querySelector('video')) {
+    addVideoSettingsPanel();
+    return;
+  }
+  // MutationObserverでvideoタグの出現を監視
+  const observer = new MutationObserver((mutations, obs) => {
+    if (document.querySelector('video')) {
+      addVideoSettingsPanel();
+      obs.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 }
 
 // 動画下部に設定パネルを追加する関数
@@ -121,7 +140,7 @@ function addVideoSettingsPanel() {
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
                   <div style="margin-bottom: 8px;">
             <input type="checkbox" id="auto-play" ${autoPlayEnabled ? 'checked' : ''}>
-            <label for="auto-play" style="margin-left: 5px; cursor: pointer; color: #333;">動画を自動再生する<span style="font-size: 11px; color: #666;">（自動で音声を再生できないことが多いので、よく失敗します。）</span></label>
+            <label for="auto-play" style="margin-left: 5px; cursor: pointer; color: #333;">動画を自動再生する<span style="font-size: 11px; color: #666;">（ブラウザ側でユーザー操作を検知できないと失敗する）</span></label>
           </div>
         <div style="margin-bottom: 8px;">
           <input type="checkbox" id="auto-next-video" ${autoNextVideoEnabled ? 'checked' : ''}>
