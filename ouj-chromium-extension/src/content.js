@@ -1,72 +1,85 @@
 // 画面種別を判定する関数
 function detectOujPageType() {
-  const url = window.location.href;
-  console.log("detectOujPageType: 現在のURL:", url);
-  if (url.includes('https://sso.ouj.ac.jp/cas/login')) {
-    console.log("detectOujPageType: 【ログイン画面】");
-    return 'login';
-  }
-  if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/player?co=')) {
-    const coNum = url.split('co=')[1];
-    console.log("detectOujPageType: 【動画再生画面】動画ID:", coNum);
-    return 'player';
-  }
-  if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=')) {
-    // ca=の後ろの値を抽出
-    const match = url.match(/vod\?ca=(\d+)/);
-    if (match) {
-      const caNum = parseInt(match[1], 10);
-      if (isNaN(caNum)) {
-        console.log("detectOujPageType: 【動画選択画面】ca=があるが値が取れない場合");
-        return 'vod-select'; // ca=があるが値が取れない場合
-      }
-        // parentCategories()を使って判定
-      if (typeof window.parentCategories === 'function') {
-        // 非同期なのでPromiseを返す
-        return window.parentCategories().then(parentIds => {
-          console.log("detectOujPageType: parentCategoriesに含まれるかの確認:", parentIds);
-          if (parentIds.includes(caNum)) {
-            console.log("detectOujPageType: parentCategoriesに含まれるため【コース選択画面】カテゴリID:", caNum);
-            return 'course-select';
-          }
-          // 既存の判定も残す
-          if (caNum < 100 ) {
-            console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
-            return 'course-select'; // コース選択画面
-          } else if (480 < caNum && caNum < 500) {
-            console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
-            return 'course-select'; // コース選択画面
-          } else {
-            console.log("detectOujPageType: 【動画選択画面】カテゴリID:", caNum);
-            return 'video-select'; // 講座選択画面
-          }
-        });
-      }
-      // // parentCategoriesが未定義の場合は従来通り
-      // if (caNum < 100 ) {
-      //   console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
-      //   return 'course-select'; // コース選択画面
-      // } else if (480 < caNum && caNum < 500) {
-      //   console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
-      //   return 'course-select'; // コース選択画面
-      // } else {
-      //   console.log("detectOujPageType: 【動画選択画面】カテゴリID:", caNum);
-      //   return 'video-select'; // 講座選択画面
-      // }
+  return new Promise(async (resolve) => {
+    const url = window.location.href;
+    console.log("detectOujPageType: 現在のURL:", url);
+    if (url.includes('https://sso.ouj.ac.jp/cas/login')) {
+      console.log("detectOujPageType: 【ログイン画面】");
+      resolve('login');
+      return;
     }
-    console.log("detectOujPageType: 【動画選択画面】ca=があるが値が取れない場合");
-    return 'vod-select'; // ca=があるが値が取れない場合
-  }
-  console.log("detectOujPageType: 【そのほか】不明");
-  return ''; // 何も含まない場合
+    if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/player?co=')) {
+      const coNum = url.split('co=')[1];
+      console.log("detectOujPageType: 【動画再生画面】動画ID:", coNum);
+      resolve('player');
+      return;
+    }
+    if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=')) {
+      // ca=の後ろの値を抽出
+      const match = url.match(/vod\?ca=(\d+)/);
+      if (match) {
+        const caNum = parseInt(match[1], 10);
+        if (isNaN(caNum)) {
+          console.log("detectOujPageType: 【動画選択画面】ca=があるが値が取れない場合");
+          resolve('vod-select'); // ca=があるが値が取れない場合
+          return;
+        }
+        // parentCategories()を使って判定
+        if (typeof window.parentCategories === 'function') {
+          try {
+            const parentIds = await window.parentCategories();
+            console.log("detectOujPageType: parentCategoriesに含まれるかの確認:", parentIds);
+            if (parentIds.includes(caNum)) {
+              console.log("detectOujPageType: parentCategoriesに含まれるため【コース選択画面】カテゴリID:", caNum);
+              resolve('course-select');
+              return;
+            }
+            if (caNum < 100 ) {
+              console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
+              resolve('course-select');
+              return;
+            } else if (480 < caNum && caNum < 500) {
+              console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
+              resolve('course-select');
+              return;
+            } else {
+              console.log("detectOujPageType: 【動画選択画面】カテゴリID:", caNum);
+              resolve('video-select');
+              return;
+            }
+          } catch (e) {
+            console.error("detectOujPageType: parentCategoriesの取得に失敗", e);
+            resolve('vod-select');
+            return;
+          }
+        }
+        // parentCategoriesが未定義の場合は従来通り
+        if (caNum < 100 ) {
+          console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
+          resolve('course-select');
+          return;
+        } else if (480 < caNum && caNum < 500) {
+          console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
+          resolve('course-select');
+          return;
+        } else {
+          console.log("detectOujPageType: 【動画選択画面】カテゴリID:", caNum);
+          resolve('video-select');
+          return;
+        }
+      }
+      console.log("detectOujPageType: 【動画選択画面】ca=があるが値が取れない場合");
+      resolve('vod-select');
+      return;
+    }
+    console.log("detectOujPageType: 【そのほか】不明");
+    resolve('');
+  });
 }
 
 async function main() {
   // 画面種別を判定して処理を分岐
-  let pageType = detectOujPageType();
-  if (pageType instanceof Promise) {
-    pageType = await pageType;
-  }
+  const pageType = await detectOujPageType();
   if (pageType === 'login') {
     // ログイン画面の処理
     console.log("main: ログイン画面を検出しました。自動ログイン監視を開始します。");
@@ -133,11 +146,56 @@ if (document.readyState === "complete" || document.readyState === "interactive")
 // SPA対応: URL変化を監視してmain()を再実行
 (function() {
   let lastUrl = location.href;
-  setInterval(() => {
+  let urlChangeDetected = false;
+
+  // history.pushState/replaceStateのフック
+  function patchHistoryMethod(type) {
+    const orig = history[type];
+    history[type] = function() {
+      const result = orig.apply(this, arguments);
+      const event = new Event('ouj-urlchange');
+      window.dispatchEvent(event);
+      return result;
+    };
+  }
+  patchHistoryMethod('pushState');
+  patchHistoryMethod('replaceState');
+
+  // popstateイベント
+  window.addEventListener('popstate', () => {
+    window.dispatchEvent(new Event('ouj-urlchange'));
+  });
+
+  // 独自イベントでmain()再実行
+  window.addEventListener('ouj-urlchange', () => {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
+      urlChangeDetected = true;
       console.log('[OUJ拡張] URL変化検知: main()再実行');
       safeMain();
     }
-  }, 500);
+  });
+
+  // フォールバック: どうしても検知できない場合のためのsetInterval
+  // （一部のSPA実装ではhistory APIを直接使わずlocation.hashや独自管理の場合があるため）
+  setInterval(() => {
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      if (!urlChangeDetected) {
+        // history APIフックやpopstateで検知できなかった場合のみログ
+        console.warn('[OUJ拡張] setIntervalによるURL変化検知: main()再実行（history APIフック非対応のSPAの可能性）');
+      }
+      urlChangeDetected = false;
+      safeMain();
+    }
+  }, 1000); // 1秒間隔で十分
+
+  /*
+    【うまくいかない場合の主な原因】
+    - サイト側がhistory.pushState/replaceStateをラップしている、または独自のルーティング管理をしている
+    - location.hashのみで遷移管理している場合（hashchangeイベントも必要な場合あり）
+    - そもそもURLが変わらずDOMだけ書き換えるSPAの場合（この場合は要素監視が必要）
+    - 拡張機能のcontent scriptが早すぎてhistory APIパッチが間に合わない場合
+    その場合はsetIntervalのフォールバックで最低限の検知を担保
+  */
 })();
