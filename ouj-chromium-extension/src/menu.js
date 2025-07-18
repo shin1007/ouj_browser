@@ -476,6 +476,8 @@ function addMenuEventListeners() {
       
       // パネル外クリックで閉じる機能
       const closePanelOnOutsideClick = (event) => {
+        // モーダルが出ている場合はパネルを閉じない
+        if (document.getElementById('confirm-dialog')) return;
         if (!panel.contains(event.target)) {
           closePanel();
         }
@@ -863,6 +865,8 @@ function addMenuEventListeners() {
       
       // パネル外クリックで閉じる機能
       const closePanelOnOutsideClick = (event) => {
+        // モーダルが出ている場合はパネルを閉じない
+        if (document.getElementById('confirm-dialog')) return;
         if (!panel.contains(event.target)) {
           closePanel();
         }

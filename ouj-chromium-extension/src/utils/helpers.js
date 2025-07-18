@@ -705,6 +705,11 @@ const showConfirmDialog = (message, title = '確認', options = {}) => {
         const okButton = content.querySelector(`.${okButtonClass}`);
         const cancelButton = content.querySelector(`.${cancelButtonClass}`);
 
+        // OKボタンに自動フォーカス
+        setTimeout(() => {
+            okButton.focus();
+        }, 50);
+
         const closeDialog = (result) => {
             // イベントリスナーを削除
             document.removeEventListener('keydown', handleKeydown);
@@ -732,7 +737,15 @@ const showConfirmDialog = (message, title = '確認', options = {}) => {
         // キーボードイベント
         const handleKeydown = (event) => {
             if (event.key === 'Enter') {
-                closeDialog(true);
+                // フォーカス中の要素で判定
+                const active = document.activeElement;
+                if (active === okButton) {
+                    closeDialog(true);
+                } else if (active === cancelButton) {
+                    closeDialog(false);
+                } else {
+                    closeDialog(true);
+                }
             } else if (event.key === 'Escape') {
                 closeDialog(false);
             }
