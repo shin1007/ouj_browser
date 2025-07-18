@@ -24,7 +24,11 @@ function saveOptions() {
         playbackSpeed: playbackSpeed,
         favorites: favorites
     }, () => {
-        alert('Options saved!');
+        if (typeof window.showSuccessNotification === 'function') {
+            window.showSuccessNotification('設定が保存されました！', 3000);
+        } else {
+            alert('設定が保存されました！');
+        }
     });
 }
 

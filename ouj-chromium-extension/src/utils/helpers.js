@@ -364,7 +364,14 @@ const getSetting = (key, defaultValue = null) => {
         if (value === null) {
             return defaultValue;
         }
-        return JSON.parse(value);
+        
+        // JSONとして解析を試行
+        try {
+            return JSON.parse(value);
+        } catch (parseError) {
+            // JSON解析に失敗した場合、文字列として返す
+            return value;
+        }
     } catch (error) {
         console.error(`getSetting: 設定の取得に失敗しました - ${key}:`, error);
         return defaultValue;
@@ -592,6 +599,148 @@ const showInfoNotification = (message, duration = 3000) => {
     return showNotification(message, 'info', duration);
 };
 
+/**
+ * 確認ダイアログを表示する関数
+ * @param {string} message - 確認メッセージ
+ * @param {string} title - ダイアログのタイトル（デフォルト: '確認'）
+ * @param {Object} options - オプション設定
+ * @returns {Promise<boolean>} ユーザーの選択（true: OK, false: キャンセル）
+ */
+const showConfirmDialog = (message, title = '確認', options = {}) => {
+    return new Promise((resolve) => {
+        const {
+            okText = 'OK',
+            cancelText = 'キャンセル',
+            okButtonClass = 'confirm-ok',
+            cancelButtonClass = 'confirm-cancel'
+        } = options;
+
+        // 既存の確認ダイアログがあれば削除
+        const existingDialog = document.getElementById('confirm-dialog');
+        if (existingDialog) {
+            existingDialog.remove();
+        }
+
+        // ダイアログ要素を作成
+        const dialog = document.createElement('div');
+        dialog.id = 'confirm-dialog';
+        dialog.className = 'confirm-dialog';
+        
+        // オーバーレイを作成
+        const overlay = document.createElement('div');
+        overlay.className = 'confirm-overlay';
+        
+        // ダイアログコンテンツを作成
+        const content = document.createElement('div');
+        content.className = 'confirm-content';
+        
+        // スタイルを適用
+        Object.assign(overlay.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '100%',
+            height: '100%',
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: '10001',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: '0',
+            transition: 'opacity 0.3s ease-in-out'
+        });
+
+        Object.assign(content.style, {
+            background: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '90%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            transform: 'scale(0.95)',
+            transition: 'transform 0.3s ease-in-out',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        });
+
+        // HTMLコンテンツを設定
+        content.innerHTML = `
+            <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #1f2937;">${title}</h3>
+            <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.5; color: #4b5563;">${message}</p>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="${cancelButtonClass}" style="
+                    padding: 8px 16px;
+                    border: 1px solid #d1d5db;
+                    background: #ffffff;
+                    color: #374151;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    cursor: pointer;
+                    transition: all 0.2s ease-in-out;
+                ">${cancelText}</button>
+                <button class="${okButtonClass}" style="
+                    padding: 8px 16px;
+                    border: none;
+                    background: #3b82f6;
+                    color: #ffffff;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    cursor: pointer;
+                    transition: all 0.2s ease-in-out;
+                ">${okText}</button>
+            </div>
+        `;
+
+        // 要素を組み立て
+        overlay.appendChild(content);
+        dialog.appendChild(overlay);
+        document.body.appendChild(dialog);
+
+        // アニメーション開始
+        setTimeout(() => {
+            overlay.style.opacity = '1';
+            content.style.transform = 'scale(1)';
+        }, 10);
+
+        // ボタンイベントリスナー
+        const okButton = content.querySelector(`.${okButtonClass}`);
+        const cancelButton = content.querySelector(`.${cancelButtonClass}`);
+
+        const closeDialog = (result) => {
+            // イベントリスナーを削除
+            document.removeEventListener('keydown', handleKeydown);
+            
+            overlay.style.opacity = '0';
+            content.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                if (dialog.parentNode) {
+                    dialog.remove();
+                }
+                resolve(result);
+            }, 300);
+        };
+
+        okButton.addEventListener('click', () => closeDialog(true));
+        cancelButton.addEventListener('click', () => closeDialog(false));
+
+        // オーバーレイクリックでキャンセル
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) {
+                closeDialog(false);
+            }
+        });
+
+        // キーボードイベント
+        const handleKeydown = (event) => {
+            if (event.key === 'Enter') {
+                closeDialog(true);
+            } else if (event.key === 'Escape') {
+                closeDialog(false);
+            }
+        };
+        document.addEventListener('keydown', handleKeydown);
+    });
+};
+
 // グローバル関数として公開
 window.savePlaybackPosition = savePlaybackPosition;
 window.getPlaybackPosition = getPlaybackPosition;
@@ -616,6 +765,7 @@ window.showSuccessNotification = showSuccessNotification;
 window.showErrorNotification = showErrorNotification;
 window.showWarningNotification = showWarningNotification;
 window.showInfoNotification = showInfoNotification;
+window.showConfirmDialog = showConfirmDialog;
 
 // 初期化完了を通知
 console.log('helpers.js: 共通関数の初期化が完了しました');

@@ -359,7 +359,7 @@ function addMenuEventListeners() {
       function attachDeleteButtonListeners() {
         const deleteButtons = panel.querySelectorAll('.history-delete-btn');
         deleteButtons.forEach(button => {
-          button.addEventListener('click', (event) => {
+          button.addEventListener('click', async (event) => {
             event.stopPropagation();
             const date = button.getAttribute('data-date');
             const categoryId = button.getAttribute('data-category-id');
@@ -368,13 +368,31 @@ function addMenuEventListeners() {
             const item = history[index];
             if (item) {
               const title = item.title || `コース (ID: ${item.categoryId})`;
-              if (confirm(`「${title}」を履歴から削除しますか？`)) {
-                // 履歴から削除
-                history.splice(index, 1);
-                window.saveSetting('history', history);
-                console.log(`addMenuEventListeners: 履歴を削除しました。インデックス: ${index}`);
-                // リストを再描画
-                renderHistoryList(searchValue, 'date');
+              
+              // 共通化した確認ダイアログを使用
+              if (typeof window.showConfirmDialog === 'function') {
+                const confirmed = await window.showConfirmDialog(
+                  `「${title}」を履歴から削除しますか？`,
+                  '履歴の削除'
+                );
+                if (confirmed) {
+                  // 履歴から削除
+                  history.splice(index, 1);
+                  window.saveSetting('history', history);
+                  console.log(`addMenuEventListeners: 履歴を削除しました。インデックス: ${index}`);
+                  // リストを再描画
+                  renderHistoryList(searchValue, 'date');
+                }
+              } else {
+                // フォールバック: 従来のconfirmを使用
+                if (confirm(`「${title}」を履歴から削除しますか？`)) {
+                  // 履歴から削除
+                  history.splice(index, 1);
+                  window.saveSetting('history', history);
+                  console.log(`addMenuEventListeners: 履歴を削除しました。インデックス: ${index}`);
+                  // リストを再描画
+                  renderHistoryList(searchValue, 'date');
+                }
               }
             }
           });
@@ -382,14 +400,29 @@ function addMenuEventListeners() {
       }
 
       // 履歴を全削除する関数
-      function clearAllHistory() {
+      async function clearAllHistory() {
         if (history.length === 0) return;
         
-        if (confirm(`履歴を全て削除しますか？（${history.length}件）`)) {
-          history = [];
-          window.saveSetting('history', history);
-          console.log('addMenuEventListeners: 履歴を全削除しました');
-          renderHistoryList();
+        // 共通化した確認ダイアログを使用
+        if (typeof window.showConfirmDialog === 'function') {
+          const confirmed = await window.showConfirmDialog(
+            `履歴を全て削除しますか？（${history.length}件）`,
+            '履歴の全削除'
+          );
+          if (confirmed) {
+            history = [];
+            window.saveSetting('history', history);
+            console.log('addMenuEventListeners: 履歴を全削除しました');
+            renderHistoryList();
+          }
+        } else {
+          // フォールバック: 従来のconfirmを使用
+          if (confirm(`履歴を全て削除しますか？（${history.length}件）`)) {
+            history = [];
+            window.saveSetting('history', history);
+            console.log('addMenuEventListeners: 履歴を全削除しました');
+            renderHistoryList();
+          }
         }
       }
 
@@ -859,11 +892,21 @@ function addMenuEventListeners() {
 // 履歴をlocalStorageに保存する関数
 function addHistoryEntry(categoryId, title = '') {
   if (!categoryId) return;
-  const now = new Date();
+  
+  // 最近の履歴追加をチェック（5秒以内の同じカテゴリIDは無視）
+  const lastHistoryKey = `lastHistory_${categoryId}`;
+  const lastHistoryTime = window.getSetting(lastHistoryKey, 0);
+  const now = Date.now();
+  
+  if (now - lastHistoryTime < 5000) {
+    console.log(`addHistoryEntry: 最近の履歴追加のためスキップします。カテゴリID: ${categoryId}`);
+    return;
+  }
+  
   const entry = {
     categoryId,
     title,
-    date: now.toISOString(),
+    date: new Date().toISOString(),
   };
   let history = [];
   try {
@@ -878,6 +921,7 @@ function addHistoryEntry(categoryId, title = '') {
   // 最大20件まで
   if (history.length > 20) history = history.slice(0, 20);
   window.saveSetting('history', history);
+  window.saveSetting(lastHistoryKey, now);
   console.log('addHistoryEntry: 履歴を追加しました', entry, history);
 }
 
