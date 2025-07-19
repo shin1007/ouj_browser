@@ -1169,6 +1169,14 @@ function addMenuEventListeners() {
         </div>
         <div class="recommend-panel-content" style="overflow-y: auto; max-height: calc(100% - 60px); scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.3) transparent;">
           <style>
+            /* TODO: スクロールバーの統一感を向上
+             * - お気に入りパネル、履歴パネル、おすすめパネルでスクロールバーのスタイルを統一
+             * - ダークテーマ/ライトテーマに応じた動的な色調整
+             * - スクロールバーの幅、角丸、透明度の統一
+             * - ホバー効果の統一
+             * - Firefox用のscrollbar-color設定の統一
+             * - 共通のCSSクラスとして外部ファイルに分離
+             */
             .recommend-panel-content::-webkit-scrollbar {
               width: 8px;
             }
@@ -1240,13 +1248,86 @@ function addMenuEventListeners() {
           if (typeof window.getCategoriesData === 'function') {
             categories = await window.getCategoriesData();
           }
-        } catch (e) {}
+        } catch (e) {        }
+        
+        // 類似コース検索関数
+        function findSimilarCourses(targetNames, allCategories, excludeIds) {
+          // TODO: 類似コース検索アルゴリズムの改善
+          // - 現在の単純な文字列マッチングをより高度なアルゴリズムに変更
+          // - レーベンシュタイン距離、コサイン類似度、TF-IDFなどの導入
+          // - 日本語の形態素解析によるキーワード抽出
+          // - 科目分野の分類による重み付け
+          const similarCourses = [];
+          
+          for (const category of allCategories) {
+            if (excludeIds.has(category.categoryId)) continue;
+            
+            const categoryName = category.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+            
+            // 類似度スコアを計算
+            let maxScore = 0;
+            for (const targetName of targetNames) {
+              const score = calculateSimilarity(targetName, categoryName);
+              maxScore = Math.max(maxScore, score);
+            }
+            
+            if (maxScore > 0.3) { // 類似度が30%以上の場合
+              similarCourses.push({
+                category: category,
+                score: maxScore
+              });
+            }
+          }
+          
+          // スコア順にソートして上位3つを返す
+          return similarCourses
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 3)
+            .map(item => item.category);
+        }
+        
+        // 文字列類似度計算関数（簡易版）
+        // TODO: 類似度計算アルゴリズムの改善
+        // - レーベンシュタイン距離による編集距離計算
+        // - コサイン類似度によるベクトル化比較
+        // - TF-IDFによる重要キーワード抽出
+        // - 日本語形態素解析（MeCab等）による単語分割
+        // - 同義語・類義語辞書の活用
+        function calculateSimilarity(str1, str2) {
+          const s1 = str1.toLowerCase();
+          const s2 = str2.toLowerCase();
+          
+          // 完全一致
+          if (s1 === s2) return 1.0;
+          
+          // 部分一致
+          if (s1.includes(s2) || s2.includes(s1)) return 0.8;
+          
+          // 共通キーワードを探す
+          const words1 = s1.split(/[\s・、]/).filter(w => w.length > 1);
+          const words2 = s2.split(/[\s・、]/).filter(w => w.length > 1);
+          
+          let commonWords = 0;
+          for (const word1 of words1) {
+            for (const word2 of words2) {
+              if (word1 === word2 || word1.includes(word2) || word2.includes(word1)) {
+                commonWords++;
+              }
+            }
+          }
+          
+          if (commonWords === 0) return 0;
+          
+          // 類似度スコアを計算
+          const totalWords = Math.max(words1.length, words2.length);
+          return commonWords / totalWords;
+        }
         
         let recommendList = [];
         let usedCategoryIds = new Set(); // 重複チェック用
         
-        // 1. 履歴の上位3つを優先的に追加
-        for (let i = 0; i < Math.min(3, history.length); i++) {
+        // 1. 履歴の上位2つを優先的に追加
+        for (let i = 0; i < Math.min(2, history.length); i++) {
           const historyItem = history[i];
           const categoryId = historyItem.categoryId;
           
@@ -1281,8 +1362,16 @@ function addMenuEventListeners() {
           }
         }
         
-        // 2. お気に入りから9個を追加（重複を避ける）
+        // 2. お気に入りから5個を追加（履歴で使用済みのコースは除外）
         if (favorites.length) {
+          // 履歴で使用済みのコースIDを収集
+          const historyUsedCategoryIds = new Set();
+          for (const item of recommendList) {
+            if (item.source === 'history') {
+              historyUsedCategoryIds.add(item.categoryId);
+            }
+          }
+          
           // シャッフル
           favorites = favorites.slice();
           for (let i = favorites.length - 1; i > 0; i--) {
@@ -1291,8 +1380,12 @@ function addMenuEventListeners() {
           }
           
           for (const categoryId of favorites) {
-            if (recommendList.length >= 12) break; // 合計12個まで
+            if (recommendList.length >= 7) break; // 履歴2個 + お気に入り5個まで
             if (usedCategoryIds.has(categoryId)) continue; // 重複チェック
+            if (historyUsedCategoryIds.has(categoryId)) {
+              console.log('お気に入りコースが履歴と重複のため除外:', categoryId);
+              continue; // 履歴で使用済みのコースは除外
+            }
             
             // コース内動画リスト取得
             const cacheKey = `cachedVodContents_${categoryId}`;
@@ -1323,11 +1416,153 @@ function addMenuEventListeners() {
             }
           }
         }
+        
+        // 3. 類似コースから3個を追加（動画レベルでの重複を避ける）
+        // TODO: 類似コースの検索アルゴリズムを改善
+        // - より精度の高い類似度計算（現在は単純な文字列マッチング）
+        // - キーワードベースの検索（科目名、講師名、分野など）
+        // - ジャンル別の類似性（人文科学、社会科学、自然科学など）
+        // - ユーザーの視聴パターンに基づく推薦
+        // - 機械学習による推薦システムの導入
+        if (categories.length > 0) {
+          // 履歴とお気に入りのコース名を収集
+          const targetNames = [];
+          
+          // 履歴からコース名を取得（重複を避けて）
+          const usedNames = new Set();
+          for (const historyItem of history.slice(0, 3)) {
+            const cat = categories.find(c => c.categoryId == historyItem.categoryId);
+            if (cat) {
+              const cleanName = cat.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+              if (!usedNames.has(cleanName)) {
+                targetNames.push(cleanName);
+                usedNames.add(cleanName);
+              }
+            }
+          }
+          
+          // お気に入りからコース名を取得（重複を避けて）
+          for (const categoryId of favorites.slice(0, 3)) {
+            const cat = categories.find(c => c.categoryId == categoryId);
+            if (cat) {
+              const cleanName = cat.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+              if (!usedNames.has(cleanName)) {
+                targetNames.push(cleanName);
+                usedNames.add(cleanName);
+              }
+            }
+          }
+          
+          if (targetNames.length > 0) {
+            console.log('類似コース検索対象:', targetNames);
+            const similarCategories = findSimilarCourses(targetNames, categories, usedCategoryIds); // コースレベルでの重複チェック
+            console.log('類似コース検索結果:', similarCategories);
+            
+            // 履歴とお気に入りで使用済みのコースIDを収集
+            const historyAndFavoritesUsedCategoryIds = new Set();
+            for (const item of recommendList) {
+              if (item.source === 'history' || item.source === 'favorites') {
+                historyAndFavoritesUsedCategoryIds.add(item.categoryId);
+              }
+            }
+            
+            let similarCount = 0;
+            for (const category of similarCategories) {
+              if (recommendList.length >= 12) break; // 履歴2個 + お気に入り5個 + 類似5個まで
+              
+              const categoryId = category.categoryId;
+              if (historyAndFavoritesUsedCategoryIds.has(categoryId)) {
+                console.log('類似コースが履歴・お気に入りと重複のため除外:', categoryId);
+                continue; // 履歴・お気に入りで使用済みのコースは除外
+              }
+              
+              // コース内動画リスト取得
+              const cacheKey = `cachedVodContents_${categoryId}`;
+              let videos = [];
+              try {
+                if (typeof window.fetchWithCache === 'function') {
+                  videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
+                }
+              } catch (e) {}
+              if (!Array.isArray(videos) || !videos.length) continue;
+              
+              // 進捗95%未満の最初の動画を探す（並列取得）
+              const contentIds = videos.map(v => v.contentId);
+              const statusList = await window.getMultipleVideoViewingStatus(contentIds);
+              let found = null;
+              let foundStatus = null;
+              for (let i = 0; i < videos.length; i++) {
+                const status = statusList[i];
+                if (status.currentTimeRate < 0.95) {
+                  found = videos[i];
+                  foundStatus = status;
+                  break;
+                }
+              }
+              if (found) {
+                const videoWithSource = { 
+                  ...found, 
+                  categoryId: categoryId, // 明示的にcategoryIdを設定
+                  progress: foundStatus ? foundStatus.currentTimeRate : 0, 
+                  source: 'similar' 
+                };
+                console.log('類似コース動画データ:', videoWithSource);
+                recommendList.push(videoWithSource);
+                usedCategoryIds.add(categoryId); // コースレベルでの重複チェック
+                similarCount++;
+              }
+            }
+            
+            // 類似コースが見つからない場合のフォールバック
+            if (similarCount === 0) {
+              console.log('類似コースが見つからないため、お気に入りから追加の動画を取得');
+              // お気に入りから追加の動画を取得（重複を避けて）
+              for (const categoryId of favorites) {
+                if (recommendList.length >= 12) break;
+                if (usedCategoryIds.has(categoryId)) continue;
+                
+                const cacheKey = `cachedVodContents_${categoryId}`;
+                let videos = [];
+                try {
+                  if (typeof window.fetchWithCache === 'function') {
+                    videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
+                  }
+                } catch (e) {}
+                if (!Array.isArray(videos) || !videos.length) continue;
+                
+                const contentIds = videos.map(v => v.contentId);
+                const statusList = await window.getMultipleVideoViewingStatus(contentIds);
+                let found = null;
+                let foundStatus = null;
+                for (let i = 0; i < videos.length; i++) {
+                  const status = statusList[i];
+                  if (status.currentTimeRate < 0.95) {
+                    found = videos[i];
+                    foundStatus = status;
+                    break;
+                  }
+                }
+                if (found) {
+                  const videoWithSource = { 
+                    ...found, 
+                    categoryId: categoryId,
+                    progress: foundStatus ? foundStatus.currentTimeRate : 0, 
+                    source: 'favorites' 
+                  };
+                  console.log('フォールバック動画データ:', videoWithSource);
+                  recommendList.push(videoWithSource);
+                  usedCategoryIds.add(categoryId);
+                }
+              }
+            }
+          }
+        }
         let isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         let listHtml = recommendList.map(item => {
           // サムネイル画像
           let thumb = '';
           console.log('おすすめ動画 - 動画データ:', item);
+          console.log('おすすめ動画 - summary:', item.summary);
           
           // 1. まずcontentIdからサムネイルURLを生成（最優先）
           if (item.contentId) {
@@ -1353,11 +1588,21 @@ function addMenuEventListeners() {
             courseName = cat ? cat.name : '';
             courseName = courseName.replace(/^[0-9]+\s*/, '');
             courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+            console.log('コース名取得:', { categoryId: item.categoryId, courseName: courseName, source: item.source });
           }
           
-          // ソース表示（履歴 or お気に入り）
-          const sourceLabel = item.source === 'history' ? '履歴' : 'お気に入り';
-          const sourceColor = item.source === 'history' ? (isDark ? '#60a5fa' : '#3b82f6') : (isDark ? '#fbbf24' : '#f59e0b');
+          // ソース表示（履歴 or お気に入り or 類似）
+          let sourceLabel, sourceColor;
+          if (item.source === 'history') {
+            sourceLabel = '履歴';
+            sourceColor = isDark ? '#60a5fa' : '#3b82f6';
+          } else if (item.source === 'favorites') {
+            sourceLabel = 'お気に入り';
+            sourceColor = isDark ? '#fbbf24' : '#f59e0b';
+          } else if (item.source === 'similar') {
+            sourceLabel = '類似';
+            sourceColor = isDark ? '#10b981' : '#059669';
+          }
           // 進捗バー
           let progress = item.progress || 0;
           const progressPercent = Math.floor(progress * 100);
@@ -1385,7 +1630,7 @@ function addMenuEventListeners() {
                     <div style=\"font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;\">${item.title}</div>
                     <div style=\"font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;\">${courseName}</div>
                   </div>
-                  <div style=\"font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;line-height:1.5;\">${item.summary ? item.summary : 'サマリー情報なし'}</div>
+                  <div style=\"font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;line-height:1.5;\">${item.summary && item.summary.trim() ? item.summary.replace(/<[^>]*>/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : 'サマリー情報なし'}</div>
                   <div style=\"height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);\">
                     <div style=\"width:${progressPercent}%;height:100%;background:${barFg};\"></div>
                   </div>
