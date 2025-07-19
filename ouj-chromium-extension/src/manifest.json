@@ -9,25 +9,33 @@
     "scripting",
     "autofill"
   ],
-  "host_permissions": ["https://v.ouj.ac.jp/*"],
+  "host_permissions": [
+    "https://v.ouj.ac.jp/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["*://*.ouj.ac.jp/*"],
-      "css": ["favorite-panel.css", "thumbnail-progress.css"],
-      "js": ["utils/helpers.js",
-      "utils/viewingStatus.js",
-      "categories.js",
-      "login.js",
-      "menu.js",
-      "course-select.js",
-      "video-select.js",
-      "video.js",
-      "thumbnail-progress.js",
-      "content.js"
-    ]
+      "matches": [
+        "*://*.ouj.ac.jp/*"
+      ],
+      "css": [
+        "favorite-panel.css",
+        "thumbnail-progress.css"
+      ],
+      "js": [
+        "utils/helpers.js",
+        "utils/viewingStatus.js",
+        "categories.js",
+        "login.js",
+        "menu.js",
+        "course-select.js",
+        "video-select.js",
+        "video.js",
+        "thumbnail-progress.js",
+        "content.js"
+      ]
     }
   ],
   "action": {
@@ -46,8 +54,12 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["icons/*"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "icons/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

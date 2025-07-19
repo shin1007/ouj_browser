@@ -78,21 +78,31 @@ function detectOujPageType() {
 }
 
 async function main() {
+  console.log('main: 開始');
+  
   // 画面種別を判定して処理を分岐
   const pageType = await detectOujPageType();
+  console.log('main: 画面種別判定結果:', pageType);
+  
   if (pageType === 'login') {
     // ログイン画面の処理
     console.log("main: ログイン画面を検出しました。自動ログイン監視を開始します。");
     window.waitForPasswordAndLogin();
     return;
   }
+  
+  console.log('main: メニュー挿入処理を開始');
   window.waitForLogoAndInsertMenu();
 
   // ログイン画面ではない場合
+  console.log('main: カテゴリデータ取得を開始');
   window.getCategoriesData().then(categories => {
+    console.log('main: カテゴリデータ取得完了、画面種別に応じた処理を開始');
+    
     if (pageType === 'player') {
       // 動画再生画面の処理
-      // TODO: ・再生速度の調整（記憶させておいたもの）
+      console.log('main: 動画再生画面の処理を開始');
+      // ・再生速度の調整（記憶させておいたもの）
       // TODO: ・OPスキップ
       // ・EDスキップ
       // ・自動で次を再生
@@ -100,16 +110,18 @@ async function main() {
       
     } else if (pageType === 'course-select') {
       // コース選択画面
+      console.log('main: コース選択画面の処理を開始');
       // ・お気に入りされているかの確認
       // ・お気に入りボタンを追加
       window.waitThenAddFavBtnToCategoryList();
     } else if (pageType === 'video-select') {
       // 動画選択画面
+      console.log('main: 動画選択画面の処理を開始');
       // ・お気に入りされているかの確認
       // ・お気に入りボタンを追加
       window.addFavoriteButtonToCategoryTop();
-      // TODO: ・どれくらい再生されているのかを取得
-      // TODO: ・どこまで再生したかの表示
+      // ・どれくらい再生されているのかを取得
+      // ・どこまで再生したかの表示
     } else {
       // その他の処理
       console.log("main: 特に何もしません。");
@@ -118,6 +130,8 @@ async function main() {
 }
 
 function safeMain() {
+  console.log('safeMain: 開始');
+  
   const missing = [];
   if (typeof window.waitForLogoAndInsertMenu !== 'function') missing.push('waitForLogoAndInsertMenu');
   if (typeof window.getCategoriesData !== 'function') missing.push('getCategoriesData');
@@ -131,9 +145,12 @@ function safeMain() {
       console.error('[OUJ拡張] グローバル関数未定義:', missing.join(', '));
       safeMain._warned = missing.join(',');
     }
+    console.log('safeMain: 関数が未定義のため50ms後に再試行');
     setTimeout(safeMain, 50);
     return;
   }
+  
+  console.log('safeMain: 全関数が利用可能、main()を実行');
   main();
 }
 
@@ -169,6 +186,8 @@ if (document.readyState === "complete" || document.readyState === "interactive")
   // 独自イベントでmain()再実行
   window.addEventListener('ouj-urlchange', () => {
     if (location.href !== lastUrl) {
+      console.log('[OUJ拡張] URL変化検知: 前のURL:', lastUrl);
+      console.log('[OUJ拡張] URL変化検知: 新しいURL:', location.href);
       lastUrl = location.href;
       urlChangeDetected = true;
       console.log('[OUJ拡張] URL変化検知: main()再実行');
