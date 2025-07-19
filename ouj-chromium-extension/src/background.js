@@ -8,6 +8,9 @@ const SCRIPT_TO_INJECT = {
     // type: 'module'
 };
 
+// 拡張機能の初期化ログ
+console.log('OUJ拡張機能のbackground.jsが読み込まれました');
+
 chrome.webNavigation.onCompleted.addListener(function(details) {
     // 複数のURLパターンをチェック
     const isSsoPage = details.url.includes("https://sso.ouj.ac.jp");

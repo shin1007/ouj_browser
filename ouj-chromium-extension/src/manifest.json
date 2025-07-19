@@ -7,7 +7,8 @@
     "storage",
     "activeTab",
     "scripting",
-    "autofill"
+    "autofill",
+    "tabs"
   ],
   "host_permissions": [
     "https://v.ouj.ac.jp/*"
