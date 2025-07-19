@@ -18,6 +18,7 @@
       "matches": ["*://*.ouj.ac.jp/*"],
       "css": ["favorite-panel.css", "thumbnail-progress.css"],
       "js": ["utils/helpers.js",
+      "utils/viewingStatus.js",
       "categories.js",
       "login.js",
       "menu.js",

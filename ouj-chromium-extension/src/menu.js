@@ -1004,6 +1004,9 @@ function addMenuEventListeners() {
           panel.querySelector('.recommend-panel-content').innerHTML = '<li class="recommend-empty">お気に入りコースがありません</li>';
           return;
         }
+        
+
+        
         // カテゴリリストを取得
         let categories = [];
         try {
@@ -1029,20 +1032,26 @@ function addMenuEventListeners() {
             }
           } catch (e) {}
           if (!Array.isArray(videos) || !videos.length) continue;
-          // 進捗95%未満の最初の動画を探す
+          // 進捗95%未満の最初の動画を探す（キャッシュ付きAPIで並列取得）
+          const statusList = await Promise.all(
+            videos.map(v => window.getVideoViewingStatus ? window.getVideoViewingStatus(v.contentId) : Promise.resolve({currentTimeRate:0,isFinished:false}))
+          );
+          console.log('categoryId:', categoryId, 'videos:', videos, 'statusList:', statusList);
+          statusList.forEach((status, idx) => {
+            console.log(`  video[${idx}] contentId: ${videos[idx].contentId}, title: ${videos[idx].title}, currentTimeRate: ${status.currentTimeRate}`);
+          });
           let found = null;
-          for (const v of videos) {
-            let progress = 0;
-            try {
-              progress = parseFloat(window.getSetting(`videoProgress_${v.contentId}`, 0));
-            } catch (e) {}
-            if (progress < 0.95) {
-              found = v;
+          let foundStatus = null;
+          for (let i = 0; i < videos.length; i++) {
+            const status = statusList[i];
+            if (status.currentTimeRate < 0.95) {
+              found = videos[i];
+              foundStatus = status;
               break;
             }
           }
           if (found) {
-            recommendList.push(found);
+            recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0 });
           }
         }
         let isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -1058,10 +1067,7 @@ function addMenuEventListeners() {
             courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
           }
           // 進捗バー
-          let progress = 0;
-          try {
-            progress = parseFloat(window.getSetting(`videoProgress_${item.contentId}`, 0));
-          } catch (e) {}
+          let progress = item.progress || 0;
           const progressPercent = Math.floor(progress * 100);
           // ダーク/ライト配色
           const cardBg = isDark ? '#232c3a' : '#fff';
@@ -1092,8 +1098,8 @@ function addMenuEventListeners() {
             </a>
           `;
         }).join('');
-        if (!listHtml) listHtml = `<div class="recommend-empty" style="color:${isDark ? '#fff' : '#222'}">おすすめ動画はありません（全て再生済み）</div>`;
-        panel.querySelector('.recommend-panel-content').innerHTML = `<div class="recommend-list" style="padding:8px 0;">${listHtml}</div>`;
+        if (!listHtml) listHtml = `<div class=\"recommend-empty\" style=\"color:${isDark ? '#fff' : '#222'}\">おすすめ動画はありません（全て再生済み）</div>`;
+        panel.querySelector('.recommend-panel-content').innerHTML = `<div class=\"recommend-list\" style=\"padding:8px 0;\">${listHtml}</div>`;
 
         // 追加: リンククリックでパネルを閉じる
         const recommendLinks = panel.querySelectorAll('.recommend-card');
