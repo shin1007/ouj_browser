@@ -1227,12 +1227,12 @@ function addMenuEventListeners() {
       // おすすめ動画リスト生成処理
       (async () => {
         let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
-        if (!favorites.length) {
-          panel.querySelector('.recommend-panel-content').innerHTML = '<li class="recommend-empty">お気に入りコースがありません</li>';
+        let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
+        
+        if (!favorites.length && !history.length) {
+          panel.querySelector('.recommend-panel-content').innerHTML = '<li class="recommend-empty">お気に入りコースと履歴がありません</li>';
           return;
         }
-        
-
         
         // カテゴリリストを取得
         let categories = [];
@@ -1241,15 +1241,17 @@ function addMenuEventListeners() {
             categories = await window.getCategoriesData();
           }
         } catch (e) {}
-        // シャッフル
-        favorites = favorites.slice();
-        for (let i = favorites.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
-        }
+        
         let recommendList = [];
-        for (const categoryId of favorites) {
-          if (recommendList.length >= 12) break;
+        let usedCategoryIds = new Set(); // 重複チェック用
+        
+        // 1. 履歴の上位3つを優先的に追加
+        for (let i = 0; i < Math.min(3, history.length); i++) {
+          const historyItem = history[i];
+          const categoryId = historyItem.categoryId;
+          
+          if (usedCategoryIds.has(categoryId)) continue; // 重複チェック
+          
           // コース内動画リスト取得
           const cacheKey = `cachedVodContents_${categoryId}`;
           let videos = [];
@@ -1259,21 +1261,66 @@ function addMenuEventListeners() {
             }
           } catch (e) {}
           if (!Array.isArray(videos) || !videos.length) continue;
+          
           // 進捗95%未満の最初の動画を探す（並列取得）
           const contentIds = videos.map(v => v.contentId);
           const statusList = await window.getMultipleVideoViewingStatus(contentIds);
           let found = null;
           let foundStatus = null;
-          for (let i = 0; i < videos.length; i++) {
-            const status = statusList[i];
+          for (let j = 0; j < videos.length; j++) {
+            const status = statusList[j];
             if (status.currentTimeRate < 0.95) {
-              found = videos[i];
+              found = videos[j];
               foundStatus = status;
               break;
             }
           }
           if (found) {
-            recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0 });
+            recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0, source: 'history' });
+            usedCategoryIds.add(categoryId);
+          }
+        }
+        
+        // 2. お気に入りから9個を追加（重複を避ける）
+        if (favorites.length) {
+          // シャッフル
+          favorites = favorites.slice();
+          for (let i = favorites.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
+          }
+          
+          for (const categoryId of favorites) {
+            if (recommendList.length >= 12) break; // 合計12個まで
+            if (usedCategoryIds.has(categoryId)) continue; // 重複チェック
+            
+            // コース内動画リスト取得
+            const cacheKey = `cachedVodContents_${categoryId}`;
+            let videos = [];
+            try {
+              if (typeof window.fetchWithCache === 'function') {
+                videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
+              }
+            } catch (e) {}
+            if (!Array.isArray(videos) || !videos.length) continue;
+            
+            // 進捗95%未満の最初の動画を探す（並列取得）
+            const contentIds = videos.map(v => v.contentId);
+            const statusList = await window.getMultipleVideoViewingStatus(contentIds);
+            let found = null;
+            let foundStatus = null;
+            for (let i = 0; i < videos.length; i++) {
+              const status = statusList[i];
+              if (status.currentTimeRate < 0.95) {
+                found = videos[i];
+                foundStatus = status;
+                break;
+              }
+            }
+            if (found) {
+              recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0, source: 'favorites' });
+              usedCategoryIds.add(categoryId);
+            }
           }
         }
         let isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -1307,6 +1354,10 @@ function addMenuEventListeners() {
             courseName = courseName.replace(/^[0-9]+\s*/, '');
             courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
           }
+          
+          // ソース表示（履歴 or お気に入り）
+          const sourceLabel = item.source === 'history' ? '履歴' : 'お気に入り';
+          const sourceColor = item.source === 'history' ? (isDark ? '#60a5fa' : '#3b82f6') : (isDark ? '#fbbf24' : '#f59e0b');
           // 進捗バー
           let progress = item.progress || 0;
           const progressPercent = Math.floor(progress * 100);
@@ -1322,11 +1373,14 @@ function addMenuEventListeners() {
           return `
             <a href="https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${item.contentId}&ct=V&ca=${item.categoryId}" class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);transition:all 0.2s ease;cursor:pointer;text-decoration:none;margin-bottom:8px;padding:0;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(30,40,60,0.15)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(30,40,60,0.10)'">
               <div style=\"display:flex;align-items:flex-start;gap:16px;padding:16px 20px;\">
-                <div style=\"display:block;width:120px;height:68px;flex-shrink:0;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);\">
-                  ${thumb ? `<img src=\"${thumb}\" alt=\"サムネイル\" style=\"width:100%;height:100%;object-fit:cover;\" onerror=\"this.style.display='none';this.nextElementSibling.style.display='inline-block';\">` : ''}
-                  <span style=\"display:${thumb ? 'none' : 'inline-block'};width:100%;height:100%;background:${thumbBg};background-image:url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 96 54\" fill=\"%23ccc\"><rect width=\"96\" height=\"54\" fill=\"%23f0f0f0\"/><text x=\"48\" y=\"27\" text-anchor=\"middle\" dy=\".3em\" font-family=\"Arial\" font-size=\"12\" fill=\"%23999\">動画</text></svg>');background-size:cover;background-position:center;\"></span>
+                <div style=\"display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;\">
+                  <div style=\"display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);\">
+                    ${thumb ? `<img src=\"${thumb}\" alt=\"サムネイル\" style=\"width:100%;height:100%;object-fit:cover;\" onerror=\"this.style.display='none';this.nextElementSibling.style.display='inline-block';\">` : ''}
+                    <span style=\"display:${thumb ? 'none' : 'inline-block'};width:100%;height:100%;background:${thumbBg};background-image:url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 96 54\" fill=\"%23ccc\"><rect width=\"96\" height=\"54\" fill=\"%23f0f0f0\"/><text x=\"48\" y=\"27\" text-anchor=\"middle\" dy=\".3em\" font-family=\"Arial\" font-size=\"12\" fill=\"%23999\">動画</text></svg>');background-size:cover;background-position:center;\"></span>
+                  </div>
+                  <div style=\"font-size:10px;color:${sourceColor};background:${sourceColor}20;padding:2px 6px;border-radius:4px;text-align:center;font-weight:500;width:fit-content;margin:0 auto;\">${sourceLabel}</div>
                 </div>
-                <div style=\"flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;\">
+                                  <div style=\"flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;\">
                   <div style=\"display:flex;align-items:baseline;gap:8px;\">
                     <div style=\"font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;\">${item.title}</div>
                     <div style=\"font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;\">${courseName}</div>
