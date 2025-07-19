@@ -1032,10 +1032,9 @@ function addMenuEventListeners() {
             }
           } catch (e) {}
           if (!Array.isArray(videos) || !videos.length) continue;
-          // 進捗95%未満の最初の動画を探す（キャッシュ付きAPIで並列取得）
-          const statusList = await Promise.all(
-            videos.map(v => window.getVideoViewingStatus ? window.getVideoViewingStatus(v.contentId) : Promise.resolve({currentTimeRate:0,isFinished:false}))
-          );
+          // 進捗95%未満の最初の動画を探す（並列取得）
+          const contentIds = videos.map(v => v.contentId);
+          const statusList = await window.getMultipleVideoViewingStatus(contentIds);
           console.log('categoryId:', categoryId, 'videos:', videos, 'statusList:', statusList);
           statusList.forEach((status, idx) => {
             console.log(`  video[${idx}] contentId: ${videos[idx].contentId}, title: ${videos[idx].title}, currentTimeRate: ${status.currentTimeRate}`);

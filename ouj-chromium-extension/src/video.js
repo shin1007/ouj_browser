@@ -365,11 +365,9 @@ async function getAvailableVideosFromFavorites(favorites) {
         }
         
         try {
-          // 動画の再生状況を取得（キャッシュなしでリアルタイム取得）
-          const viewingReq = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${video.contentId}/viewinglog/latest`);
-          const viewingData = await viewingReq.json();
-          
-          const currentTimeRate = viewingData.currentTimeRate || 0;
+          // 動画の再生状況を取得（共通関数を使用）
+          const viewingStatus = await window.getVideoViewingStatus(video.contentId);
+          const currentTimeRate = viewingStatus.currentTimeRate;
           console.log(`getAvailableVideosFromFavorites: 動画 ${video.contentId} (${video.title}) の再生進捗: ${(currentTimeRate * 100).toFixed(1)}%`);
           
           // 再生が完了していない場合（currentTimeRate < 0.95）

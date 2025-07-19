@@ -11,7 +11,7 @@ const VIEWING_STATUS_CACHE_KEY = 'viewingStatusCache';
  * @returns {Promise<{ currentTimeRate: number, isFinished: boolean, raw: any }>} 
  */
 async function getVideoViewingStatus(contentId, options = {}) {
-  const cacheSeconds = options.cacheSeconds ?? 30; // 30秒
+  const cacheSeconds = options.cacheSeconds ?? 10; // 10秒（より短いキャッシュ時間）
   const cacheKey = VIEWING_STATUS_CACHE_KEY;
   const now = Date.now();
 
@@ -53,5 +53,26 @@ async function getVideoViewingStatus(contentId, options = {}) {
   }
 }
 
+/**
+ * 複数の動画IDの再生状況を並列で取得（キャッシュ付き）
+ * @param {Array<string|number>} contentIds
+ * @param {Object} options
+ * @returns {Promise<Array<{ contentId: string|number, currentTimeRate: number, isFinished: boolean, raw: any }>>}
+ */
+async function getMultipleVideoViewingStatus(contentIds, options = {}) {
+  const promises = contentIds.map(async (contentId) => {
+    try {
+      const status = await getVideoViewingStatus(contentId, options);
+      return { contentId, ...status };
+    } catch (e) {
+      console.error(`getMultipleVideoViewingStatus: 動画 ${contentId} の取得に失敗:`, e);
+      return { contentId, currentTimeRate: 0, isFinished: false, raw: null };
+    }
+  });
+  
+  return await Promise.all(promises);
+}
+
 // windowオブジェクトに公開
-window.getVideoViewingStatus = getVideoViewingStatus; 
+window.getVideoViewingStatus = getVideoViewingStatus;
+window.getMultipleVideoViewingStatus = getMultipleVideoViewingStatus; 
