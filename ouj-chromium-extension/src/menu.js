@@ -1167,7 +1167,25 @@ function addMenuEventListeners() {
             </svg>
           </button>
         </div>
-        <div class="recommend-panel-content" style="padding: 16px;">
+        <div class="recommend-panel-content" style="overflow-y: auto; max-height: calc(100% - 60px); scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.3) transparent;">
+          <style>
+            .recommend-panel-content::-webkit-scrollbar {
+              width: 8px;
+            }
+            .recommend-panel-content::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            .recommend-panel-content::-webkit-scrollbar-thumb {
+              background: rgba(255, 255, 255, 0.3);
+              border-radius: 4px;
+            }
+            .recommend-panel-content::-webkit-scrollbar-thumb:hover {
+              background: rgba(255, 255, 255, 0.5);
+            }
+            .recommend-panel-content::-webkit-scrollbar-button {
+              display: none;
+            }
+          </style>
           <div class="recommend-loading">おすすめ動画を取得中...</div>
         </div>
       `;
@@ -1261,7 +1279,26 @@ function addMenuEventListeners() {
         let isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         let listHtml = recommendList.map(item => {
           // サムネイル画像
-          const thumb = item.thumbnailUrl || item.imageUrl || '';
+          let thumb = '';
+          console.log('おすすめ動画 - 動画データ:', item);
+          
+          // 1. まずcontentIdからサムネイルURLを生成（最優先）
+          if (item.contentId) {
+            thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail/large2`;
+            console.log('おすすめ動画 - contentIdから生成したサムネイルURL:', thumb);
+          }
+          
+          // 2. 生成したURLがない場合のみ、APIから取得したデータを使用
+          if (!thumb) {
+            thumb = item.thumbnailUrl || item.imageUrl || '';
+            console.log('おすすめ動画 - APIから取得したサムネイルURL:', thumb);
+          }
+          
+          // 3. それでもない場合の代替手段
+          if (!thumb && item.contentId) {
+            thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail`;
+            console.log('おすすめ動画 - 代替サムネイルURL:', thumb);
+          }
           // コース名（カテゴリ名）
           let courseName = '';
           if (Array.isArray(categories) && item.categoryId) {
@@ -1283,10 +1320,11 @@ function addMenuEventListeners() {
           const borderColor = isDark ? '#2d3748' : '#e5e7eb';
           // カード全体を<a>にする
           return `
-            <a href="https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${item.contentId}&ct=V&ca=${item.categoryId}" class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);transition:background 0.2s;cursor:pointer;text-decoration:none;margin-bottom:14px;padding:0;">
+            <a href="https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${item.contentId}&ct=V&ca=${item.categoryId}" class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);transition:all 0.2s ease;cursor:pointer;text-decoration:none;margin-bottom:8px;padding:0;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(30,40,60,0.15)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(30,40,60,0.10)'">
               <div style=\"display:flex;align-items:flex-start;gap:16px;padding:16px 20px;\">
-                <div style=\"display:block;width:96px;height:54px;flex-shrink:0;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);\">
-                  ${thumb ? `<img src=\"${thumb}\" alt=\"サムネイル\" style=\"width:100%;height:100%;object-fit:cover;\">` : `<span style=\\"display:inline-block;width:100%;height:100%;background:${thumbBg};\\"></span>`}
+                <div style=\"display:block;width:120px;height:68px;flex-shrink:0;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);\">
+                  ${thumb ? `<img src=\"${thumb}\" alt=\"サムネイル\" style=\"width:100%;height:100%;object-fit:cover;\" onerror=\"this.style.display='none';this.nextElementSibling.style.display='inline-block';\">` : ''}
+                  <span style=\"display:${thumb ? 'none' : 'inline-block'};width:100%;height:100%;background:${thumbBg};background-image:url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 96 54\" fill=\"%23ccc\"><rect width=\"96\" height=\"54\" fill=\"%23f0f0f0\"/><text x=\"48\" y=\"27\" text-anchor=\"middle\" dy=\".3em\" font-family=\"Arial\" font-size=\"12\" fill=\"%23999\">動画</text></svg>');background-size:cover;background-position:center;\"></span>
                 </div>
                 <div style=\"flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;\">
                   <div style=\"display:flex;align-items:baseline;gap:8px;\">
@@ -1302,8 +1340,8 @@ function addMenuEventListeners() {
             </a>
           `;
         }).join('');
-        if (!listHtml) listHtml = `<div class=\"recommend-empty\" style=\"color:${isDark ? '#fff' : '#222'}\">おすすめ動画はありません（全て再生済み）</div>`;
-        panel.querySelector('.recommend-panel-content').innerHTML = `<div class=\"recommend-list\" style=\"padding:8px 0;\">${listHtml}</div>`;
+        if (!listHtml) listHtml = `<div class=\"recommend-empty\" style=\"color:${isDark ? '#fff' : '#222'};padding:16px;text-align:center;\">おすすめ動画はありません（全て再生済み）</div>`;
+        panel.querySelector('.recommend-panel-content').innerHTML = `<div class=\"recommend-list\" style=\"padding:16px;\">${listHtml}</div>`;
 
         // 追加: リンククリックでパネルを閉じる
         const recommendLinks = panel.querySelectorAll('.recommend-card');
