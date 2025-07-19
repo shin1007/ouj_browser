@@ -6,7 +6,7 @@ async function addFavoriteButtonToCategoryTop() {
     // 挿入位置の存在確認
     const mainVodList = document.querySelector('#main > main-vod-list > ion-content > div.scroll-content > div');
     if (!mainVodList) {
-        console.log("addFavoriteButtonToCategoryTop: 挿入位置が見つかりませんでした。100ms後に再試行します。");
+    
         setTimeout(addFavoriteButtonToCategoryTop, 100);
         return;
     }

@@ -62,18 +62,14 @@ function createMenuHTML() {
 function waitForLogoAndInsertMenu() {
   // 共通関数の存在をチェック
   if (typeof window.waitForElement !== 'function') {
-    console.warn('waitForLogoAndInsertMenu: waitForElement関数が見つかりません。100ms後に再試行します。');
     setTimeout(waitForLogoAndInsertMenu, 100);
     return;
   }
   
   // ロゴの存在確認
   window.waitForElement('img.logo-img[src="./assets/images/icon_logo.png"]', (logo) => {
-    console.log("waitForLogoAndInsertMenu: ロゴが見つかりました。メニューを挿入します。");
-    
     // 既に挿入されている場合は何もしない
     if (document.getElementById('menu-title')) {
-      console.log("waitForLogoAndInsertMenu: メニューがすでに存在します。");
       return;
     }
     
@@ -88,12 +84,9 @@ function waitForLogoAndInsertMenu() {
     if (settingList) {
       // 設定リストの前に挿入
       settingList.parentNode.insertBefore(menuList, settingList);
-      console.log("waitForLogoAndInsertMenu: メニューを正常に挿入しました");
       
       // イベントリスナーを追加
       addMenuEventListeners();
-    } else {
-      console.log("waitForLogoAndInsertMenu: 挿入位置が見つかりませんでした");
     }
   });
 }
@@ -106,7 +99,6 @@ function addMenuEventListeners() {
   
   if (historyItem) {
     historyItem.addEventListener('click', async () => {
-      console.log("addMenuEventListeners: 履歴メニューがクリックされました");
       // 既存パネルがあれば削除
       let panel = document.getElementById('history-list-panel');
       if (panel) {
@@ -167,8 +159,6 @@ function addMenuEventListeners() {
       } catch (e) {
         history = [];
       }
-      
-      console.log("addMenuEventListeners: 履歴データ:", history);
 
       // 検索ボックスを追加
       let searchValue = '';
@@ -329,7 +319,6 @@ function addMenuEventListeners() {
             event.preventDefault();
             const categoryId = item.getAttribute('data-category-id');
             if (categoryId) {
-              console.log(`addMenuEventListeners: 履歴項目がクリックされました。カテゴリID: ${categoryId}`);
               // パネルを閉じてからページ遷移
               closePanel();
               // 少し遅延させてからページ遷移（アニメーション完了を待つ）
@@ -381,7 +370,6 @@ function addMenuEventListeners() {
                   // 履歴から削除
                   history.splice(index, 1);
                   window.saveSetting('history', history);
-                  console.log(`addMenuEventListeners: 履歴を削除しました。インデックス: ${index}`);
                   // リストを再描画
                   renderHistoryList(searchValue, 'date');
                 }
@@ -391,7 +379,6 @@ function addMenuEventListeners() {
                   // 履歴から削除
                   history.splice(index, 1);
                   window.saveSetting('history', history);
-                  console.log(`addMenuEventListeners: 履歴を削除しました。インデックス: ${index}`);
                   // リストを再描画
                   renderHistoryList(searchValue, 'date');
                 }
@@ -414,7 +401,6 @@ function addMenuEventListeners() {
           if (confirmed) {
             history = [];
             window.saveSetting('history', history);
-            console.log('addMenuEventListeners: 履歴を全削除しました');
             renderHistoryList();
           }
         } else {
@@ -422,7 +408,6 @@ function addMenuEventListeners() {
           if (confirm(`履歴を全て削除しますか？（${history.length}件）`)) {
             history = [];
             window.saveSetting('history', history);
-            console.log('addMenuEventListeners: 履歴を全削除しました');
             renderHistoryList();
           }
         }
@@ -521,7 +506,6 @@ function addMenuEventListeners() {
   
   if (favoritesItem) {
     favoritesItem.addEventListener('click', async () => {
-      console.log("addMenuEventListeners: お気に入りメニューがクリックされました");
       // 既存パネルがあれば削除
       let panel = document.getElementById('favorite-list-panel');
       if (panel) {
@@ -602,11 +586,9 @@ function addMenuEventListeners() {
       
       if (cachedData && cachedData.data) {
         categories = cachedData.data;
-        console.log("addMenuEventListeners: お気に入り表示: キャッシュされたカテゴリデータを使用しました");
       } else {
         // キャッシュがない場合のみAPIから取得
         categories = await window.getCategoriesData();
-        console.log("addMenuEventListeners: お気に入り表示: APIからカテゴリデータを取得しました");
       }
       
       if (!Array.isArray(categories)) categories = [];
@@ -618,9 +600,7 @@ function addMenuEventListeners() {
         idToName[cat.categoryId.toString()] = cat.name;
       });
       
-      console.log("addMenuEventListeners: カテゴリデータ:", categories);
-      console.log("addMenuEventListeners: お気に入りID:", favorites);
-      console.log("addMenuEventListeners: ID→名前辞書:", idToName);
+
 
       // 検索ボックスを追加
       let searchValue = '';
@@ -814,7 +794,6 @@ function addMenuEventListeners() {
             event.preventDefault();
             const categoryId = item.getAttribute('data-category-id');
             if (categoryId) {
-              console.log(`addMenuEventListeners: お気に入り項目がクリックされました。カテゴリID: ${categoryId}`);
               // パネルを閉じてからページ遷移
               closePanel();
               // 少し遅延させてからページ遷移（アニメーション完了を待つ）
@@ -896,7 +875,6 @@ function addMenuEventListeners() {
 
   if (recommendItem) {
     recommendItem.addEventListener('click', async () => {
-      console.log("addMenuEventListeners: おすすめ動画メニューがクリックされました");
       // 既存パネルがあれば削除
       let panel = document.getElementById('recommend-list-panel');
       if (panel) {
@@ -1035,10 +1013,6 @@ function addMenuEventListeners() {
           // 進捗95%未満の最初の動画を探す（並列取得）
           const contentIds = videos.map(v => v.contentId);
           const statusList = await window.getMultipleVideoViewingStatus(contentIds);
-          console.log('categoryId:', categoryId, 'videos:', videos, 'statusList:', statusList);
-          statusList.forEach((status, idx) => {
-            console.log(`  video[${idx}] contentId: ${videos[idx].contentId}, title: ${videos[idx].title}, currentTimeRate: ${status.currentTimeRate}`);
-          });
           let found = null;
           let foundStatus = null;
           for (let i = 0; i < videos.length; i++) {
@@ -1123,7 +1097,6 @@ function addHistoryEntry(categoryId, title = '') {
   const now = Date.now();
   
   if (now - lastHistoryTime < 5000) {
-    console.log(`addHistoryEntry: 最近の履歴追加のためスキップします。カテゴリID: ${categoryId}`);
     return;
   }
   
@@ -1146,7 +1119,6 @@ function addHistoryEntry(categoryId, title = '') {
   if (history.length > 20) history = history.slice(0, 20);
   window.saveSetting('history', history);
   window.saveSetting(lastHistoryKey, now);
-  console.log('addHistoryEntry: 履歴を追加しました', entry, history);
 }
 
 // グローバル関数として公開

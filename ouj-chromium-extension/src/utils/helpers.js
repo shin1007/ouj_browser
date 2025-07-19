@@ -56,7 +56,7 @@ const isSameDate = (dateString1, dateString2) => {
  * @returns {Promise<Object|null>} 取得またはキャッシュされたJSONデータ、またはnull
  */
 const fetchWithCache = async (url, cacheKey) => {
-    console.log(`fetchWithCache: ${cacheKey} のキャッシュ確認を開始...`);
+  
 
     // 1. 最初にキャッシュされたデータを確認
     const result = await chrome.storage.local.get([cacheKey]);
@@ -64,13 +64,13 @@ const fetchWithCache = async (url, cacheKey) => {
 
     if (cachedData && cachedData.timestamp) {
         if (isSameDate(cachedData.timestamp, new Date().toISOString())) {
-            console.log(`fetchWithCache: ${cacheKey} の当日キャッシュを利用します。`, cachedData.data);
+    
             return cachedData.data;
         } else {
             console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものではありません。ネットワークからデータ取得を試行中...`);
         }
     } else {
-        console.log(`fetchWithCache: ${cacheKey} のキャッシュがないため、ネットワークからデータ取得を試行中...`);
+  
     }
 
     try {
@@ -89,7 +89,7 @@ const fetchWithCache = async (url, cacheKey) => {
             timestamp: new Date().toISOString()
         };
         await chrome.storage.local.set({ [cacheKey]: cacheData });
-        console.log(`fetchWithCache: ${cacheKey} の新しいデータを取得し、キャッシュしました。`, data);
+  
         return data;
 
     } catch (error) {
@@ -131,7 +131,7 @@ const waitForElement = (selector, callback, interval = 100, maxAttempts = null) 
             return;
         }
         
-        console.log(`waitForElement: 要素が見つかりません。${interval}ms後に再試行します: ${selector}`);
+  
         setTimeout(checkElement, interval);
     };
     

@@ -88,7 +88,6 @@ function addVideoSettingsPanel() {
   
   // 対象要素を待って取得する関数
   if (typeof window.waitForElement !== 'function') {
-    console.warn('addVideoSettingsPanel: waitForElement関数が見つかりません。100ms後に再試行します。');
     setTimeout(addVideoSettingsPanel, 100);
     return;
   }
@@ -110,7 +109,6 @@ function addVideoSettingsPanel() {
     
     // 共通関数の存在をチェック
     if (typeof window.getSetting !== 'function' || typeof window.getBooleanSetting !== 'function') {
-      console.warn('addVideoSettingsPanel: 設定管理関数が見つかりません。100ms後に再試行します。');
       setTimeout(addVideoSettingsPanel, 100);
       return;
     }
@@ -298,7 +296,7 @@ async function fetchNextVideoFromFavorites() {
     
     // 各お気に入りコースの未再生動画を取得
     const availableVideos = await getAvailableVideosFromFavorites(favorites);
-    console.log('fetchNextVideoFromFavorites: 利用可能な動画リスト:', availableVideos);
+    
     
     if (availableVideos.length === 0) {
       console.log('fetchNextVideoFromFavorites: 再生可能な動画がありません（すべて再生済み）');
@@ -310,9 +308,7 @@ async function fetchNextVideoFromFavorites() {
     const randomVideo = availableVideos[Math.floor(Math.random() * availableVideos.length)];
     nextVideoId = randomVideo.contentId;
     window.nextVideoCategoryId = randomVideo.categoryId;
-    console.log('fetchNextVideoFromFavorites: お気に入りからランダム選択された動画ID:', nextVideoId);
-    console.log('fetchNextVideoFromFavorites: 動画タイトル:', randomVideo.title);
-    console.log('fetchNextVideoFromFavorites: コースID:', randomVideo.categoryId);
+    
     
   } catch (error) {
     console.error('fetchNextVideoFromFavorites: お気に入りからの動画取得に失敗しました:', error);
@@ -332,18 +328,14 @@ async function getAvailableVideosFromFavorites(favorites) {
   const availableVideos = [];
   const currentVideoId = getCurrentVideoId();
   
-  console.log(`getAvailableVideosFromFavorites: 現在の動画ID: ${currentVideoId}`);
-  
   for (const favoriteId of favorites) {
     try {
-      console.log(`getAvailableVideosFromFavorites: お気に入りコース ${favoriteId} の動画をチェック中...`);
       
       // コースの動画リストを取得
       const cacheKey = `cachedVodContents_${favoriteId}`;
       const videos = await fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${favoriteId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
       
       if (!videos || videos.length === 0) {
-        console.log(`getAvailableVideosFromFavorites: コース ${favoriteId} に動画がありません`);
         continue;
       }
       
@@ -354,13 +346,11 @@ async function getAvailableVideosFromFavorites(favorites) {
       for (const video of videos) {
         // 再生状況取得に失敗した場合は以降の動画をスキップ
         if (viewingLogFailed) {
-          console.log(`getAvailableVideosFromFavorites: コース ${favoriteId} で再生状況取得に失敗したため、以降の動画をスキップします`);
           break;
         }
         
         // 現在の動画の場合は再生完了として扱う
         if (video.contentId == currentVideoId) {
-          console.log(`getAvailableVideosFromFavorites: 現在の動画 ${video.contentId} (${video.title}) は再生完了として扱います`);
           continue;
         }
         
@@ -368,7 +358,6 @@ async function getAvailableVideosFromFavorites(favorites) {
           // 動画の再生状況を取得（共通関数を使用）
           const viewingStatus = await window.getVideoViewingStatus(video.contentId);
           const currentTimeRate = viewingStatus.currentTimeRate;
-          console.log(`getAvailableVideosFromFavorites: 動画 ${video.contentId} (${video.title}) の再生進捗: ${(currentTimeRate * 100).toFixed(1)}%`);
           
           // 再生が完了していない場合（currentTimeRate < 0.95）
           if (currentTimeRate < 0.95) {
@@ -384,7 +373,6 @@ async function getAvailableVideosFromFavorites(favorites) {
           }
           
         } catch (viewingError) {
-          console.log(`getAvailableVideosFromFavorites: 動画 ${video.contentId} の再生状況取得に失敗:`, viewingError);
           viewingLogFailed = true; // 失敗フラグを設定
           
           // 最初の動画で失敗した場合は未再生として扱う
@@ -402,13 +390,11 @@ async function getAvailableVideosFromFavorites(favorites) {
       // 未完了動画が見つかった場合はリストに追加
       if (firstUnfinishedVideo) {
         availableVideos.push(firstUnfinishedVideo);
-        console.log(`getAvailableVideosFromFavorites: コース ${favoriteId} の未完了動画を追加:`, firstUnfinishedVideo.title);
-      } else {
-        console.log(`getAvailableVideosFromFavorites: コース ${favoriteId} はすべて再生済みです`);
+
       }
       
     } catch (error) {
-      console.error(`getAvailableVideosFromFavorites: コース ${favoriteId} の処理に失敗:`, error);
+      // エラーは静かに処理
     }
   }
   return availableVideos;
@@ -536,13 +522,13 @@ function isEndingMusic() {
 
 // エンディング検出の監視を開始する関数
 function startEndingDetection() {
-  console.log('startEndingDetection: エンディング検出監視を開始します');
+
   
   let endingDetected = false;
   const interval = setInterval(() => {
     if (!endingDetected && isEndingMusic()) {
       endingDetected = true;
-      console.log('startEndingDetection: エンディング音楽を検出しました！');
+      
       
       // エンディング検出時の処理をここに追加
       // 例: 自動で次の動画に進む、スキップボタンを表示するなど
@@ -559,7 +545,7 @@ function startEndingDetection() {
 
 // エンディング検出時の処理
 function handleEndingDetected() {
-  console.log('handleEndingDetected: エンディング処理を実行します');
+  
   
   // 次の動画IDが設定されている場合のみスキップボタンを表示
   if (nextVideoId) {
@@ -591,7 +577,6 @@ function startAutoPlay() {
   
   // 動画要素を待って自動再生を実行する関数
   if (typeof window.waitForElement !== 'function') {
-    console.warn('startAutoPlay: waitForElement関数が見つかりません。100ms後に再試行します。');
     setTimeout(startAutoPlay, 100);
     return;
   }
@@ -646,11 +631,11 @@ function showAutoPlayFailedNotification() {
 
 // 動画終了監視機能
 function startVideoEndMonitoring() {
-  console.log('startVideoEndMonitoring: 動画終了監視を開始します');
+
   
   // 自動次の動画遷移設定をチェック（デフォルトは有効）
   const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
-  console.log('startVideoEndMonitoring: 自動次の動画遷移設定:', autoNextVideoEnabled ? '有効' : '無効');
+  
   
   if (!autoNextVideoEnabled) {
     console.log('startVideoEndMonitoring: 自動次の動画遷移が無効化されているため、スキップします');
@@ -659,13 +644,12 @@ function startVideoEndMonitoring() {
   
   // 動画要素を待って終了監視を開始する関数
   if (typeof window.waitForElement !== 'function') {
-    console.warn('startVideoEndMonitoring: waitForElement関数が見つかりません。100ms後に再試行します。');
     setTimeout(startVideoEndMonitoring, 100);
     return;
   }
   
   window.waitForElement('video', (video) => {
-    console.log('startVideoEndMonitoring: 動画要素が見つかりました。終了監視を開始します');
+    
     
     // 動画終了イベントリスナーを追加
     const handleVideoEnded = () => {
@@ -691,7 +675,7 @@ function startVideoEndMonitoring() {
     video.removeEventListener('ended', handleVideoEnded);
     video.addEventListener('ended', handleVideoEnded);
     
-    console.log('startVideoEndMonitoring: 動画終了イベントリスナーを追加しました');
+    
   });
 }
 
@@ -811,7 +795,6 @@ function applySavedPlaybackSpeed() {
     
     // 動画要素を待って再生速度を適用
     if (typeof window.waitForElement !== 'function') {
-      console.warn('applySavedPlaybackSpeed: waitForElement関数が見つかりません。100ms後に再試行します。');
       setTimeout(applySavedPlaybackSpeed, 100);
       return;
     }
@@ -899,7 +882,6 @@ function startVolumeNormalization() {
   
   // 動画要素を待って音量監視を開始する関数
   if (typeof window.waitForElement !== 'function') {
-    console.warn('startVolumeNormalization: waitForElement関数が見つかりません。100ms後に再試行します。');
     setTimeout(startVolumeNormalization, 100);
     return;
   }

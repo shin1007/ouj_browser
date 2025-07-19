@@ -1,11 +1,10 @@
 // ログインページのURLをチェック
 function waitForPasswordAndLogin() {
-    // 共通関数の存在をチェック
-    if (typeof window.waitForElement !== 'function') {
-        console.warn('waitForPasswordAndLogin: waitForElement関数が見つかりません。100ms後に再試行します。');
-        setTimeout(waitForPasswordAndLogin, 100);
-        return;
-    }
+      // 共通関数の存在をチェック
+  if (typeof window.waitForElement !== 'function') {
+    setTimeout(waitForPasswordAndLogin, 100);
+    return;
+  }
     
     // ログイン要素を待つ
     window.waitForElement('#username', (usernameField) => {

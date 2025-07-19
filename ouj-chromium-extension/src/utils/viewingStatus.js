@@ -34,7 +34,6 @@ async function getVideoViewingStatus(contentId, options = {}) {
     const res = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`);
     if (!res.ok) throw new Error('APIエラー');
     const data = await res.json();
-    console.log('API viewinglog response:', data); // 追加
     const currentTimeRate = data.currentTimeRate || 0;
     const isFinished = currentTimeRate >= 0.95;
     const resultData = { currentTimeRate, isFinished, raw: data };
