@@ -1495,9 +1495,6 @@ window.checkIfRadioProgram = checkIfRadioProgram;
 window.showRadioProgramUI = showRadioProgramUI;
 window.getVideoData = getVideoData;
 
-// TODO: ラジオ番組のAI自動字幕生成機能を実装すること。
-//   - AI字幕生成時は、プロンプトに「動画の概要」「放送大学の講義であること」「コース名」などの背景情報を付加する必要があるかもしれない点に注意。
-
 // --- 代わりに「Enter / Spaceキーで再生できる」旨を表示するUIを追加 ---
 function showPlayHint() {
   if (document.getElementById('play-hint-notification')) return;
