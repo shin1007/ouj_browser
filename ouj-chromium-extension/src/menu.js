@@ -151,147 +151,158 @@ function waitForLogoAndInsertMenu() {
     console.log('waitForLogoAndInsertMenu: 最終的な挿入位置要素:', settingList);
     console.log('waitForLogoAndInsertMenu: 挿入位置の親要素:', settingList?.parentNode);
     
-    if (settingList) {
-      
-      // 設定リストの前に挿入
-      settingList.parentNode.insertBefore(menuList, settingList);
-      console.log('waitForLogoAndInsertMenu: メニュー挿入完了。挿入された要素:', menuList);
-      
-      // 挿入直後に監視を開始（無限ループ対策付き）
-      let reinsertionCount = 0;
-      const maxReinsertions = 5;
-      
-      const startMonitoring = () => {
-        const observer = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            mutation.removedNodes.forEach((node) => {
-              if (node.nodeType === Node.ELEMENT_NODE && 
-                  (node.getAttribute?.('aria-label') === '拡張機能' || 
-                   node.querySelector?.('ion-list[aria-label="拡張機能"]'))) {
-                console.log('waitForLogoAndInsertMenu: メニューが削除されました。再挿入を試行します');
-                
-                if (reinsertionCount < maxReinsertions) {
-                  reinsertionCount++;
-                  console.log(`waitForLogoAndInsertMenu: 再挿入試行 ${reinsertionCount}/${maxReinsertions}`);
-                  
-                  // 少し遅延してから再挿入
-                  setTimeout(() => {
-                                      // 重複挿入防止チェック
-                  if (document.querySelector('ion-list[aria-label="拡張機能"]')) {
-                    console.log('waitForLogoAndInsertMenu: 再挿入時に既にメニューが存在します。スキップします');
-                    return;
-                  }
-                    
-                    const currentSettingList = document.querySelector('#menu ion-list:nth-child(3)') || 
-                                              document.querySelector('#menu ion-list:last-child');
-                    if (currentSettingList && !document.querySelector('ion-list[aria-label="拡張機能"]')) {
-                      const newMenuContainer = document.createElement('div');
-                      newMenuContainer.innerHTML = createMenuHTML();
-                      const newMenuList = newMenuContainer.firstElementChild;
-                      currentSettingList.parentNode.insertBefore(newMenuList, currentSettingList);
-                      console.log('waitForLogoAndInsertMenu: メニューを再挿入しました');
-                      addMenuEventListeners();
-                      
-                      // 再挿入後も監視を継続
-                      setTimeout(() => {
-                        const reinsertedMenu = document.querySelector('ion-list[aria-label="拡張機能"]');
-                        if (reinsertedMenu) {
-                          observer.observe(reinsertedMenu.parentNode, { childList: true, subtree: true });
-                        }
-                      }, 50);
-                    }
-                  }, 200); // より長い遅延
-                } else {
-                  console.log('waitForLogoAndInsertMenu: 最大再挿入回数に達しました。監視を停止します');
-                  observer.disconnect();
-                }
-              }
-            });
-          });
-        });
-        
-        // メニューの親要素を監視
-        const menuParent = settingList.parentNode;
-        if (menuParent) {
-          observer.observe(menuParent, { childList: true, subtree: true });
-          console.log('waitForLogoAndInsertMenu: メニュー削除監視を開始しました');
-        }
-        
-        return observer;
-      };
-      
-      // 監視を即座に開始
-      const observer = startMonitoring();
-      
-      // 挿入確認のための遅延チェック
-      setTimeout(() => {
-        console.log('waitForLogoAndInsertMenu: 遅延チェック開始');
-        
-        // 複数のセレクタでメニューの存在を確認
-        const insertedMenuByAriaLabel = document.querySelector('ion-list[aria-label="拡張機能"]');
-        const insertedMenuById = document.getElementById('ouj-extension-menu-title');
-        const allMenuLists = document.querySelectorAll('#menu ion-list');
-        
-        console.log('waitForLogoAndInsertMenu: 遅延チェック - aria-labelセレクタ結果:', insertedMenuByAriaLabel);
-        console.log('waitForLogoAndInsertMenu: 遅延チェック - IDセレクタ結果:', insertedMenuById);
-        console.log('waitForLogoAndInsertMenu: 遅延チェック - 全ion-list要素数:', allMenuLists.length);
-        
-        // 全ion-list要素の詳細をログ出力
-        allMenuLists.forEach((list, index) => {
-          console.log(`waitForLogoAndInsertMenu: 遅延チェック - ion-list[${index}]:`, list);
-          console.log(`waitForLogoAndInsertMenu: 遅延チェック - ion-list[${index}]のクラス:`, list.className);
-          console.log(`waitForLogoAndInsertMenu: 遅延チェック - ion-list[${index}]のaria-label:`, list.getAttribute('aria-label'));
-        });
-        
-        if (insertedMenuByAriaLabel || insertedMenuById) {
-          console.log('waitForLogoAndInsertMenu: メニューが正常に挿入されました');
-        } else {
-          console.error('waitForLogoAndInsertMenu: メニューの挿入に失敗しました');
-          console.log('waitForLogoAndInsertMenu: DOM構造を確認中...');
-          
-          // #menu要素の現在の構造を確認
-          const menuElement = document.getElementById('menu');
-          if (menuElement) {
-            console.log('waitForLogoAndInsertMenu: #menu要素の現在のHTML:', menuElement.innerHTML.substring(0, 1000) + '...');
-          }
-          
-          // 挿入に失敗した場合、再挿入を試行
-          if (reinsertionCount < maxReinsertions) {
+    if (!settingList) {
+      return;
+    }
+    
+    // 設定リストの前に挿入
+    settingList.parentNode.insertBefore(menuList, settingList);
+    console.log('waitForLogoAndInsertMenu: メニュー挿入完了。挿入された要素:', menuList);
+    
+    // 挿入直後に監視を開始（無限ループ対策付き）
+    let reinsertionCount = 0;
+    const maxReinsertions = 5;
+    
+    const startMonitoring = () => {
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          mutation.removedNodes.forEach((node) => {
+            if (node.nodeType !== Node.ELEMENT_NODE) {
+              return;
+            }
+            
+            const isRemovedMenu = node.getAttribute?.('aria-label') === '拡張機能' || 
+                                 node.querySelector?.('ion-list[aria-label="拡張機能"]');
+            if (!isRemovedMenu) {
+              return;
+            }
+            
+            console.log('waitForLogoAndInsertMenu: メニューが削除されました。再挿入を試行します');
+            
+            if (reinsertionCount >= maxReinsertions) {
+              console.log('waitForLogoAndInsertMenu: 最大再挿入回数に達しました。監視を停止します');
+              observer.disconnect();
+              return;
+            }
+            
             reinsertionCount++;
-            console.log(`waitForLogoAndInsertMenu: 初回挿入失敗。再挿入を試行 ${reinsertionCount}/${maxReinsertions}`);
+            console.log(`waitForLogoAndInsertMenu: 再挿入試行 ${reinsertionCount}/${maxReinsertions}`);
+            
+            // 少し遅延してから再挿入
             setTimeout(() => {
               // 重複挿入防止チェック
               if (document.querySelector('ion-list[aria-label="拡張機能"]')) {
-                console.log('waitForLogoAndInsertMenu: 初回失敗後の再挿入時に既にメニューが存在します。スキップします');
+                console.log('waitForLogoAndInsertMenu: 再挿入時に既にメニューが存在します。スキップします');
                 return;
               }
               
               const currentSettingList = document.querySelector('#menu ion-list:nth-child(3)') || 
                                         document.querySelector('#menu ion-list:last-child');
-              if (currentSettingList && !document.querySelector('ion-list[aria-label="拡張機能"]')) {
-                const newMenuContainer = document.createElement('div');
-                newMenuContainer.innerHTML = createMenuHTML();
-                const newMenuList = newMenuContainer.firstElementChild;
-                currentSettingList.parentNode.insertBefore(newMenuList, currentSettingList);
-                console.log('waitForLogoAndInsertMenu: 初回失敗後の再挿入を実行しました');
-                addMenuEventListeners();
+              if (!currentSettingList) {
+                return;
               }
-            }, 100);
-          }
+              
+              const newMenuContainer = document.createElement('div');
+              newMenuContainer.innerHTML = createMenuHTML();
+              const newMenuList = newMenuContainer.firstElementChild;
+              currentSettingList.parentNode.insertBefore(newMenuList, currentSettingList);
+              console.log('waitForLogoAndInsertMenu: メニューを再挿入しました');
+              addMenuEventListeners();
+              
+              // 再挿入後も監視を継続
+              setTimeout(() => {
+                const reinsertedMenu = document.querySelector('ion-list[aria-label="拡張機能"]');
+                if (reinsertedMenu) {
+                  observer.observe(reinsertedMenu.parentNode, { childList: true, subtree: true });
+                }
+              }, 50);
+            }, 200); // より長い遅延
+          });
+        });
+      });
+      
+      // メニューの親要素を監視
+      const menuParent = settingList.parentNode;
+      if (menuParent) {
+        observer.observe(menuParent, { childList: true, subtree: true });
+        console.log('waitForLogoAndInsertMenu: メニュー削除監視を開始しました');
+      }
+      
+      return observer;
+    };
+    
+    // 監視を即座に開始
+    const observer = startMonitoring();
+    
+    // 挿入確認のための遅延チェック
+    setTimeout(() => {
+      console.log('waitForLogoAndInsertMenu: 遅延チェック開始');
+      
+      // 複数のセレクタでメニューの存在を確認
+      const insertedMenuByAriaLabel = document.querySelector('ion-list[aria-label="拡張機能"]');
+      const insertedMenuById = document.getElementById('ouj-extension-menu-title');
+      const allMenuLists = document.querySelectorAll('#menu ion-list');
+      
+      console.log('waitForLogoAndInsertMenu: 遅延チェック - aria-labelセレクタ結果:', insertedMenuByAriaLabel);
+      console.log('waitForLogoAndInsertMenu: 遅延チェック - IDセレクタ結果:', insertedMenuById);
+      console.log('waitForLogoAndInsertMenu: 遅延チェック - 全ion-list要素数:', allMenuLists.length);
+      
+      // 全ion-list要素の詳細をログ出力
+      allMenuLists.forEach((list, index) => {
+        console.log(`waitForLogoAndInsertMenu: 遅延チェック - ion-list[${index}]:`, list);
+        console.log(`waitForLogoAndInsertMenu: 遅延チェック - ion-list[${index}]のクラス:`, list.className);
+        console.log(`waitForLogoAndInsertMenu: 遅延チェック - ion-list[${index}]のaria-label:`, list.getAttribute('aria-label'));
+      });
+      
+      if (insertedMenuByAriaLabel || insertedMenuById) {
+        console.log('waitForLogoAndInsertMenu: メニューが正常に挿入されました');
+        return;
+      }
+      
+      console.error('waitForLogoAndInsertMenu: メニューの挿入に失敗しました');
+      console.log('waitForLogoAndInsertMenu: DOM構造を確認中...');
+      
+      // #menu要素の現在の構造を確認
+      const menuElement = document.getElementById('menu');
+      if (menuElement) {
+        console.log('waitForLogoAndInsertMenu: #menu要素の現在のHTML:', menuElement.innerHTML.substring(0, 1000) + '...');
+      }
+      
+      // 挿入に失敗した場合、再挿入を試行
+      if (reinsertionCount >= maxReinsertions) {
+        return;
+      }
+      
+      reinsertionCount++;
+      console.log(`waitForLogoAndInsertMenu: 初回挿入失敗。再挿入を試行 ${reinsertionCount}/${maxReinsertions}`);
+      setTimeout(() => {
+        // 重複挿入防止チェック
+        if (document.querySelector('ion-list[aria-label="拡張機能"]')) {
+          console.log('waitForLogoAndInsertMenu: 初回失敗後の再挿入時に既にメニューが存在します。スキップします');
+          return;
         }
+        
+        const currentSettingList = document.querySelector('#menu ion-list:nth-child(3)') || 
+                                  document.querySelector('#menu ion-list:last-child');
+        if (!currentSettingList) {
+          return;
+        }
+        
+        const newMenuContainer = document.createElement('div');
+        newMenuContainer.innerHTML = createMenuHTML();
+        const newMenuList = newMenuContainer.firstElementChild;
+        currentSettingList.parentNode.insertBefore(newMenuList, currentSettingList);
+        console.log('waitForLogoAndInsertMenu: 初回失敗後の再挿入を実行しました');
+        addMenuEventListeners();
       }, 100);
-      
-      // イベントリスナーを追加
-      addMenuEventListeners();
-      console.log('waitForLogoAndInsertMenu: 完了');
-      
-      // 挿入処理完了フラグをリセット
-      window.oujMenuInsertionInProgress = false;
-    } else {
-      console.error('waitForLogoAndInsertMenu: 挿入位置が見つかりませんでした');
-      // 挿入処理失敗時もフラグをリセット
-      window.oujMenuInsertionInProgress = false;
-    }
+    }, 100);
+    
+    // イベントリスナーを追加
+    addMenuEventListeners();
+    console.log('waitForLogoAndInsertMenu: 完了');
+    
+    // 挿入処理完了フラグをリセット
+    window.oujMenuInsertionInProgress = false;
   });
 }
 
