@@ -777,12 +777,12 @@ function addMenuEventListeners() {
         backdropFilter: 'blur(10px)',
         border: '1px solid rgba(255, 255, 255, 0.2)'
       });
-      // リスト部分の高さも5件分に合わせて調整
+      // リスト部分の高さを調整（履歴パネルと統一）
       setTimeout(() => {
         const content = panel.querySelector('.favorite-panel-content');
         if (content) {
-          content.style.height = '320px'; // 1件約64px×5件分
-          content.style.overflowY = 'auto';
+          // CSSファイルで設定済みのため、JavaScriptでの設定は不要
+          // max-height: 60vh と overflow-y: auto がCSSで設定されている
         }
         // 空表示liにも高さ・中央寄せを適用
         const emptyLi = panel.querySelector('.favorite-empty');
@@ -1142,7 +1142,34 @@ function addMenuEventListeners() {
         backdropFilter: 'blur(10px)',
         border: '1px solid rgba(255, 255, 255, 0.2)'
       });
-      // ローディング表示
+      // ローディング表示（ダミーカード付き）
+      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const cardBg = isDark ? '#232c3a' : '#fff';
+      const cardText = isDark ? '#fff' : '#222';
+      const cardSubText = isDark ? '#b0b8c9' : '#666';
+      const barBg = isDark ? '#374151' : '#e5e7eb';
+      const thumbBg = isDark ? '#444' : '#eee';
+      
+      // ダミーカードのHTML
+      const dummyCards = Array.from({ length: 5 }, (_, i) => `
+        <div class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);margin-bottom:8px;padding:0;opacity:0.7;">
+          <div style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;">
+            <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;">
+              <div style="display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);animation:pulse 1.5s ease-in-out infinite;"></div>
+              <div style="font-size:10px;color:${isDark ? '#60a5fa' : '#3b82f6'};background:${isDark ? '#60a5fa20' : '#3b82f620'};padding:2px 6px;border-radius:4px;text-align:center;font-weight:500;width:fit-content;margin:0 auto;animation:pulse 1.5s ease-in-out infinite;">取得中</div>
+            </div>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;">
+              <div style="display:flex;align-items:baseline;gap:8px;">
+                <div style="font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:18px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
+                <div style="font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:14px;background:${barBg};border-radius:4px;width:80px;animation:pulse 1.5s ease-in-out infinite;"></div>
+              </div>
+              <div style="font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;height:36px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
+              <div style="height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);animation:pulse 1.5s ease-in-out infinite;"></div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      
       panel.innerHTML = `
         <div class="panel-header">
           <h3 id="recommend-panel-title" class="panel-title">
@@ -1155,35 +1182,17 @@ function addMenuEventListeners() {
             </svg>
           </button>
         </div>
-        <div class="recommend-panel-content" style="overflow-y: auto; max-height: calc(100% - 60px); scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.3) transparent;">
-          <style>
-            /* TODO: スクロールバーの統一感を向上
-             * - お気に入りパネル、履歴パネル、おすすめパネルでスクロールバーのスタイルを統一
-             * - ダークテーマ/ライトテーマに応じた動的な色調整
-             * - スクロールバーの幅、角丸、透明度の統一
-             * - ホバー効果の統一
-             * - Firefox用のscrollbar-color設定の統一
-             * - 共通のCSSクラスとして外部ファイルに分離
-             */
-            .recommend-panel-content::-webkit-scrollbar {
-              width: 8px;
-            }
-            .recommend-panel-content::-webkit-scrollbar-track {
-              background: transparent;
-            }
-            .recommend-panel-content::-webkit-scrollbar-thumb {
-              background: rgba(255, 255, 255, 0.3);
-              border-radius: 4px;
-            }
-            .recommend-panel-content::-webkit-scrollbar-thumb:hover {
-              background: rgba(255, 255, 255, 0.5);
-            }
-            .recommend-panel-content::-webkit-scrollbar-button {
-              display: none;
-            }
-          </style>
-          <div class="recommend-loading">おすすめ動画を取得中...</div>
+        <div class="recommend-panel-content">
+          <div class="recommend-list" style="padding:16px;">
+            ${dummyCards}
+          </div>
         </div>
+        <style>
+          @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+          }
+        </style>
       `;
       document.body.appendChild(panel);
       // アニメーション効果を追加
@@ -1191,6 +1200,16 @@ function addMenuEventListeners() {
         panel.style.opacity = '1';
         panel.style.transform = 'translate(-50%, -50%) scale(1)';
       });
+      
+      // リスト部分の高さを調整（履歴パネルと統一）
+      setTimeout(() => {
+        const content = panel.querySelector('.recommend-panel-content');
+        if (content) {
+          // CSSファイルで設定済みのため、JavaScriptでの設定は不要
+          // max-height: 60vh と overflow-y: auto がCSSで設定されている
+        }
+      }, 0);
+      
       // パネルを閉じる共通関数
       const closePanel = () => {
         panel.style.opacity = '0';

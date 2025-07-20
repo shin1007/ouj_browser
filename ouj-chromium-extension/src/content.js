@@ -1,4 +1,6 @@
 // 画面種別を判定する関数
+
+
 function detectOujPageType() {
   return new Promise(async (resolve) => {
     const url = window.location.href;
