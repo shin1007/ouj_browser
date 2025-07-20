@@ -100,6 +100,10 @@ async function main() {
     // ホームページの処理
     console.log("main: ホームページを検出しました。");
     
+    // メニュー挿入処理を開始（ホームページでもメニューを表示）
+    console.log('main: ホームページでメニュー挿入処理を開始');
+    window.waitForLogoAndInsertMenu();
+    
     // 自動ログイン設定を確認
     chrome.storage.sync.get(['autoLogin'], function(result) {
       if (result.autoLogin) {
@@ -109,7 +113,6 @@ async function main() {
         console.log("main: 自動ログインが無効です。");
       }
     });
-    // TODO: ログイン直後のホーム画面（https://v.ouj.ac.jp/view/ouj/#/navi/home）でメニューが表示されない問題を修正する。メニュー挿入処理のタイミングや条件を調整する必要がある。
     return;
   }
   
