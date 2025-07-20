@@ -40,6 +40,9 @@ async function initializeVideoPlayer() {
     }
   }
     
+  // ラジオ番組判定を実行
+  await checkIfRadioProgram();
+    
   // 音量自動調整機能を開始
   startVolumeNormalization();
 
@@ -146,8 +149,16 @@ function addVideoSettingsPanel() {
         </div>
         <div style="margin-bottom: 8px;">
           <input type="checkbox" id="volume-normalization" ${volumeNormalizationEnabled ? 'checked' : ''}>
-          <label for="volume-normalization" style="margin-left: 5px; cursor: pointer; color: #333;">音量の自動調整<span style="font-size: 11px; color: #666;">（OPEDや場面転換時の音量急上昇を緩やかにする）</span></label>
+          <label for="volume-normalization" style="margin-left: 5px; cursor: pointer; color: #333;">音量の自動調整<span style="font-size: 11px; color: #666;">（実際の音声レベルを測定してOPEDや場面転換時の音量急上昇を緩やかにする）</span></label>
         </div>
+        ${window.isRadioProgram ? `
+        <div style="margin-bottom: 8px; padding: 8px; background: #e8f4fd; border-radius: 4px; border-left: 4px solid #2196f3;">
+          <div style="font-weight: bold; color: #1976d2; margin-bottom: 4px;">🎵 ラジオ番組</div>
+          <div style="font-size: 12px; color: #555;">
+            ${window.isRadioWithSubtitles ? '字幕付きラジオ番組です（字幕が表示されます）' : '音声のみのラジオ番組です'}
+          </div>
+        </div>
+        ` : ''}
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
         <div style="margin-bottom: 8px;">
           <input type="radio" id="same-course" name="next-video" value="same-course" ${savedSetting === 'same-course' ? 'checked' : ''}>
@@ -994,7 +1005,7 @@ function setupPlaybackSpeedShortcuts() {
   });
 }
 
-// 音量自動調整機能
+// 音量自動調整機能（実際の音声レベルを測定）
 function startVolumeNormalization() {
   console.log('startVolumeNormalization: 音量自動調整機能を開始します');
   
@@ -1007,14 +1018,337 @@ function startVolumeNormalization() {
     return;
   }
   
-  // 動画要素を待って音量監視を開始する関数
+  // Web Audio APIのサポートチェック
+  if (!window.AudioContext && !window.webkitAudioContext) {
+    console.warn('startVolumeNormalization: Web Audio APIがサポートされていません。従来の音量監視にフォールバックします');
+    startLegacyVolumeNormalization();
+    return;
+  }
+  
+  // 動画要素を待って音声レベル監視を開始する関数
   if (typeof window.waitForElement !== 'function') {
     setTimeout(startVolumeNormalization, 100);
     return;
   }
   
   window.waitForElement('video', (video) => {
-    console.log('startVolumeNormalization: 動画要素が見つかりました。音量監視を開始します');
+    console.log('startVolumeNormalization: 動画要素が見つかりました。実際の音声レベル監視を開始します');
+    
+    // Web Audio APIの初期化
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    
+    // 動画のストリームを取得
+    let microphone;
+    try {
+      const stream = video.captureStream();
+      // 音声トラックが存在するかチェック
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length === 0) {
+        console.log('startVolumeNormalization: 動画に音声トラックがありません。従来の音量監視にフォールバックします');
+        startLegacyVolumeNormalization();
+        return;
+      }
+      microphone = audioContext.createMediaStreamSource(stream);
+    } catch (error) {
+      console.error('startVolumeNormalization: 音声ストリームの取得に失敗しました:', error);
+      console.log('startVolumeNormalization: 従来の音量監視にフォールバックします');
+      startLegacyVolumeNormalization();
+      return;
+    }
+    
+    // 音声分析の設定
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.8;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    
+    // 音声レベル履歴
+    let audioLevelHistory = [];
+    const maxHistorySize = 20; // より多くの履歴を保持
+    let lastAudioLevel = 0;
+    
+    // 音声レベル監視の間隔（ミリ秒）
+    const monitorInterval = 100; // より頻繁に監視
+    
+    // 音声レベルを取得する関数
+    function getAudioLevel() {
+      analyser.getByteFrequencyData(dataArray);
+      
+      // 全周波数帯域の平均値を計算
+      let sum = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        sum += dataArray[i];
+      }
+      const average = sum / bufferLength;
+      
+      // 0-255の値を0-1の範囲に正規化
+      return average / 255;
+    }
+    
+    // 音声レベルをデシベルに変換する関数
+    function toDecibels(level) {
+      return 20 * Math.log10(Math.max(level, 0.0001));
+    }
+    
+    const audioLevelMonitor = setInterval(() => {
+      if (!video || video.paused) {
+        return;
+      }
+      
+      const currentAudioLevel = getAudioLevel();
+      const currentDecibels = toDecibels(currentAudioLevel);
+      
+      audioLevelHistory.push(currentAudioLevel);
+      
+      // 履歴サイズを制限
+      if (audioLevelHistory.length > maxHistorySize) {
+        audioLevelHistory.shift();
+      }
+      
+      // 平均音声レベルを計算
+      const averageAudioLevel = audioLevelHistory.reduce((sum, level) => sum + level, 0) / audioLevelHistory.length;
+      const averageDecibels = toDecibels(averageAudioLevel);
+      
+      // 音声レベルの急激な変化を検出（0.2以上の変化）
+      const audioLevelChange = Math.abs(currentAudioLevel - lastAudioLevel);
+      
+      if (audioLevelChange > 0.2) {
+        console.log('startVolumeNormalization: 実際の音声レベルの急激な変化を検出:', {
+          previous: lastAudioLevel.toFixed(3),
+          current: currentAudioLevel.toFixed(3),
+          change: audioLevelChange.toFixed(3),
+          previousDb: toDecibels(lastAudioLevel).toFixed(1),
+          currentDb: currentDecibels.toFixed(1)
+        });
+        
+        // 音声レベルが高すぎる場合は動画の音量を下げる
+        if (currentAudioLevel > 0.7) {
+          const targetVolume = Math.max(0.1, video.volume * 0.8);
+          adjustVolumeGradually(video, video.volume, targetVolume);
+          console.log('startVolumeNormalization: 音声レベルが高すぎるため音量を調整:', video.volume.toFixed(2), '→', targetVolume.toFixed(2));
+        }
+      }
+      
+      // 平均音声レベルが基準を超えた場合（0.6以上）
+      if (averageAudioLevel > 0.6 && audioLevelHistory.length >= 10) {
+        console.log('startVolumeNormalization: 平均音声レベルが高すぎます:', {
+          level: averageAudioLevel.toFixed(3),
+          decibels: averageDecibels.toFixed(1)
+        });
+        
+        // 動画の音量を下げる
+        const targetVolume = Math.max(0.1, video.volume * 0.7);
+        adjustVolumeGradually(video, video.volume, targetVolume);
+      }
+      
+      // 音声レベルが低すぎる場合（0.1以下）で動画の音量が低い場合は上げる
+      if (currentAudioLevel < 0.1 && video.volume < 0.5) {
+        const targetVolume = Math.min(1, video.volume * 1.2);
+        adjustVolumeGradually(video, video.volume, targetVolume);
+        console.log('startVolumeNormalization: 音声レベルが低すぎるため音量を調整:', video.volume.toFixed(2), '→', targetVolume.toFixed(2));
+      }
+      
+      lastAudioLevel = currentAudioLevel;
+    }, monitorInterval);
+    
+    // 音声ストリームを接続
+    microphone.connect(analyser);
+    
+    // 監視を停止する関数を返す
+    return () => {
+      clearInterval(audioLevelMonitor);
+      microphone.disconnect();
+      audioContext.close();
+      console.log('startVolumeNormalization: 実際の音声レベル監視を停止しました');
+    };
+  });
+}
+
+// ラジオ番組判定関数
+async function checkIfRadioProgram() {
+  console.log('checkIfRadioProgram: ラジオ番組判定を開始します');
+  
+  try {
+    // 現在の動画IDを取得
+    const currentVideoId = getCurrentVideoId();
+    if (!currentVideoId) {
+      console.log('checkIfRadioProgram: 動画IDを取得できませんでした');
+      return;
+    }
+    
+    console.log('checkIfRadioProgram: 現在の動画ID:', currentVideoId);
+    
+    // 動画の詳細情報を取得
+    const videoData = await getVideoData(currentVideoId);
+    if (!videoData) {
+      console.log('checkIfRadioProgram: 動画データを取得できませんでした');
+      return;
+    }
+    
+    console.log('checkIfRadioProgram: 取得した動画データ:', {
+      contentId: videoData.contentId,
+      categoryId: videoData.categoryId,
+      title: videoData.title,
+      summary: videoData.summary
+    });
+    
+    // 動画データからカテゴリIDを取得
+    const categoryId = videoData.categoryId;
+    if (!categoryId) {
+      console.log('checkIfRadioProgram: 動画データからカテゴリIDを取得できませんでした');
+      return;
+    }
+    
+    console.log('checkIfRadioProgram: 動画のカテゴリID:', categoryId);
+    
+    // カテゴリデータを取得
+    const categories = await window.getCategoriesData();
+    if (!categories || !Array.isArray(categories)) {
+      console.log('checkIfRadioProgram: カテゴリデータを取得できませんでした');
+      return;
+    }
+    
+    // カテゴリIDに対応するカテゴリを検索
+    const currentCategory = categories.find(cat => cat.categoryId === categoryId);
+    
+    if (!currentCategory) {
+      console.log('checkIfRadioProgram: カテゴリIDに対応するカテゴリが見つかりませんでした');
+      return;
+    }
+    
+    console.log('checkIfRadioProgram: 見つかったカテゴリ:', {
+      categoryId: currentCategory.categoryId,
+      name: currentCategory.name,
+      summary: currentCategory.summary
+    });
+    
+    // summary欄でラジオ番組かどうかを判定
+    const isRadio = currentCategory.summary && (
+      currentCategory.summary.startsWith('(ラジオ')
+    );
+    
+    if (isRadio) {
+      // 字幕付きラジオ番組かどうかを判定
+      const hasSubtitles = currentCategory.summary.includes('・字幕');
+      
+      console.log('🎵 checkIfRadioProgram: 【ラジオ番組】を検出しました！');
+      console.log('checkIfRadioProgram: カテゴリ名:', currentCategory.name);
+      console.log('checkIfRadioProgram: サマリー:', currentCategory.summary);
+      console.log('checkIfRadioProgram: 字幕付き:', hasSubtitles ? 'はい' : 'いいえ');
+      
+      // ラジオ番組であることをグローバル変数に保存
+      window.isRadioProgram = true;
+      window.isRadioWithSubtitles = hasSubtitles;
+      
+      // 字幕付きでない場合のみUI表示
+      if (!hasSubtitles) {
+        console.log('checkIfRadioProgram: 字幕なしラジオ番組のため、専用UIを表示します');
+        showRadioProgramUI();
+      } else {
+        console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
+      }
+    } else {
+      console.log('📺 checkIfRadioProgram: 【通常の動画】です');
+      window.isRadioProgram = false;
+      window.isRadioWithSubtitles = false;
+    }
+    
+  } catch (error) {
+    console.error('checkIfRadioProgram: ラジオ番組判定でエラーが発生しました:', error);
+  }
+}
+
+// 動画データを取得する関数
+async function getVideoData(contentId) {
+  console.log('getVideoData: 動画データを取得します。contentId:', contentId);
+  
+  try {
+    // 動画の詳細情報を取得するAPI
+    const response = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}`);
+    
+    if (!response.ok) {
+      console.error('getVideoData: APIレスポンスエラー:', response.status, response.statusText);
+      return null;
+    }
+    
+    const videoData = await response.json();
+    console.log('getVideoData: 動画データ取得成功:', videoData);
+    
+    return videoData;
+    
+  } catch (error) {
+    console.error('getVideoData: 動画データ取得でエラーが発生しました:', error);
+    return null;
+  }
+}
+
+// ラジオ番組用のUI表示関数
+function showRadioProgramUI() {
+  console.log('showRadioProgramUI: ラジオ番組用UIを表示します');
+  
+  // 既にラジオ番組UIが表示されている場合は何もしない
+  if (document.getElementById('radio-program-ui')) {
+    return;
+  }
+  
+  // 動画要素を待ってUIを挿入
+  if (typeof window.waitForElement !== 'function') {
+    setTimeout(showRadioProgramUI, 100);
+    return;
+  }
+  
+  window.waitForElement('video', (video) => {
+    console.log('showRadioProgramUI: 動画要素が見つかりました。ラジオ番組用UIを挿入します');
+    
+    // ラジオ番組用のUI要素を作成
+    const radioUI = document.createElement('div');
+    radioUI.id = 'radio-program-ui';
+    radioUI.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      z-index: 1000;
+      font-family: 'Arial', sans-serif;
+      min-width: 300px;
+    `;
+    
+    radioUI.innerHTML = `
+      <div style="font-size: 24px; margin-bottom: 10px;">🎵</div>
+      <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">ラジオ番組</div>
+      <div style="font-size: 14px; opacity: 0.8;">音声のみの番組です</div>
+    `;
+    
+    // 動画要素の親要素に挿入
+    const videoContainer = video.parentElement;
+    if (videoContainer) {
+      videoContainer.style.position = 'relative';
+      videoContainer.appendChild(radioUI);
+      
+      console.log('showRadioProgramUI: ラジオ番組用UIを挿入しました');
+    } else {
+      console.error('showRadioProgramUI: 動画要素の親要素が見つかりませんでした');
+    }
+  });
+}
+
+// 従来の音量監視（フォールバック用）
+function startLegacyVolumeNormalization() {
+  console.log('startLegacyVolumeNormalization: 従来の音量監視を開始します');
+  
+  if (typeof window.waitForElement !== 'function') {
+    setTimeout(startLegacyVolumeNormalization, 100);
+    return;
+  }
+  
+  window.waitForElement('video', (video) => {
+    console.log('startLegacyVolumeNormalization: 動画要素が見つかりました。従来の音量監視を開始します');
     
     let lastVolume = video.volume;
     let volumeHistory = [];
@@ -1042,7 +1376,7 @@ function startVolumeNormalization() {
       
       // 音量が急激に変化した場合（0.1以上の変化）
       if (volumeChange > 0.1) {
-        console.log('startVolumeNormalization: 音量の急激な変化を検出:', {
+        console.log('startLegacyVolumeNormalization: 音量の急激な変化を検出:', {
           previous: lastVolume.toFixed(2),
           current: currentVolume.toFixed(2),
           change: volumeChange.toFixed(2)
@@ -1054,7 +1388,7 @@ function startVolumeNormalization() {
       
       // 平均音量が基準を超えた場合（0.8以上）
       if (averageVolume > 0.8 && volumeHistory.length >= 5) {
-        console.log('startVolumeNormalization: 平均音量が高すぎます:', averageVolume.toFixed(2));
+        console.log('startLegacyVolumeNormalization: 平均音量が高すぎます:', averageVolume.toFixed(2));
         
         // 音量を下げる
         const targetVolume = Math.min(currentVolume * 0.7, 0.6);
@@ -1067,7 +1401,7 @@ function startVolumeNormalization() {
     // 監視を停止する関数を返す
     return () => {
       clearInterval(volumeMonitor);
-      console.log('startVolumeNormalization: 音量監視を停止しました');
+      console.log('startLegacyVolumeNormalization: 従来の音量監視を停止しました');
     };
   });
 }
@@ -1131,10 +1465,12 @@ window.showPlaybackSpeedNotification = showPlaybackSpeedNotification;
 window.applySavedPlaybackSpeed = applySavedPlaybackSpeed;
 window.setupPlaybackSpeedShortcuts = setupPlaybackSpeedShortcuts;
 window.startVolumeNormalization = startVolumeNormalization;
+window.startLegacyVolumeNormalization = startLegacyVolumeNormalization;
 window.normalizeVolume = normalizeVolume;
 window.adjustVolumeGradually = adjustVolumeGradually;
+window.checkIfRadioProgram = checkIfRadioProgram;
+window.showRadioProgramUI = showRadioProgramUI;
+window.getVideoData = getVideoData;
 
-// TODO: ラジオ番組（映像が無い/真っ黒な画面の場合）は、動画上に「ラジオ番組です」などの案内を表示する機能を追加すること。
-//   - 例: サムネイル画像を常時表示する、案内テキストを重ねる、など。
-//   - さらに、AIで自動字幕を生成する機能も検討する。
+// TODO: ラジオ番組のAI自動字幕生成機能を実装すること。
 //   - AI字幕生成時は、プロンプトに「動画の概要」「放送大学の講義であること」「コース名」などの背景情報を付加する必要があるかもしれない点に注意。
