@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "A Chrome extension to enhance the usability of OUJ broadcasting classes.",
   "permissions": [
+    // TODO: 必要な権限のみを記載し、permissionの最小化を徹底すること。
     "storage",
     "activeTab",
     "scripting",

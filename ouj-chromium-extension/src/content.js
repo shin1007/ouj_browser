@@ -8,6 +8,11 @@ function detectOujPageType() {
       resolve('login');
       return;
     }
+    if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/home')) {
+      console.log("detectOujPageType: 【ホームページ】");
+      resolve('home');
+      return;
+    }
     if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/player?co=')) {
       const coNum = url.split('co=')[1];
       console.log("detectOujPageType: 【動画再生画面】動画ID:", coNum);
@@ -90,6 +95,22 @@ async function main() {
     window.waitForPasswordAndLogin();
     return;
   }
+
+  if (pageType === 'home') {
+    // ホームページの処理
+    console.log("main: ホームページを検出しました。");
+    
+    // 自動ログイン設定を確認
+    chrome.storage.sync.get(['autoLogin'], function(result) {
+      if (result.autoLogin) {
+        console.log("main: 自動ログインが有効です。#theme-color要素のクリックを試行します。");
+        window.waitForThemeColorAndClick();
+      } else {
+        console.log("main: 自動ログインが無効です。");
+      }
+    });
+    return;
+  }
   
   console.log('main: メニュー挿入処理を開始');
   window.waitForLogoAndInsertMenu();
@@ -104,9 +125,19 @@ async function main() {
       console.log('main: 動画再生画面の処理を開始');
       // ・再生速度の調整（記憶させておいたもの）
       // TODO: ・OPスキップ
+      //   - 現状の音楽検知は精度が低いため、より良い方法を検討する。
+      //   - 例: Web Audio APIで音声スペクトルを解析し、BGM（音楽）と日本語音声（会話・ナレーション）を区別する。
+      //   - 音楽部分は、一定の周波数帯域が強く、かつ言語的な特徴（母音・子音のパターン）が少ない区間として判定できる可能性。
+      //   - 日本語の読み上げ部分は、音声認識APIや簡易的な音素検出で「日本語らしい波形」やピッチ変動が多い区間として判定。
+      //   - 音楽→日本語音声への切り替わりをOP終了とみなす。
+      //   - EDも同様に、会話やナレーションが終わり、音楽だけになる区間を検知してスキップ候補とする。
+      //   - 必要に応じて、音量変化や無音区間もヒントとして利用する。
+      //   - 参考: Web Audio APIのAnalyserNode、SpeechRecognition API、または外部音声認識サービスの活用も検討。
       // ・EDスキップ
       // ・自動で次を再生
       window.initializeVideoPlayer();
+      // TODO: 音声・動画の自動再生や制御がブラウザのポリシー変更で制限される場合のフォールバック処理を検討すること。
+      // TODO: キーボード操作（例: スペースキーで再生/一時停止、ショートカットキー対応など）を強化し、アクセシビリティを向上させること。
       
     } else if (pageType === 'course-select') {
       // コース選択画面
@@ -128,6 +159,37 @@ async function main() {
     }
   });
 }
+
+// #theme-color要素を待ってログイン画面に遷移する関数
+function waitForThemeColorAndClick() {
+  console.log('waitForThemeColorAndClick: 開始');
+  
+  // 共通関数の存在をチェック
+  if (typeof window.waitForElement !== 'function') {
+    console.log('waitForThemeColorAndClick: waitForElement関数が未定義、100ms後に再試行');
+    setTimeout(waitForThemeColorAndClick, 100);
+    return;
+  }
+  
+  // #theme-color要素を待つ（読み込みに時間がかかるため、十分な待機時間を設定）
+  window.waitForElement('#theme-color', (themeColorElement) => {
+    console.log('waitForThemeColorAndClick: #theme-color要素が見つかりました。ログイン画面に遷移します。');
+    
+    // 少し遅延させてからログイン画面に遷移
+    setTimeout(() => {
+      try {
+        console.log('waitForThemeColorAndClick: ログイン画面に遷移します: https://sso.ouj.ac.jp/cas/login');
+        window.location.href = 'https://sso.ouj.ac.jp/cas/login';
+      } catch (error) {
+        console.error('waitForThemeColorAndClick: 遷移実行中にエラーが発生しました:', error);
+      }
+    }, 500); // 500ms待機
+    
+  }, 10000); // 最大10秒待機
+}
+
+// グローバル関数として公開
+window.waitForThemeColorAndClick = waitForThemeColorAndClick;
 
 function safeMain() {
   console.log('safeMain: 開始');

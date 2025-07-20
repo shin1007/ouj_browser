@@ -1006,3 +1006,8 @@ window.setupPlaybackSpeedShortcuts = setupPlaybackSpeedShortcuts;
 window.startVolumeNormalization = startVolumeNormalization;
 window.normalizeVolume = normalizeVolume;
 window.adjustVolumeGradually = adjustVolumeGradually;
+
+// TODO: ラジオ番組（映像が無い/真っ黒な画面の場合）は、動画上に「ラジオ番組です」などの案内を表示する機能を追加すること。
+//   - 例: サムネイル画像を常時表示する、案内テキストを重ねる、など。
+//   - さらに、AIで自動字幕を生成する機能も検討する。
+//   - AI字幕生成時は、プロンプトに「動画の概要」「放送大学の講義であること」「コース名」などの背景情報を付加する必要があるかもしれない点に注意。
