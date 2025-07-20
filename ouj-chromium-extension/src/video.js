@@ -52,9 +52,6 @@ async function initializeVideoPlayer() {
   // キーボードショートカットを設定
   setupPlaybackSpeedShortcuts();
   
-  // 自動再生機能を開始
-  startAutoPlay();
-  
   // 次の動画IDを取得
   await fetchNextVideoId();
 
@@ -118,13 +115,51 @@ function addVideoSettingsPanel() {
     
     // 保存された設定を取得
     const savedSetting = window.getSetting('nextVideoSetting', 'same-course');
-    const autoPlayEnabled = window.getBooleanSetting('autoPlayEnabled', true);
     const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
     const playbackSpeed = window.getSetting('playbackSpeed', '1');
     const volumeNormalizationEnabled = window.getBooleanSetting('volumeNormalizationEnabled', true);
       
       panel.innerHTML = `
-        <div style="margin-bottom: 10px; font-weight: bold; color: #333; text-decoration: underline;">動画再生設定</div>
+        <div style="margin-bottom: 10px; font-weight: bold; color: #1976d2; font-size: 17px; text-align: center; background: #e3f2fd; border-radius: 6px; padding: 8px 0;">
+          ▶️ <b>Enter</b> または <b>Space</b> キーで再生できます
+          <span id="toggle-shortcut-help" style="display:inline-block; margin-left:8px; color:#1976d2; cursor:pointer; font-size:14px; text-decoration:underline;">（その他のキーボードショートカット）▼</span>
+        </div>
+        <div id="shortcut-help-panel" style="display:none; margin-bottom: 10px;">
+          <div style="font-weight: bold; color: #333; text-decoration: underline; margin-bottom:10px;">キーボードショートカット</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; font-size: 12px; color: #555;">
+            <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
+              <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">基本操作</div>
+              <div style="line-height: 1.3;">
+                <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Space</span> 再生/一時停止</div>
+                <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">M</span> ミュート切り替え</div>
+                <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">F</span> フルスクリーン</div>
+              </div>
+            </div>
+            <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
+              <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">シーク操作</div>
+              <div style="line-height: 1.3;">
+                <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">←→</span> 10秒前後</div>
+                <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Shift+←→</span> 30秒前後</div>
+                <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">0</span> 最初に戻る</div>
+                <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">End</span> 最後に進む</div>
+              </div>
+            </div>
+            <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
+              <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">音量調整</div>
+              <div style="line-height: 1.3;">
+                <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">↑↓</span> 音量±5%</div>
+                <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Shift+↑↓</span> 音量±10%</div>
+              </div>
+            </div>
+            <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
+              <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">再生速度</div>
+              <div style="line-height: 1.3;">
+                <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Ctrl+1-8</span> 0.25x〜3x</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr style="margin: 15px 0; border: none; border-top: 2px solid #2196f3;">
         <div style="margin-bottom: 8px;">
           <label for="playback-speed" style="display: block; margin-bottom: 5px; color: #333;">再生速度:</label>
           <select id="playback-speed" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
@@ -138,11 +173,6 @@ function addVideoSettingsPanel() {
             <option value="3" ${playbackSpeed === '3' ? 'selected' : ''}>3x (3倍速)</option>
           </select>
         </div>
-        <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
-                  <div style="margin-bottom: 8px;">
-            <input type="checkbox" id="auto-play" ${autoPlayEnabled ? 'checked' : ''}>
-            <label for="auto-play" style="margin-left: 5px; cursor: pointer; color: #333;">動画を自動再生する<span style="font-size: 11px; color: #666;">（ブラウザ側でユーザー操作を検知できないと失敗する）</span></label>
-          </div>
         <div style="margin-bottom: 8px;">
           <input type="checkbox" id="auto-next-video" ${autoNextVideoEnabled ? 'checked' : ''}>
           <label for="auto-next-video" style="margin-left: 5px; cursor: pointer; color: #333;">動画終了時に自動で次の動画に進む</label>
@@ -169,39 +199,6 @@ function addVideoSettingsPanel() {
           <label for="favorites-random" style="margin-left: 5px; cursor: pointer; color: #333;">お気に入りの中からランダムで次を再生</label>
         </div>
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
-        <div style="margin-bottom: 10px; font-weight: bold; color: #333; text-decoration: underline;">キーボードショートカット</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; font-size: 12px; color: #555;">
-          <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
-            <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">基本操作</div>
-            <div style="line-height: 1.3;">
-              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Space</span> 再生/一時停止</div>
-              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">M</span> ミュート切り替え</div>
-              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">F</span> フルスクリーン</div>
-            </div>
-          </div>
-          <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
-            <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">シーク操作</div>
-            <div style="line-height: 1.3;">
-              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">←→</span> 10秒前後</div>
-              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Shift+←→</span> 30秒前後</div>
-              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">0</span> 最初に戻る</div>
-              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">End</span> 最後に進む</div>
-            </div>
-          </div>
-          <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
-            <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">音量調整</div>
-            <div style="line-height: 1.3;">
-              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">↑↓</span> 音量±5%</div>
-              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Shift+↑↓</span> 音量±10%</div>
-            </div>
-          </div>
-          <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
-            <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">再生速度</div>
-            <div style="line-height: 1.3;">
-              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Ctrl+1-8</span> 0.25x〜3x</div>
-            </div>
-          </div>
-        </div>
         <div style="margin-top: 10px; font-size: 12px; color: #666;">
           設定は自動的に保存されます
         </div>
@@ -217,16 +214,7 @@ function addVideoSettingsPanel() {
         });
       });
       
-      // チェックボックスのイベントリスナーを追加
-      const autoPlayCheckbox = panel.querySelector('#auto-play');
-      if (autoPlayCheckbox) {
-        autoPlayCheckbox.addEventListener('change', (event) => {
-          const enabled = event.target.checked;
-          window.saveSetting('autoPlayEnabled', enabled);
-          console.log('addVideoSettingsPanel: 自動再生設定を保存しました:', enabled);
-        });
-      }
-      
+      // チェックボックスのイベントリスナーを追加（auto-next-video, volume-normalizationのみ）
       const autoNextVideoCheckbox = panel.querySelector('#auto-next-video');
       if (autoNextVideoCheckbox) {
         autoNextVideoCheckbox.addEventListener('change', (event) => {
@@ -261,6 +249,21 @@ function addVideoSettingsPanel() {
       // 対象要素の最後に追加
       targetElement.appendChild(panel);
       console.log('addVideoSettingsPanel: 動画設定パネルを追加しました');
+
+      // 折りたたみUIのイベントリスナー追加（panelがDOMに追加された直後に必ず実行）
+      const toggle = panel.querySelector('#toggle-shortcut-help');
+      const helpPanel = panel.querySelector('#shortcut-help-panel');
+      if (toggle && helpPanel) {
+        toggle.addEventListener('click', () => {
+          if (helpPanel.style.display === 'none') {
+            helpPanel.style.display = 'block';
+            toggle.textContent = '（その他のキーボードショートカット）▲';
+          } else {
+            helpPanel.style.display = 'none';
+            toggle.textContent = '（その他のキーボードショートカット）▼';
+          }
+        });
+      }
     });
 }
 
@@ -611,67 +614,87 @@ function handleEndingDetected() {
 function startAutoPlay() {
   console.log('startAutoPlay: 自動再生機能を開始します');
   
-  // 自動再生設定をチェック（デフォルトは有効）
+  // 自動再生設定をチェック
   const autoPlayEnabled = window.getBooleanSetting('autoPlayEnabled', true);
   console.log('startAutoPlay: 自動再生設定:', autoPlayEnabled ? '有効' : '無効');
-  
   if (!autoPlayEnabled) {
-    console.log('startAutoPlay: 自動再生が無効化されているため、スキップします');
     return;
   }
   
-  // 動画要素を待って自動再生を実行する関数
+  // 動画要素を待って再生を試みる
   if (typeof window.waitForElement !== 'function') {
     setTimeout(startAutoPlay, 100);
     return;
   }
   
   window.waitForElement('video', (video) => {
-    const videoPlayer = document.querySelector('.video-js');
-    
-    if (videoPlayer) {
       console.log('startAutoPlay: 動画要素が見つかりました。自動再生を開始します');
-      
-      // 動画が読み込まれるまで少し待つ
-      setTimeout(() => {
-        try {
-          // 動画の準備ができているかチェック
-          if (video.readyState >= 2) { // HAVE_CURRENT_DATA以上
-            console.log('startAutoPlay: 動画の準備が完了しました。再生を開始します');
-            video.play().then(() => {
-              console.log('startAutoPlay: 自動再生が成功しました');
-            }).catch((error) => {
-              console.log('startAutoPlay: 自動再生に失敗しました（ユーザーインタラクションが必要な可能性）:', error);
-              // 自動再生が失敗した場合、ユーザーに通知
-              showAutoPlayFailedNotification();
-            });
+    let retryCount = 0;
+    const maxRetries = 10;
+    const retryInterval = 1000; // 1秒ごと
+
+    async function tryPlay() {
+      try {
+        await video.play();
+        console.log('startAutoPlay: 自動再生成功');
+        removeAutoPlayFailedNotification();
+      } catch (e) {
+        retryCount++;
+        console.warn(`startAutoPlay: 自動再生に失敗しました（${retryCount}回目）:`, e);
+        if (retryCount < maxRetries) {
+          setTimeout(tryPlay, retryInterval);
           } else {
-            console.log('startAutoPlay: 動画の準備がまだ完了していません。再試行します');
-            // 動画の準備がまだ完了していない場合、再試行
-            window.waitForCondition(() => video.readyState >= 2, () => {
-              video.play().then(() => {
-                console.log('startAutoPlay: 自動再生が成功しました');
-              }).catch((error) => {
-                console.log('startAutoPlay: 自動再生に失敗しました（ユーザーインタラクションが必要な可能性）:', error);
                 showAutoPlayFailedNotification();
-              });
-            }, 500);
           }
-        } catch (error) {
-          console.error('startAutoPlay: 自動再生中にエラーが発生しました:', error);
         }
-      }, 1000); // 1秒待ってから再生開始
+    }
+
+    tryPlay();
+  });
+}
+
+// 自動再生失敗時の通知UIを表示
+function showAutoPlayFailedNotification() {
+  if (document.getElementById('autoplay-failed-notification')) return;
+  const notification = document.createElement('div');
+  notification.id = 'autoplay-failed-notification';
+  notification.style.cssText = `
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 24px 32px;
+    border-radius: 12px;
+    font-size: 18px;
+    z-index: 9999;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    text-align: center;
+  `;
+  notification.innerHTML = `
+    <div style="font-size: 32px; margin-bottom: 12px;">▶️</div>
+    <div style="margin-bottom: 8px;">自動再生がブロックされました</div>
+    <button id="autoplay-manual-play-btn" style="margin-top: 8px; padding: 8px 24px; font-size: 16px; border-radius: 6px; border: none; background: #2196f3; color: #fff; cursor: pointer;">再生</button>
+    <div style="margin-top: 8px; font-size: 12px; color: #ccc;">ブラウザの仕様により自動再生が制限されています。再生ボタンを押してください。</div>
+  `;
+  document.body.appendChild(notification);
+  const playBtn = document.getElementById('autoplay-manual-play-btn');
+  playBtn?.focus();
+  playBtn?.addEventListener('click', () => {
+    const video = document.querySelector('video');
+    if (video) {
+      video.play().then(() => {
+        removeAutoPlayFailedNotification();
+      });
     }
   });
 }
 
-// 自動再生失敗時の通知を表示
-function showAutoPlayFailedNotification() {
-  if (typeof window.showWarningNotification !== 'function') {
-    console.warn('showAutoPlayFailedNotification: 通知関数が見つかりません。');
-    return;
-  }
-  window.showWarningNotification('自動再生に失敗しました。手動で再生ボタンを押してください。', 5000);
+// 自動再生失敗通知UIを削除
+function removeAutoPlayFailedNotification() {
+  const notification = document.getElementById('autoplay-failed-notification');
+  if (notification) notification.remove();
 }
 
 // 動画終了監視機能
@@ -1474,3 +1497,37 @@ window.getVideoData = getVideoData;
 
 // TODO: ラジオ番組のAI自動字幕生成機能を実装すること。
 //   - AI字幕生成時は、プロンプトに「動画の概要」「放送大学の講義であること」「コース名」などの背景情報を付加する必要があるかもしれない点に注意。
+
+// --- 代わりに「Enter / Spaceキーで再生できる」旨を表示するUIを追加 ---
+function showPlayHint() {
+  if (document.getElementById('play-hint-notification')) return;
+  const hint = document.createElement('div');
+  hint.id = 'play-hint-notification';
+  hint.style.cssText = `
+    position: fixed;
+    top: 18%;
+    left: 50%;
+    transform: translate(-50%, 0);
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 16px 28px;
+    border-radius: 10px;
+    font-size: 18px;
+    z-index: 9999;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    text-align: center;
+    pointer-events: none;
+  `;
+  hint.innerHTML = `
+    <span style="font-size: 22px;">▶️</span> <b>Enter</b> または <b>Space</b> キーで再生できます
+  `;
+  document.body.appendChild(hint);
+  setTimeout(() => {
+    hint.remove();
+  }, 6000);
+}
+
+// 動画ページ初期化時にヒントを表示
+if (location.pathname.includes('/video/')) {
+  showPlayHint();
+}
