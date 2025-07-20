@@ -1247,7 +1247,7 @@ function addMenuEventListeners() {
               }
             }
             allScores.push({categoryId: category.categoryId, name: categoryName, score: maxScore});
-            if (maxScore > 0.15) {
+            if (maxScore > 0.1) {
               similarCourses.push({ category, score: maxScore });
               seenCategoryIds.add(category.categoryId);
             }
@@ -1467,6 +1467,7 @@ function addMenuEventListeners() {
           const uniqueSimilarCategories = [];
           const seenIds = new Set([...usedCategoryIds]);
           const seenNames = new Set();
+          let idDupCount = 0, nameDupCount = 0;
           function normalizeName(name) {
             return name.replace(/[\s\(（\)）'’'"'"0-9０-９a-zA-Zａ-ｚＡ-Ｚ]/g, '').toLowerCase();
           }
@@ -1481,11 +1482,13 @@ function addMenuEventListeners() {
           }
           for (const cat of similarCategories) {
             if (seenIds.has(cat.categoryId)) {
+              idDupCount++;
               console.log('【類似コース重複除外:ID】categoryId:', cat.categoryId, cat.name);
               continue;
             }
             const normName = normalizeName(cat.name);
             if (seenNames.has(normName)) {
+              nameDupCount++;
               console.log('【類似コース重複除外:コース名】', cat.name);
               continue;
             }
@@ -1493,6 +1496,8 @@ function addMenuEventListeners() {
             seenIds.add(cat.categoryId);
             seenNames.add(normName);
           }
+          console.log('【類似コース重複除外:ID件数】', idDupCount);
+          console.log('【類似コース重複除外:コース名件数】', nameDupCount);
           console.log('【類似コース最終表示リスト】', uniqueSimilarCategories);
           
           // 履歴とお気に入りで使用済みのコースIDを収集
