@@ -157,6 +157,40 @@ function addVideoSettingsPanel() {
           <input type="radio" id="favorites-random" name="next-video" value="favorites-random" ${savedSetting === 'favorites-random' ? 'checked' : ''}>
           <label for="favorites-random" style="margin-left: 5px; cursor: pointer; color: #333;">お気に入りの中からランダムで次を再生</label>
         </div>
+        <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+        <div style="margin-bottom: 10px; font-weight: bold; color: #333; text-decoration: underline;">キーボードショートカット</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; font-size: 12px; color: #555;">
+          <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
+            <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">基本操作</div>
+            <div style="line-height: 1.3;">
+              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Space</span> 再生/一時停止</div>
+              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">M</span> ミュート切り替え</div>
+              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">F</span> フルスクリーン</div>
+            </div>
+          </div>
+          <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
+            <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">シーク操作</div>
+            <div style="line-height: 1.3;">
+              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">←→</span> 10秒前後</div>
+              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Shift+←→</span> 30秒前後</div>
+              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">0</span> 最初に戻る</div>
+              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">End</span> 最後に進む</div>
+            </div>
+          </div>
+          <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
+            <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">音量調整</div>
+            <div style="line-height: 1.3;">
+              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">↑↓</span> 音量±5%</div>
+              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Shift+↑↓</span> 音量±10%</div>
+            </div>
+          </div>
+          <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
+            <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">再生速度</div>
+            <div style="line-height: 1.3;">
+              <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Ctrl+1-8</span> 0.25x〜3x</div>
+            </div>
+          </div>
+        </div>
         <div style="margin-top: 10px; font-size: 12px; color: #666;">
           設定は自動的に保存されます
         </div>
@@ -810,6 +844,28 @@ function applySavedPlaybackSpeed() {
 // キーボードショートカットで再生速度を変更
 function setupPlaybackSpeedShortcuts() {
   document.addEventListener('keydown', (event) => {
+    // 動画要素を取得
+    const video = document.querySelector('video');
+    if (!video) {
+      return; // 動画が存在しない場合は何もしない
+    }
+    
+    // フォーム入力中はショートカットを無効化
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.isContentEditable) {
+      return;
+    }
+    
+    // スクロールを防ぐキーのリスト
+    const scrollPreventingKeys = [
+      'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 
+      'Home', 'End', 'PageUp', 'PageDown'
+    ];
+    
+    // スクロールを防ぐキーの場合は常にpreventDefault
+    if (scrollPreventingKeys.includes(event.code)) {
+      event.preventDefault();
+    }
+    
     // Ctrl + 数字キーで再生速度を変更
     if (event.ctrlKey && !event.altKey && !event.shiftKey) {
       let newSpeed = 1;
@@ -863,6 +919,77 @@ function setupPlaybackSpeedShortcuts() {
         
         console.log('setupPlaybackSpeedShortcuts: キーボードショートカットで再生速度を変更しました:', newSpeed);
       }
+    }
+    
+    // スペースキーで再生/一時停止
+    if (event.code === 'Space' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+      if (video.paused) {
+        video.play().then(() => {
+          console.log('setupPlaybackSpeedShortcuts: スペースキーで再生しました');
+        }).catch(error => {
+          console.error('setupPlaybackSpeedShortcuts: 再生に失敗しました:', error);
+        });
+      } else {
+        video.pause();
+        console.log('setupPlaybackSpeedShortcuts: スペースキーで一時停止しました');
+      }
+    }
+    
+    // 左右矢印キーでシーク（10秒前後）
+    if (event.code === 'ArrowLeft' && !event.ctrlKey && !event.altKey) {
+      const seekTime = event.shiftKey ? 30 : 10; // Shift + 左矢印で30秒、通常で10秒
+      video.currentTime = Math.max(0, video.currentTime - seekTime);
+      console.log(`setupPlaybackSpeedShortcuts: 左矢印キーで${seekTime}秒戻しました`);
+    }
+    
+    if (event.code === 'ArrowRight' && !event.ctrlKey && !event.altKey) {
+      const seekTime = event.shiftKey ? 30 : 10; // Shift + 右矢印で30秒、通常で10秒
+      video.currentTime = Math.min(video.duration, video.currentTime + seekTime);
+      console.log(`setupPlaybackSpeedShortcuts: 右矢印キーで${seekTime}秒進めました`);
+    }
+    
+    // 上下矢印キーで音量調整
+    if (event.code === 'ArrowUp' && !event.ctrlKey && !event.altKey) {
+      const volumeChange = event.shiftKey ? 0.1 : 0.05; // Shift + 上矢印で10%、通常で5%
+      video.volume = Math.min(1, video.volume + volumeChange);
+      console.log(`setupPlaybackSpeedShortcuts: 上矢印キーで音量を上げました: ${(video.volume * 100).toFixed(0)}%`);
+    }
+    
+    if (event.code === 'ArrowDown' && !event.ctrlKey && !event.altKey) {
+      const volumeChange = event.shiftKey ? 0.1 : 0.05; // Shift + 下矢印で10%、通常で5%
+      video.volume = Math.max(0, video.volume - volumeChange);
+      console.log(`setupPlaybackSpeedShortcuts: 下矢印キーで音量を下げました: ${(video.volume * 100).toFixed(0)}%`);
+    }
+    
+    // Mキーでミュート切り替え
+    if (event.key.toLowerCase() === 'm' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+      event.preventDefault();
+      video.muted = !video.muted;
+      console.log(`setupPlaybackSpeedShortcuts: Mキーでミュートを${video.muted ? 'ON' : 'OFF'}にしました`);
+    }
+    
+    // Fキーでフルスクリーン切り替え
+    if (event.key.toLowerCase() === 'f' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+      event.preventDefault();
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+        console.log('setupPlaybackSpeedShortcuts: Fキーでフルスクリーンを解除しました');
+      } else {
+        video.requestFullscreen();
+        console.log('setupPlaybackSpeedShortcuts: Fキーでフルスクリーンにしました');
+      }
+    }
+    
+    // 0キーで最初に戻る
+    if (event.key === '0' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+      video.currentTime = 0;
+      console.log('setupPlaybackSpeedShortcuts: 0キーで動画の最初に戻りました');
+    }
+    
+    // Endキーで最後に進む
+    if (event.code === 'End' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+      video.currentTime = video.duration;
+      console.log('setupPlaybackSpeedShortcuts: Endキーで動画の最後に進みました');
     }
   });
 }
