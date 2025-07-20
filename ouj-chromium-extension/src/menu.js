@@ -124,29 +124,7 @@ function waitForLogoAndInsertMenu() {
     const menuElement = document.getElementById('menu');
     
     // 挿入位置を特定（複数のセレクタを試す）
-    let settingList = document.querySelector('#menu > menu-navi > ion-content > div.scroll-content > ion-content > div.scroll-content > ion-list:nth-child(3)');
-    
-    if (!settingList) {
-      settingList = document.querySelector('#menu ion-list:nth-child(3)');
-    }
-    
-    if (!settingList) {
-      settingList = document.querySelector('#menu ion-list:last-child');
-    }
-    
-    if (!settingList) {
-      const allMenuLists = document.querySelectorAll('#menu ion-list');
-      allMenuLists.forEach((list, index) => {
-      });
-      
-      // #menu要素の構造も確認
-      const menuElement = document.getElementById('menu');
-      
-      // 最後の手段: 最初のion-listの前に挿入
-      if (allMenuLists.length > 0) {
-        settingList = allMenuLists[0];
-      }
-    }
+    const settingList = findInsertionPosition();
     
     console.log('waitForLogoAndInsertMenu: 最終的な挿入位置要素:', settingList);
     console.log('waitForLogoAndInsertMenu: 挿入位置の親要素:', settingList?.parentNode);
@@ -190,32 +168,7 @@ function waitForLogoAndInsertMenu() {
             
             // 少し遅延してから再挿入
             setTimeout(() => {
-              // 重複挿入防止チェック
-              if (document.querySelector('ion-list[aria-label="拡張機能"]')) {
-                console.log('waitForLogoAndInsertMenu: 再挿入時に既にメニューが存在します。スキップします');
-                return;
-              }
-              
-              const currentSettingList = document.querySelector('#menu ion-list:nth-child(3)') || 
-                                        document.querySelector('#menu ion-list:last-child');
-              if (!currentSettingList) {
-                return;
-              }
-              
-              const newMenuContainer = document.createElement('div');
-              newMenuContainer.innerHTML = createMenuHTML();
-              const newMenuList = newMenuContainer.firstElementChild;
-              currentSettingList.parentNode.insertBefore(newMenuList, currentSettingList);
-              console.log('waitForLogoAndInsertMenu: メニューを再挿入しました');
-              addMenuEventListeners();
-              
-              // 再挿入後も監視を継続
-              setTimeout(() => {
-                const reinsertedMenu = document.querySelector('ion-list[aria-label="拡張機能"]');
-                if (reinsertedMenu) {
-                  observer.observe(reinsertedMenu.parentNode, { childList: true, subtree: true });
-                }
-              }, 50);
+              reinsertMenu(observer);
             }, 200); // より長い遅延
           });
         });
@@ -276,24 +229,7 @@ function waitForLogoAndInsertMenu() {
       reinsertionCount++;
       console.log(`waitForLogoAndInsertMenu: 初回挿入失敗。再挿入を試行 ${reinsertionCount}/${maxReinsertions}`);
       setTimeout(() => {
-        // 重複挿入防止チェック
-        if (document.querySelector('ion-list[aria-label="拡張機能"]')) {
-          console.log('waitForLogoAndInsertMenu: 初回失敗後の再挿入時に既にメニューが存在します。スキップします');
-          return;
-        }
-        
-        const currentSettingList = document.querySelector('#menu ion-list:nth-child(3)') || 
-                                  document.querySelector('#menu ion-list:last-child');
-        if (!currentSettingList) {
-          return;
-        }
-        
-        const newMenuContainer = document.createElement('div');
-        newMenuContainer.innerHTML = createMenuHTML();
-        const newMenuList = newMenuContainer.firstElementChild;
-        currentSettingList.parentNode.insertBefore(newMenuList, currentSettingList);
-        console.log('waitForLogoAndInsertMenu: 初回失敗後の再挿入を実行しました');
-        addMenuEventListeners();
+        reinsertMenu();
       }, 100);
     }, 100);
     
@@ -304,6 +240,163 @@ function waitForLogoAndInsertMenu() {
     // 挿入処理完了フラグをリセット
     window.oujMenuInsertionInProgress = false;
   });
+}
+
+// 挿入位置を特定する関数
+function findInsertionPosition() {
+  // 複数のセレクタを順番に試す
+  const selectors = [
+    '#menu > menu-navi > ion-content > div.scroll-content > ion-content > div.scroll-content > ion-list:nth-child(3)',
+    '#menu ion-list:nth-child(3)',
+    '#menu ion-list:last-child'
+  ];
+  
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      return element;
+    }
+  }
+  
+  // 最後の手段: 最初のion-listの前に挿入
+  const allMenuLists = document.querySelectorAll('#menu ion-list');
+  if (allMenuLists.length > 0) {
+    return allMenuLists[0];
+  }
+  
+  return null;
+}
+
+// メニューを再挿入する関数
+function reinsertMenu(observer = null) {
+  // 重複挿入防止チェック
+  if (document.querySelector('ion-list[aria-label="拡張機能"]')) {
+    console.log('waitForLogoAndInsertMenu: 再挿入時に既にメニューが存在します。スキップします');
+    return;
+  }
+  
+  const currentSettingList = findInsertionPosition();
+  if (!currentSettingList) {
+    return;
+  }
+  
+  const newMenuContainer = document.createElement('div');
+  newMenuContainer.innerHTML = createMenuHTML();
+  const newMenuList = newMenuContainer.firstElementChild;
+  currentSettingList.parentNode.insertBefore(newMenuList, currentSettingList);
+  console.log('waitForLogoAndInsertMenu: メニューを再挿入しました');
+  addMenuEventListeners();
+  
+  // 監視を継続する場合
+  if (observer) {
+    setTimeout(() => {
+      const reinsertedMenu = document.querySelector('ion-list[aria-label="拡張機能"]');
+      if (reinsertedMenu) {
+        observer.observe(reinsertedMenu.parentNode, { childList: true, subtree: true });
+      }
+    }, 50);
+  }
+}
+
+// 履歴リストを日付順で描画する関数
+function renderHistoryListByDate(filteredItems) {
+  if (!filteredItems.length) {
+    return '<li class="history-empty">該当する履歴はありません</li>';
+  }
+  
+  // 日時順（新しい順）でフラットに表示
+  const sortedItems = filteredItems.sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  return sortedItems.map((item, index) => {
+    const date = new Date(item.date);
+    const dateStr = date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    const title = item.title || `コース (ID: ${item.categoryId})`;
+    return `<li class="history-item" data-category-id="${item.categoryId}" tabindex="0" role="button" aria-label="${title}を開く">
+      <div class="history-item-content">
+        <div class="history-title">${title}</div>
+        <div class="history-date">${dateStr}</div>
+      </div>
+      <button class="history-delete-btn" data-date="${item.date}" data-category-id="${item.categoryId}" aria-label="${title}を履歴から削除" title="削除">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
+        </svg>
+      </button>
+      <svg class="history-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
+    </li>`;
+  }).join('');
+}
+
+// 履歴リストをグループ順で描画する関数
+function renderHistoryListByGroup(filteredItems) {
+  if (!filteredItems.length) {
+    return '<li class="history-empty">該当する履歴はありません</li>';
+  }
+  
+  // 日付ごとにグループ化
+  const groupedHistory = {};
+  filteredItems.forEach(item => {
+    const date = new Date(item.date);
+    const dateKey = date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    if (!groupedHistory[dateKey]) {
+      groupedHistory[dateKey] = [];
+    }
+    groupedHistory[dateKey].push(item);
+  });
+
+  // グループ化されたHTMLを生成（日付降順）
+  const sortedGroups = Object.entries(groupedHistory).sort(([aDate], [bDate]) => {
+    // 日付文字列をDateに変換して降順
+    return new Date(bDate) - new Date(aDate);
+  });
+
+  const groupHtmls = sortedGroups.map(([dateKey, items]) => {
+    // 各グループ内で新しい順にソート
+    const sortedItems = items.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const itemsHtml = sortedItems.map((item, index) => {
+      const date = new Date(item.date);
+      const timeStr = date.toLocaleTimeString('ja-JP', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      const title = item.title || `コース (ID: ${item.categoryId})`;
+      return `<li class="history-item" data-category-id="${item.categoryId}" tabindex="0" role="button" aria-label="${title}を開く">
+        <div class="history-item-content">
+          <div class="history-title">${title}</div>
+          <div class="history-date">${timeStr}</div>
+        </div>
+        <button class="history-delete-btn" data-date="${item.date}" data-category-id="${item.categoryId}" aria-label="${title}を履歴から削除" title="削除">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
+          </svg>
+        </button>
+        <svg class="history-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </li>`;
+    }).join('');
+
+    return `
+      <div class="history-group">
+        <div class="history-group-header">${dateKey}</div>
+        <ul class="history-group-list">${itemsHtml}</ul>
+      </div>
+    `;
+  });
+
+  return groupHtmls.join('');
 }
 
 // メニューのイベントリスナーを追加
@@ -407,98 +500,9 @@ function addMenuEventListeners() {
           }) : historyItemsWithParent;
 
           if (sortType === 'date') {
-            // 日時順（新しい順）でフラットに表示
-            const sortedItems = filteredItems.sort((a, b) => new Date(b.date) - new Date(a.date));
-            listHtml = sortedItems.map((item, index) => {
-              const date = new Date(item.date);
-              const dateStr = date.toLocaleDateString('ja-JP', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              });
-              const title = item.title || `コース (ID: ${item.categoryId})`;
-              return `<li class="history-item" data-category-id="${item.categoryId}" tabindex="0" role="button" aria-label="${title}を開く">
-                <div class="history-item-content">
-                  <div class="history-title">${title}</div>
-                  <div class="history-date">${dateStr}</div>
-                </div>
-                <button class="history-delete-btn" data-date="${item.date}" data-category-id="${item.categoryId}" aria-label="${title}を履歴から削除" title="削除">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
-                  </svg>
-                </button>
-                <svg class="history-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M9 18l6-6-6-6"/>
-                </svg>
-              </li>`;
-            }).join('');
-            if (!sortedItems.length) {
-              listHtml = '<li class="history-empty">該当する履歴はありません</li>';
-            }
+            listHtml = renderHistoryListByDate(filteredItems);
           } else {
-            // グループ順（日付ごと）
-            // 日付ごとにグループ化
-            const groupedHistory = {};
-            filteredItems.forEach(item => {
-              const date = new Date(item.date);
-              const dateKey = date.toLocaleDateString('ja-JP', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-              });
-              if (!groupedHistory[dateKey]) {
-                groupedHistory[dateKey] = [];
-              }
-              groupedHistory[dateKey].push(item);
-            });
-
-            // グループ化されたHTMLを生成（日付降順）
-            const sortedGroups = Object.entries(groupedHistory).sort(([aDate], [bDate]) => {
-              // 日付文字列をDateに変換して降順
-              return new Date(bDate) - new Date(aDate);
-            });
-
-            const groupHtmls = sortedGroups.map(([dateKey, items]) => {
-              // 各グループ内で新しい順にソート
-              const sortedItems = items.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-              const itemsHtml = sortedItems.map((item, index) => {
-                const date = new Date(item.date);
-                const timeStr = date.toLocaleTimeString('ja-JP', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                });
-                const title = item.title || `コース (ID: ${item.categoryId})`;
-                return `<li class="history-item" data-category-id="${item.categoryId}" tabindex="0" role="button" aria-label="${title}を開く">
-                  <div class="history-item-content">
-                    <div class="history-title">${title}</div>
-                    <div class="history-date">${timeStr}</div>
-                  </div>
-                  <button class="history-delete-btn" data-date="${item.date}" data-category-id="${item.categoryId}" aria-label="${title}を履歴から削除" title="削除">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
-                    </svg>
-                  </button>
-                  <svg class="history-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 18l6-6-6-6"/>
-                  </svg>
-                </li>`;
-              }).join('');
-
-              return `
-                <div class="history-group">
-                  <div class="history-group-header">${dateKey}</div>
-                  <ul class="history-group-list">${itemsHtml}</ul>
-                </div>
-              `;
-            });
-
-            listHtml = groupHtmls.join('');
-            if (!filteredItems.length) {
-              listHtml = '<li class="history-empty">該当する履歴はありません</li>';
-            }
+            listHtml = renderHistoryListByGroup(filteredItems);
           }
         } else {
           listHtml = '<li class="history-empty">履歴はありません</li>';

@@ -3,83 +3,93 @@ function detectOujPageType() {
   return new Promise(async (resolve) => {
     const url = window.location.href;
     console.log("detectOujPageType: 現在のURL:", url);
+    
+    // ログイン画面の判定
     if (url.includes('https://sso.ouj.ac.jp/cas/login')) {
       console.log("detectOujPageType: 【ログイン画面】");
       resolve('login');
       return;
     }
+    
+    // ホームページの判定
     if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/home')) {
       console.log("detectOujPageType: 【ホームページ】");
       resolve('home');
       return;
     }
+    
+    // 動画再生画面の判定
     if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/player?co=')) {
       const coNum = url.split('co=')[1];
       console.log("detectOujPageType: 【動画再生画面】動画ID:", coNum);
       resolve('player');
       return;
     }
-    if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=')) {
-      // ca=の後ろの値を抽出
-      const match = url.match(/vod\?ca=(\d+)/);
-      if (match) {
-        const caNum = parseInt(match[1], 10);
-        if (isNaN(caNum)) {
-          console.log("detectOujPageType: 【動画選択画面】ca=があるが値が取れない場合");
-          resolve('vod-select'); // ca=があるが値が取れない場合
-          return;
-        }
-        // parentCategories()を使って判定
-        if (typeof window.parentCategories === 'function') {
-          try {
-            const parentIds = await window.parentCategories();
-            console.log("detectOujPageType: parentCategoriesに含まれるかの確認:", parentIds);
-            if (parentIds.includes(caNum)) {
-              console.log("detectOujPageType: parentCategoriesに含まれるため【コース選択画面】カテゴリID:", caNum);
-              resolve('course-select');
-              return;
-            }
-            if (caNum < 100 ) {
-              console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
-              resolve('course-select');
-              return;
-            } else if (480 < caNum && caNum < 500) {
-              console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
-              resolve('course-select');
-              return;
-            } else {
-              console.log("detectOujPageType: 【動画選択画面】カテゴリID:", caNum);
-              resolve('video-select');
-              return;
-            }
-          } catch (e) {
-            console.error("detectOujPageType: parentCategoriesの取得に失敗", e);
-            resolve('vod-select');
-            return;
-          }
-        }
-        // parentCategoriesが未定義の場合は従来通り
-        if (caNum < 100 ) {
-          console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
-          resolve('course-select');
-          return;
-        } else if (480 < caNum && caNum < 500) {
-          console.log("detectOujPageType: 【コース選択画面】カテゴリID:", caNum);
-          resolve('course-select');
-          return;
-        } else {
-          console.log("detectOujPageType: 【動画選択画面】カテゴリID:", caNum);
-          resolve('video-select');
-          return;
-        }
-      }
+    
+    // VOD画面の判定
+    if (!url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=')) {
+      console.log("detectOujPageType: 【そのほか】不明");
+      resolve('');
+      return;
+    }
+    
+    // ca=の後ろの値を抽出
+    const match = url.match(/vod\?ca=(\d+)/);
+    if (!match) {
       console.log("detectOujPageType: 【動画選択画面】ca=があるが値が取れない場合");
       resolve('vod-select');
       return;
     }
-    console.log("detectOujPageType: 【そのほか】不明");
-    resolve('');
+    
+    const caNum = parseInt(match[1], 10);
+    if (isNaN(caNum)) {
+      console.log("detectOujPageType: 【動画選択画面】ca=があるが値が取れない場合");
+      resolve('vod-select');
+      return;
+    }
+    
+    // parentCategories()を使って判定
+    if (typeof window.parentCategories === 'function') {
+      try {
+        const parentIds = await window.parentCategories();
+        console.log("detectOujPageType: parentCategoriesに含まれるかの確認:", parentIds);
+        
+        if (parentIds.includes(caNum)) {
+          console.log("detectOujPageType: parentCategoriesに含まれるため【コース選択画面】カテゴリID:", caNum);
+          resolve('course-select');
+          return;
+        }
+        
+        const pageType = determinePageTypeByCategoryId(caNum);
+        console.log(`detectOujPageType: 【${pageType}】カテゴリID:`, caNum);
+        resolve(pageType);
+        return;
+        
+      } catch (e) {
+        console.error("detectOujPageType: parentCategoriesの取得に失敗", e);
+        resolve('vod-select');
+        return;
+      }
+    }
+    
+    // parentCategoriesが未定義の場合は従来通り
+    const pageType = determinePageTypeByCategoryId(caNum);
+    console.log(`detectOujPageType: 【${pageType}】カテゴリID:`, caNum);
+    resolve(pageType);
   });
+}
+
+// カテゴリIDからページ種別を判定する関数
+function determinePageTypeByCategoryId(caNum) {
+  if (caNum < 100) {
+    return 'course-select';
+  }
+  
+  if (480 < caNum && caNum < 500) {
+    return 'course-select';
+  }
+  
+  return 'video-select';
 }
 
 async function main() {

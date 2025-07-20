@@ -95,6 +95,12 @@ function addVideoSettingsPanel() {
   window.waitForElement('#content-detail-area > div.title', (targetElement) => {
     console.log('addVideoSettingsPanel: 対象要素が見つかりました: #content-detail-area > div.title');
     
+    // 共通関数の存在をチェック
+    if (typeof window.getSetting !== 'function' || typeof window.getBooleanSetting !== 'function') {
+      setTimeout(addVideoSettingsPanel, 100);
+      return;
+    }
+    
     // 設定パネルを作成
     const panel = document.createElement('div');
     panel.id = 'video-settings-panel';
@@ -106,12 +112,6 @@ function addVideoSettingsPanel() {
       font-size: 14px;
       border: 1px solid #ddd;
     `;
-    
-    // 共通関数の存在をチェック
-    if (typeof window.getSetting !== 'function' || typeof window.getBooleanSetting !== 'function') {
-      setTimeout(addVideoSettingsPanel, 100);
-      return;
-    }
     
     // 保存された設定を取得
     const savedSetting = window.getSetting('nextVideoSetting', 'same-course');
@@ -371,6 +371,36 @@ function getCurrentVideoId() {
   return matchCo ? matchCo[1] : null;
 }
 
+// 動画の再生状況をチェックする関数
+async function checkVideoViewingStatus(video, favoriteId) {
+  try {
+    // 動画の再生状況を取得（共通関数を使用）
+    const viewingStatus = await window.getVideoViewingStatus(video.contentId);
+    const currentTimeRate = viewingStatus.currentTimeRate;
+    
+    // 再生が完了していない場合（currentTimeRate < 0.95）
+    if (currentTimeRate < 0.95) {
+      return {
+        contentId: video.contentId,
+        title: video.title,
+        categoryId: favoriteId,
+        currentTimeRate: currentTimeRate
+      };
+    }
+    
+    return null;
+    
+  } catch (viewingError) {
+    // 最初の動画で失敗した場合は未再生として扱う
+    return {
+      contentId: video.contentId,
+      title: video.title,
+      categoryId: favoriteId,
+      currentTimeRate: 0
+    };
+  }
+}
+
 // お気に入りコースから未再生動画を取得する関数
 async function getAvailableVideosFromFavorites(favorites) {
   const availableVideos = [];
@@ -389,48 +419,17 @@ async function getAvailableVideosFromFavorites(favorites) {
       
       // 各動画の再生状況をチェック
       let firstUnfinishedVideo = null;
-      let viewingLogFailed = false; // 再生状況取得の失敗フラグ
       
       for (const video of videos) {
-        // 再生状況取得に失敗した場合は以降の動画をスキップ
-        if (viewingLogFailed) {
-          break;
-        }
-        
         // 現在の動画の場合は再生完了として扱う
         if (video.contentId == currentVideoId) {
           continue;
         }
         
-        try {
-          // 動画の再生状況を取得（共通関数を使用）
-          const viewingStatus = await window.getVideoViewingStatus(video.contentId);
-          const currentTimeRate = viewingStatus.currentTimeRate;
-          
-          // 再生が完了していない場合（currentTimeRate < 0.95）
-          if (currentTimeRate < 0.95) {
-            if (!firstUnfinishedVideo) {
-              firstUnfinishedVideo = {
-                contentId: video.contentId,
-                title: video.title,
-                categoryId: favoriteId,
-                currentTimeRate: currentTimeRate
-              };
-            }
-            // 最初に見つかった未完了動画を記録（番号が若いもの）
-          }
-          
-        } catch (viewingError) {
-          viewingLogFailed = true; // 失敗フラグを設定
-          
-          // 最初の動画で失敗した場合は未再生として扱う
+        const unfinishedVideo = await checkVideoViewingStatus(video, favoriteId);
+        if (unfinishedVideo) {
           if (!firstUnfinishedVideo) {
-            firstUnfinishedVideo = {
-              contentId: video.contentId,
-              title: video.title,
-              categoryId: favoriteId,
-              currentTimeRate: 0
-            };
+            firstUnfinishedVideo = unfinishedVideo;
           }
         }
       }
