@@ -44,10 +44,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // TODO: ここでログインボタンを検知し、見つかった場合はクリックしてログイン画面に遷移、
-    //       または直接ログイン画面のURL（例: https://sso.ouj.ac.jp/cas/login）に遷移する処理を追加する
-    //       （OUJホームボタンの処理の前後、または新たなボタン追加も検討）
-    
     // ログインボタンを検知してログイン画面に遷移する処理
     function detectLoginButtonAndNavigate() {
         // 現在のタブでログインボタンを検索

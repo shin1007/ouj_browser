@@ -8,7 +8,6 @@ function waitForPasswordAndLogin() {
     
     // ログイン要素を待つ
     window.waitForElement('#username', (usernameField) => {
-        // TODO: ログイン画面に遷移した際、ユーザーID入力ボックス（#username）に自動でフォーカスを当てる処理を追加する
         window.waitForElement('#password', (passwordField) => {
             window.waitForElement('button[name="submitBtn"][type="submit"]', (loginButton) => {
                 console.log("waitForPasswordAndLogin: ログイン要素が見つかりました。監視を開始します。");
