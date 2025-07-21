@@ -1762,6 +1762,7 @@ function addHistoryEntry(categoryId, title = '') {
   if (history.length > 20) history = history.slice(0, 20);
   window.saveSetting('history', history);
   window.saveSetting(lastHistoryKey, now);
+  console.log(`addHistoryEntry: 現在のページを履歴に追加しました。カテゴリID: ${categoryId}, タイトル: ${title}`);
 }
 
 // グローバル関数として公開

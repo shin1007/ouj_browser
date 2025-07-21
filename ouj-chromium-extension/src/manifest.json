@@ -8,11 +8,12 @@
     "storage",
     "activeTab",
     "scripting",
-    "autofill",
-    "tabs"
+    "tabs",
+    "webNavigation"
   ],
   "host_permissions": [
-    "https://v.ouj.ac.jp/*"
+    "https://v.ouj.ac.jp/*",
+    "https://sso.ouj.ac.jp/*"
   ],
   "background": {
     "service_worker": "background.js"

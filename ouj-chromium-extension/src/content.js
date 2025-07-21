@@ -270,7 +270,7 @@ if (document.readyState === "complete" || document.readyState === "interactive")
       lastUrl = location.href;
       if (!urlChangeDetected) {
         // history APIフックやpopstateで検知できなかった場合のみログ
-        console.warn('[OUJ拡張] setIntervalによるURL変化検知: main()再実行（history APIフック非対応のSPAの可能性）');
+        console.log('[OUJ拡張] setIntervalによるURL変化検知: main()再実行');
       }
       urlChangeDetected = false;
       safeMain();

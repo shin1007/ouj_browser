@@ -99,7 +99,20 @@ async function waitThenAddFavBtnToCategoryList() {
     setTimeout(waitThenAddFavBtnToCategoryList, 100);
     return;
   }
+  // 現在のページのカテゴリIDを取得
+  const hash = window.location.hash;
+  const params = hash.split('?')[1];
+  const ca = params.split('ca=')[1];
+  const currentCategoryNum = parseInt(ca, 10);
   
+  // categoryIdからsummaryを取得、なければ何もしない
+  const categories = await window.getCategoriesData();
+  const category = categories.find(cat => cat.categoryId === currentCategoryNum);
+
+  const summary = category ? category.summary : '';
+  console.log(`addHistoryEntry: カテゴリID: ${currentCategoryNum}, サマリー: ${summary}`);
+  if (!summary) return;
+
   // getFavorites関数が利用可能かチェック
   if (typeof window.getFavorites !== 'function') {
     console.error('getFavorites関数が未定義です。helpers.jsが読み込まれているか確認してください。');
@@ -118,13 +131,7 @@ async function waitThenAddFavBtnToCategoryList() {
   // 現在のページ（親カテゴリ）を履歴に追加
   if (window.addHistoryEntry) {
     try {
-      const hash = window.location.hash;
-      const params = hash.split('?')[1];
-      const ca = params.split('ca=')[1];
-      const currentCategoryNum = parseInt(ca, 10);
       
-      const categories = await window.getCategoriesData();
-      const category = categories.find(cat => cat.categoryId === currentCategoryNum);
       const title = category ? category.name : `コース (ID: ${currentCategoryNum})`;
       
       window.addHistoryEntry(currentCategoryNum.toString(), title);
