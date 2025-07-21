@@ -14,7 +14,7 @@ async function getVideoProgress(contentId) {
     const data = await response.json();
     return data.currentTimeRate || 0;
   } catch (error) {
-    console.log(`getVideoProgress: 動画 ${contentId} の再生進捗取得に失敗:`, error);
+    // console.log(`getVideoProgress: 動画 ${contentId} の再生進捗取得に失敗:`, error);
     return 0;
   }
 }
@@ -98,7 +98,7 @@ async function showThumbnailProgress() {
       // コンテンツIDを抽出
       const contentId = extractContentIdFromThumbnail(thumbnail);
       if (!contentId) {
-        console.log('showThumbnailProgress: コンテンツIDが見つかりませんでした');
+        // console.log('showThumbnailProgress: コンテンツIDが見つかりませんでした');
         continue;
       }
       
@@ -108,7 +108,7 @@ async function showThumbnailProgress() {
       // 進捗が0より大きい場合のみ進捗バーを表示
       if (progress > 0) {
         addProgressBarToThumbnail(thumbnail, progress);
-        console.log(`showThumbnailProgress: 動画 ${contentId} の進捗 ${(progress * 100).toFixed(1)}% を表示`);
+        // console.log(`showThumbnailProgress: 動画 ${contentId} の進捗 ${(progress * 100).toFixed(1)}% を表示`);
       }
     } catch (error) {
       console.error('showThumbnailProgress: エラーが発生しました:', error);

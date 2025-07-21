@@ -67,7 +67,7 @@ const fetchWithCache = async (url, cacheKey) => {
     
             return cachedData.data;
         } else {
-            console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものではありません。ネットワークからデータ取得を試行中...`);
+            // console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものではありません。ネットワークからデータ取得を試行中...`);
         }
     } else {
   
@@ -97,7 +97,7 @@ const fetchWithCache = async (url, cacheKey) => {
         
         // 古いキャッシュがあれば、それを返す
         if (cachedData && cachedData.data) {
-            console.log(`fetchWithCache: ${cacheKey} のネットワークエラーのため、古いキャッシュを利用します。`, cachedData.data);
+            // console.log(`fetchWithCache: ${cacheKey} のネットワークエラーのため、古いキャッシュを利用します。`, cachedData.data);
             return cachedData.data;
         }
         
@@ -121,7 +121,7 @@ const waitForElement = (selector, callback, interval = 100, maxAttempts = null) 
         const element = document.querySelector(selector);
         
         if (element) {
-            console.log(`waitForElement: 要素が見つかりました: ${selector}`);
+            // console.log(`waitForElement: 要素が見つかりました: ${selector}`);
             callback(element);
             return;
         }
@@ -152,7 +152,7 @@ const waitForCondition = (condition, callback, interval = 100, maxAttempts = nul
         attempts++;
         
         if (condition()) {
-            console.log('waitForCondition: 条件が満たされました');
+            // console.log('waitForCondition: 条件が満たされました');
             callback();
             return;
         }
@@ -162,7 +162,7 @@ const waitForCondition = (condition, callback, interval = 100, maxAttempts = nul
             return;
         }
         
-        console.log(`waitForCondition: 条件が満たされません。${interval}ms後に再試行します`);
+        // console.log(`waitForCondition: 条件が満たされません。${interval}ms後に再試行します`);
         setTimeout(checkCondition, interval);
     };
     
@@ -346,7 +346,7 @@ const closeModalPanel = (id) => {
 const saveSetting = (key, value) => {
     try {
         localStorage.setItem(key, JSON.stringify(value));
-        console.log(`saveSetting: 設定を保存しました - ${key}:`, value);
+        // console.log(`saveSetting: 設定を保存しました - ${key}:`, value);
     } catch (error) {
         console.error(`saveSetting: 設定の保存に失敗しました - ${key}:`, error);
     }
@@ -402,7 +402,7 @@ const getBooleanSetting = (key, defaultValue = true) => {
 const removeSetting = (key) => {
     try {
         localStorage.removeItem(key);
-        console.log(`removeSetting: 設定を削除しました - ${key}`);
+        // console.log(`removeSetting: 設定を削除しました - ${key}`);
     } catch (error) {
         console.error(`removeSetting: 設定の削除に失敗しました - ${key}:`, error);
     }
@@ -781,5 +781,5 @@ window.showInfoNotification = showInfoNotification;
 window.showConfirmDialog = showConfirmDialog;
 
 // 初期化完了を通知
-console.log('helpers.js: 共通関数の初期化が完了しました');
+// console.log('helpers.js: 共通関数の初期化が完了しました');
 window.helpersInitialized = true;

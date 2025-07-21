@@ -13,13 +13,8 @@ async function addFavoriteButtonsToCategoryList() {
   const ca = params.split('ca=')[1];
 
   const currentCategoryNum = parseInt(ca, 10);
-  console.log("currentCategoryNum:", currentCategoryNum);
   const childCategories = await window.getChildIds(currentCategoryNum);
-  console.log("childCategories:", childCategories);
-  
-  // お気に入りデータを取得
   const favorites = window.getFavorites ? window.getFavorites() : [];
-  console.log("favorites:", favorites);
 
   // ion-list#common-list-content内のion-itemを全て取得
   const items = document.querySelectorAll('#main div.icon-text > .icon-area');
@@ -71,24 +66,19 @@ async function addFavoriteButtonsToCategoryList() {
         const updatedFavorites = currentFavorites.filter(id => id !== categoryId);
         window.saveSetting('favorites', updatedFavorites);
         favBtn.innerHTML = '<ion-icon name="star-outline" class="icon icon-md ion-md-star-outline item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
-        console.log(`お気に入りから削除: ${category.name}`);
       } else {
         // お気に入りに追加
         const updatedFavorites = [...currentFavorites, categoryId];
         window.saveSetting('favorites', updatedFavorites);
         favBtn.innerHTML = '<ion-icon name="star" class="icon icon-md ion-md-star item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
-        console.log(`お気に入りに追加: ${category.name}`);
       }
     });
     
     // タイトルの右側に追加
     item.parentNode.appendChild(favBtn);
     
-    // コンソールにログ出力
   }
   
-  // 関数の終了をコンソールにログ出力
-  console.log("addFavoriteButtonsToCategoryList: 完了");
 }
 
 async function waitThenAddFavBtnToCategoryList() {
@@ -110,7 +100,6 @@ async function waitThenAddFavBtnToCategoryList() {
   const category = categories.find(cat => cat.categoryId === currentCategoryNum);
 
   const summary = category ? category.summary : '';
-  console.log(`addHistoryEntry: カテゴリID: ${currentCategoryNum}, サマリー: ${summary}`);
   if (!summary) return;
 
   // getFavorites関数が利用可能かチェック
@@ -135,12 +124,10 @@ async function waitThenAddFavBtnToCategoryList() {
       const title = category ? category.name : `コース (ID: ${currentCategoryNum})`;
       
       window.addHistoryEntry(currentCategoryNum.toString(), title);
-      console.log(`waitThenAddFavBtnToCategoryList: 現在のページを履歴に追加しました。カテゴリID: ${currentCategoryNum}, タイトル: ${title}`);
     } catch (error) {
       console.error('waitThenAddFavBtnToCategoryList: 履歴追加でエラーが発生しました:', error);
     }
   }
   
-  console.log("お気に入りボタンを追加しました");
 }
 window.waitThenAddFavBtnToCategoryList = waitThenAddFavBtnToCategoryList;

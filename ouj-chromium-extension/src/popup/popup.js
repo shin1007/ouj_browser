@@ -20,13 +20,11 @@ document.addEventListener('DOMContentLoaded', function() {
         chrome.storage.sync.set({
             autoLogin: autoLoginCheckbox.checked
         }, function() {
-            console.log('自動ログイン設定を保存しました:', autoLoginCheckbox.checked);
         });
     });
     
     // 放送大学ホームページを開く
     openOujHomeButton.addEventListener('click', function() {
-        console.log('放送大学ホームページボタンがクリックされました');
         const targetUrl = "https://v.ouj.ac.jp/view/ouj/#/navi/home";
         
         // 新しいタブで放送大学のホームページを開く
@@ -37,7 +35,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (chrome.runtime.lastError) {
                 console.error('タブ作成エラー:', chrome.runtime.lastError);
             } else {
-                console.log('放送大学ホームページが新しいタブで開かれました:', newTab.id);
                 // ポップアップを閉じる
                 window.close();
             }
@@ -66,7 +63,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     for (const selector of loginSelectors) {
                         const element = document.querySelector(selector);
                         if (element) {
-                            console.log('ログインボタンを検知しました:', selector);
                             return true;
                         }
                     }
@@ -74,13 +70,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, (results) => {
                 if (results && results[0] && results[0].result) {
-                    console.log('ログインボタンが検知されました。ログイン画面に遷移します。');
                     // ログイン画面のURLに直接遷移
                     chrome.tabs.update(currentTab.id, {
                         url: 'https://sso.ouj.ac.jp/cas/login'
                     });
-                } else {
-                    console.log('ログインボタンは検知されませんでした。');
                 }
             });
         });
@@ -89,7 +82,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // 自動ログイン設定が有効な場合、ログインボタン検知処理を実行
     chrome.storage.sync.get(['autoLogin'], function(result) {
         if (result.autoLogin) {
-            console.log('自動ログインが有効です。ログインボタン検知処理を開始します。');
             // 少し遅延させてから実行（ページの読み込みを待つ）
             setTimeout(detectLoginButtonAndNavigate, 2000);
         }

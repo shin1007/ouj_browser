@@ -10,13 +10,11 @@ function waitForPasswordAndLogin() {
     window.waitForElement('#username', (usernameField) => {
         window.waitForElement('#password', (passwordField) => {
             window.waitForElement('button[name="submitBtn"][type="submit"]', (loginButton) => {
-                console.log("waitForPasswordAndLogin: ログイン要素が見つかりました。監視を開始します。");
 
                 // 監視
                 const interval = setInterval(() => {
                     if (passwordField.value.length > 0) {
                         clearInterval(interval);
-                        console.log("waitForPasswordAndLogin: パスワード欄が埋まりました。自動でログインします。");
                         loginButton.click();
                     }
                 }, 200);
@@ -24,7 +22,6 @@ function waitForPasswordAndLogin() {
                 // 30秒で監視終了
                 setTimeout(() => {
                     clearInterval(interval);
-                    console.log("waitForPasswordAndLogin: 自動ログイン監視を終了しました。");
                 }, 30000);
             });
         });
@@ -38,10 +35,8 @@ function detectLoginSuccess() {
     
     // ログインページ以外のページに移動した場合、ログイン成功とみなす
     if (currentUrl.includes('/login') || currentUrl.includes('login.html')) {
-        console.log("detectLoginSuccess: ログインページにいるので、キャッシュされたカテゴリデータを削除しません。");
         return;
     } else {
-        console.log("detectLoginSuccess: ログイン成功を検知しました。キャッシュされたカテゴリデータを削除します。");
         clearCachedCategoriesData();
     }
 }
@@ -50,7 +45,6 @@ function detectLoginSuccess() {
 async function clearCachedCategoriesData() {
     try {
         await chrome.storage.local.remove(['cachedCategoriesData']);
-        console.log("clearCachedCategoriesData: キャッシュされたカテゴリデータを削除しました。");
     } catch (error) {
         console.error("clearCachedCategoriesData: カテゴリデータのキャッシュ削除に失敗しました:", error);
     }
@@ -86,7 +80,6 @@ const urlObserver = new MutationObserver(() => {
     if (currentUrl !== lastUrl) {
         // 直前がログインページ、かつ現在がログインページ以外の場合のみ発火
         if (wasLoginPage && !isLoginPage) {
-            console.log("urlObserver: ログインページからログインページ以外に遷移したことを検知しました: " + currentUrl);
             detectLoginSuccess();
         }
         lastUrl = currentUrl;

@@ -48,7 +48,6 @@ async function getChildIds(categoryNum) {
  */
 function getCurrentCategoryId() {
   const hash = window.location.hash;
-  console.log("getCurrentCategoryId - hash:", hash);
   
   // hashのcaを取得
   const params = hash.split('?')[1];
@@ -64,7 +63,6 @@ function getCurrentCategoryId() {
   }
   
   const categoryId = caMatch[1];
-  console.log("getCurrentCategoryId - categoryId:", categoryId);
   return categoryId;
 }
 
