@@ -1,10 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "OUJ Chromium Extension",
-  "version": "1.0.0",
+  "name": "OUJ Tube",
+  "version": "0.1.0",
   "description": "A Chrome extension to enhance the usability of OUJ broadcasting classes.",
   "permissions": [
-    // TODO: 必要な権限のみを記載し、permissionの最小化を徹底すること。
     "storage",
     "activeTab",
     "scripting",
