@@ -102,7 +102,6 @@ async function main() {
     // 自動ログイン設定を確認
     chrome.storage.sync.get(['autoLogin'], function(result) {
       if (result.autoLogin) {
-        window.waitForThemeColorAndClick();
       } else {
       }
     });
@@ -139,32 +138,6 @@ async function main() {
     }
   });
 }
-
-// #theme-color要素を待ってログイン画面に遷移する関数
-function waitForThemeColorAndClick() {
-  
-  // 共通関数の存在をチェック
-  if (typeof window.waitForElement !== 'function') {
-    setTimeout(waitForThemeColorAndClick, 100);
-    return;
-  }
-  
-  // #theme-color要素を待つ（読み込みに時間がかかるため、十分な待機時間を設定）
-  window.waitForElement('#theme-color', (themeColorElement) => {
-    
-    // 少し遅延させてからログイン画面に遷移
-    setTimeout(() => {
-      try {
-        window.location.href = 'https://sso.ouj.ac.jp/cas/login';
-      } catch (error) {
-      }
-    }, 500); // 500ms待機
-    
-  }, 10000); // 最大10秒待機
-}
-
-// グローバル関数として公開
-window.waitForThemeColorAndClick = waitForThemeColorAndClick;
 
 function safeMain() {
   
