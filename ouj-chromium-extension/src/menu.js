@@ -449,7 +449,7 @@ function addMenuEventListeners() {
         fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSize: mainFontSize || '14px',
         border: 'none',
-        borderRadius: '12px',
+        borderRadius: '12px 12px 0 0',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         padding: '0',
         zIndex: '9999',
@@ -767,7 +767,7 @@ function addMenuEventListeners() {
         fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSize: mainFontSize || '14px',
         border: 'none',
-        borderRadius: '12px',
+        borderRadius: '12px 12px 0 0',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         padding: '0',
         zIndex: '9999',
@@ -1132,7 +1132,7 @@ function addMenuEventListeners() {
         fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSize: mainFontSize || '14px',
         border: 'none',
-        borderRadius: '12px',
+        borderRadius: '12px 12px 0 0',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         padding: '0',
         zIndex: '9999',
@@ -1171,19 +1171,19 @@ function addMenuEventListeners() {
       `).join('');
       
       panel.innerHTML = `
-        <div class="panel-header">
-          <h3 id="recommend-panel-title" class="panel-title">
-            <ion-icon name="play" class="panel-icon" aria-hidden="true"></ion-icon>
+        <div class="history-panel-header">
+          <h3 id="recommend-panel-title" class="history-panel-title">
+            <ion-icon name="play" class="history-panel-icon" aria-hidden="true"></ion-icon>
             おすすめ動画
           </h3>
-          <button id="close-recommend-list-panel" class="panel-close" aria-label="パネルを閉じる">
+          <button id="close-recommend-list-panel" class="history-panel-close" aria-label="パネルを閉じる">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
           </button>
         </div>
-        <div class="recommend-panel-content">
-          <div class="recommend-list" style="padding:16px;">
+        <div class="history-panel-content">
+          <div class="history-list">
             ${dummyCards}
           </div>
         </div>
@@ -1203,7 +1203,7 @@ function addMenuEventListeners() {
       
       // リスト部分の高さを調整（履歴パネルと統一）
       setTimeout(() => {
-        const content = panel.querySelector('.recommend-panel-content');
+        const content = panel.querySelector('.history-panel-content');
         if (content) {
           // CSSファイルで設定済みのため、JavaScriptでの設定は不要
           // max-height: 60vh と overflow-y: auto がCSSで設定されている
@@ -1714,8 +1714,8 @@ function addMenuEventListeners() {
             </a>
           `;
         }).join('');
-        if (!listHtml) listHtml = `<div class=\"recommend-empty\" style=\"color:${isDark ? '#fff' : '#222'};padding:16px;text-align:center;\">おすすめ動画はありません（全て再生済み）</div>`;
-        panel.querySelector('.recommend-panel-content').innerHTML = `<div class=\"recommend-list\" style=\"padding:16px;\">${listHtml}</div>`;
+        if (!listHtml) listHtml = `<div class=\"history-empty\" style=\"color:${isDark ? '#fff' : '#222'};padding:16px;text-align:center;\">おすすめ動画はありません（全て再生済み）</div>`;
+        panel.querySelector('.history-panel-content').innerHTML = `<div class=\"history-list\">${listHtml}</div>`;
 
         // 追加: リンククリックでパネルを閉じる
         const recommendLinks = panel.querySelectorAll('.recommend-card');
