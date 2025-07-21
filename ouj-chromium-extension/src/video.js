@@ -3,7 +3,7 @@ let nextVideoId = null;
 
 // 動画再生画面の初期化関数（最初に呼ばれる）
 async function initializeVideoPlayer() {
-  console.log('動画再生画面の初期化を開始します');
+  // console.log('動画再生画面の初期化を開始します');
   
   
   // videoタグの出現を監視し、出現した瞬間に設定パネルを挿入
@@ -34,7 +34,7 @@ async function initializeVideoPlayer() {
       const historyId = matchCa ? matchCa[1] : 'unknown';
       
       window.addHistoryEntry(historyId, courseName);
-      console.log(`initializeVideoPlayer: 履歴に追加しました。コースID: ${historyId}, コース名: ${courseName}`);
+      // console.log(`initializeVideoPlayer: 履歴に追加しました。コースID: ${historyId}, コース名: ${courseName}`);
     } catch (error) {
       console.error('initializeVideoPlayer: 履歴追加でエラーが発生しました:', error);
     }
@@ -93,7 +93,7 @@ function addVideoSettingsPanel() {
   }
   
   window.waitForElement('#content-detail-area > div.title', (targetElement) => {
-    console.log('addVideoSettingsPanel: 対象要素が見つかりました: #content-detail-area > div.title');
+    // console.log('addVideoSettingsPanel: 対象要素が見つかりました: #content-detail-area > div.title');
     
     // 共通関数の存在をチェック
     if (typeof window.getSetting !== 'function' || typeof window.getBooleanSetting !== 'function') {
@@ -210,7 +210,7 @@ function addVideoSettingsPanel() {
         radio.addEventListener('change', (event) => {
           const setting = event.target.value;
           window.saveSetting('nextVideoSetting', setting);
-          console.log('addVideoSettingsPanel: 次の動画設定を保存しました:', setting);
+          // console.log('addVideoSettingsPanel: 次の動画設定を保存しました:', setting);
         });
       });
       
@@ -220,7 +220,7 @@ function addVideoSettingsPanel() {
         autoNextVideoCheckbox.addEventListener('change', (event) => {
           const enabled = event.target.checked;
           window.saveSetting('autoNextVideoEnabled', enabled);
-          console.log('addVideoSettingsPanel: 自動次の動画遷移設定を保存しました:', enabled);
+          // console.log('addVideoSettingsPanel: 自動次の動画遷移設定を保存しました:', enabled);
         });
       }
       
@@ -229,7 +229,7 @@ function addVideoSettingsPanel() {
         volumeNormalizationCheckbox.addEventListener('change', (event) => {
           const enabled = event.target.checked;
           window.saveSetting('volumeNormalizationEnabled', enabled);
-          console.log('addVideoSettingsPanel: 音量自動調整設定を保存しました:', enabled);
+          // console.log('addVideoSettingsPanel: 音量自動調整設定を保存しました:', enabled);
         });
       }
       
@@ -239,7 +239,7 @@ function addVideoSettingsPanel() {
         playbackSpeedSelect.addEventListener('change', (event) => {
           const speed = event.target.value;
           window.saveSetting('playbackSpeed', speed);
-          console.log('addVideoSettingsPanel: 再生速度設定を保存しました:', speed);
+          // console.log('addVideoSettingsPanel: 再生速度設定を保存しました:', speed);
           
           // 現在再生中の動画に即座に適用
           applyPlaybackSpeed(parseFloat(speed));
@@ -248,7 +248,7 @@ function addVideoSettingsPanel() {
       
       // 対象要素の最後に追加
       targetElement.appendChild(panel);
-      console.log('addVideoSettingsPanel: 動画設定パネルを追加しました');
+      // console.log('addVideoSettingsPanel: 動画設定パネルを追加しました');
 
       // 折りたたみUIのイベントリスナー追加（panelがDOMに追加された直後に必ず実行）
       const toggle = panel.querySelector('#toggle-shortcut-help');
@@ -276,12 +276,12 @@ async function fetchNextVideoId() {
   if (matchCa && matchCo) {
     const currentCourseId = matchCa[1];
     const currentVideoId = matchCo[1];
-    console.log('fetchNextVideoId: 現在のコースID:', currentCourseId);
-    console.log('fetchNextVideoId: 現在の動画ID:', currentVideoId);
+    // console.log('fetchNextVideoId: 現在のコースID:', currentCourseId);
+    // console.log('fetchNextVideoId: 現在の動画ID:', currentVideoId);
     
     // 保存された設定を取得
     const setting = window.getSetting('nextVideoSetting', 'same-course');
-    console.log('fetchNextVideoId: 次の動画設定:', setting);
+    // console.log('fetchNextVideoId: 次の動画設定:', setting);
     
     if (setting === 'same-course') {
       // 同じコースの中で次を再生
@@ -291,7 +291,7 @@ async function fetchNextVideoId() {
       await fetchNextVideoFromFavorites();
     }
   } else {
-    console.log('fetchNextVideoId: URLからコースIDまたは動画IDを取得できません');
+    // console.log('fetchNextVideoId: URLからコースIDまたは動画IDを取得できません');
     nextVideoId = null;
   }
 }
@@ -301,10 +301,10 @@ async function fetchNextVideoFromSameCourse(currentCourseId, currentVideoId) {
   try {
     const cacheKey = `cachedVodContents_${currentCourseId}`;
     const res = await fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${currentCourseId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
-    console.log('fetchNextVideoFromSameCourse: APIレスポンス:', res);
+    // console.log('fetchNextVideoFromSameCourse: APIレスポンス:', res);
     
     const currentVideoIndex = res.findIndex(item => item.contentId == currentVideoId);
-    console.log('fetchNextVideoFromSameCourse: 現在の動画インデックス:', currentVideoIndex);
+    // console.log('fetchNextVideoFromSameCourse: 現在の動画インデックス:', currentVideoIndex);
     
     if (currentVideoIndex !== -1) {
       const nextVideoIndex = currentVideoIndex + 1;
@@ -312,15 +312,15 @@ async function fetchNextVideoFromSameCourse(currentCourseId, currentVideoId) {
       if (nextVideoIndex < res.length) {
         nextVideoId = res[nextVideoIndex].contentId;
         window.nextVideoCategoryId = null; // 同じコースなのでカテゴリIDは変更不要
-        console.log('fetchNextVideoFromSameCourse: 次の動画IDを設定しました:', nextVideoId);
-        console.log('fetchNextVideoFromSameCourse: 次の動画タイトル:', res[nextVideoIndex].title);
+        // console.log('fetchNextVideoFromSameCourse: 次の動画IDを設定しました:', nextVideoId);
+        // console.log('fetchNextVideoFromSameCourse: 次の動画タイトル:', res[nextVideoIndex].title);
       } else {
-        console.log('fetchNextVideoFromSameCourse: 次の動画がありません（最後の動画です）');
+        // console.log('fetchNextVideoFromSameCourse: 次の動画がありません（最後の動画です）');
         nextVideoId = null;
         window.nextVideoCategoryId = null;
       }
     } else {
-      console.log('fetchNextVideoFromSameCourse: 現在の動画が見つかりません');
+      // console.log('fetchNextVideoFromSameCourse: 現在の動画が見つかりません');
       nextVideoId = null;
     }
   } catch (error) {
@@ -334,10 +334,10 @@ async function fetchNextVideoFromFavorites() {
   try {
     // お気に入りリストを取得
     const favorites = window.getSetting('favorites', []);
-    console.log('fetchNextVideoFromFavorites: お気に入りリスト:', favorites);
+    // console.log('fetchNextVideoFromFavorites: お気に入りリスト:', favorites);
     
     if (favorites.length === 0) {
-      console.log('fetchNextVideoFromFavorites: お気に入りがありません');
+      // console.log('fetchNextVideoFromFavorites: お気に入りがありません');
       nextVideoId = null;
       return;
     }
@@ -347,7 +347,7 @@ async function fetchNextVideoFromFavorites() {
     
     
     if (availableVideos.length === 0) {
-      console.log('fetchNextVideoFromFavorites: 再生可能な動画がありません（すべて再生済み）');
+      // console.log('fetchNextVideoFromFavorites: 再生可能な動画がありません（すべて再生済み）');
       nextVideoId = null;
       return;
     }
@@ -453,7 +453,7 @@ function calculatePlaybackPercentage() {
   const durationDisplay = document.querySelector('.vjs-duration-display');
   
   if (!currentTimeDisplay || !durationDisplay) {
-    console.log('calculatePlaybackPercentage: 再生時間表示要素が見つかりません');
+    // console.log('calculatePlaybackPercentage: 再生時間表示要素が見つかりません');
     return null;
   }
   
@@ -477,19 +477,19 @@ function calculatePlaybackPercentage() {
   const durationSeconds = timeStringToSeconds(durationStr);
   
   if (durationSeconds === 0) {
-    console.log('calculatePlaybackPercentage: 総再生時間が0秒です');
+    // console.log('calculatePlaybackPercentage: 総再生時間が0秒です');
     return null;
   }
   
   const percentage = (currentTimeSeconds / durationSeconds) * 100;
-  console.log(`calculatePlaybackPercentage: 再生進捗: ${percentage.toFixed(1)}% (${currentTimeStr} / ${durationStr})`);
+  // console.log(`calculatePlaybackPercentage: 再生進捗: ${percentage.toFixed(1)}% (${currentTimeStr} / ${durationStr})`);
   
   return percentage;
 }
 
 // 定期的に再生進捗を監視する関数
 function startPlaybackProgressMonitoring() {
-  console.log('startPlaybackProgressMonitoring: 再生進捗監視を開始します');
+  // console.log('startPlaybackProgressMonitoring: 再生進捗監視を開始します');
   
   const interval = setInterval(() => {
     const percentage = calculatePlaybackPercentage();
@@ -497,7 +497,7 @@ function startPlaybackProgressMonitoring() {
       // ここで進捗率を使用した処理を追加できます
       // 例: 特定の進捗率で何かをする
       if (percentage >= 50) {
-        console.log('startPlaybackProgressMonitoring: 動画の50%を視聴しました');
+        // console.log('startPlaybackProgressMonitoring: 動画の50%を視聴しました');
       }
     }
   }, 1000); // 1秒ごとにチェック
@@ -505,7 +505,7 @@ function startPlaybackProgressMonitoring() {
   // 監視を停止する関数を返す
   return () => {
     clearInterval(interval);
-    console.log('startPlaybackProgressMonitoring: 再生進捗監視を停止しました');
+    // console.log('startPlaybackProgressMonitoring: 再生進捗監視を停止しました');
   };
 }
 
@@ -513,7 +513,7 @@ function startPlaybackProgressMonitoring() {
 function isEndingMusic() {
   const video = document.querySelector('video');
   if (!video) {
-    console.log('isEndingMusic: 動画要素が見つかりません');
+    // console.log('isEndingMusic: 動画要素が見つかりません');
     return false;
   }
   
@@ -521,7 +521,7 @@ function isEndingMusic() {
   const duration = video.duration;
   
   if (duration === 0 || isNaN(duration)) {
-    console.log('isEndingMusic: 動画の長さが取得できません');
+    // console.log('isEndingMusic: 動画の長さが取得できません');
     return false;
   }
   
@@ -586,7 +586,7 @@ function startEndingDetection() {
   // 監視を停止する関数を返す
   return () => {
     clearInterval(interval);
-    console.log('startEndingDetection: エンディング検出監視を停止しました');
+    // console.log('startEndingDetection: エンディング検出監視を停止しました');
   };
 }
 
@@ -605,17 +605,17 @@ function handleEndingDetected() {
       }, 3000); // 3秒後に自動スキップ
     }
   } else {
-    console.log('handleEndingDetected: 次の動画がないため、スキップボタンは表示しません');
+    // console.log('handleEndingDetected: 次の動画がないため、スキップボタンは表示しません');
   }
 }
 
 // 動画の自動再生機能
 function startAutoPlay() {
-  console.log('startAutoPlay: 自動再生機能を開始します');
+  // console.log('startAutoPlay: 自動再生機能を開始します');
   
   // 自動再生設定をチェック
   const autoPlayEnabled = window.getBooleanSetting('autoPlayEnabled', true);
-  console.log('startAutoPlay: 自動再生設定:', autoPlayEnabled ? '有効' : '無効');
+  // console.log('startAutoPlay: 自動再生設定:', autoPlayEnabled ? '有効' : '無効');
   if (!autoPlayEnabled) {
     return;
   }
@@ -627,7 +627,7 @@ function startAutoPlay() {
   }
   
   window.waitForElement('video', (video) => {
-      console.log('startAutoPlay: 動画要素が見つかりました。自動再生を開始します');
+      // console.log('startAutoPlay: 動画要素が見つかりました。自動再生を開始します');
     let retryCount = 0;
     const maxRetries = 10;
     const retryInterval = 1000; // 1秒ごと
@@ -635,7 +635,7 @@ function startAutoPlay() {
     async function tryPlay() {
       try {
         await video.play();
-        console.log('startAutoPlay: 自動再生成功');
+        // console.log('startAutoPlay: 自動再生成功');
         removeAutoPlayFailedNotification();
       } catch (e) {
         retryCount++;
@@ -705,7 +705,7 @@ function startVideoEndMonitoring() {
   
   
   if (!autoNextVideoEnabled) {
-    console.log('startVideoEndMonitoring: 自動次の動画遷移が無効化されているため、スキップします');
+    // console.log('startVideoEndMonitoring: 自動次の動画遷移が無効化されているため、スキップします');
     return;
   }
   
@@ -720,11 +720,11 @@ function startVideoEndMonitoring() {
     
     // 動画終了イベントリスナーを追加
     const handleVideoEnded = () => {
-      console.log('startVideoEndMonitoring: 動画が終了しました');
+      // console.log('startVideoEndMonitoring: 動画が終了しました');
       
       // 次の動画IDが設定されている場合のみ自動遷移
       if (nextVideoId) {
-        console.log('startVideoEndMonitoring: 次の動画に自動遷移します');
+        // console.log('startVideoEndMonitoring: 次の動画に自動遷移します');
         
         // 動画終了通知を表示
         showVideoEndNotification();
@@ -734,7 +734,7 @@ function startVideoEndMonitoring() {
           skipToNextVideo();
         }, 2000); // 2秒後に自動遷移
       } else {
-        console.log('startVideoEndMonitoring: 次の動画がないため、自動遷移しません');
+        // console.log('startVideoEndMonitoring: 次の動画がないため、自動遷移しません');
       }
     };
     
@@ -787,7 +787,7 @@ function showEndingSkipButton() {
 
 // 次の動画にスキップ
 async function skipToNextVideo() {
-  console.log('skipToNextVideo: 次の動画にスキップします');
+  // console.log('skipToNextVideo: 次の動画にスキップします');
   
   if (nextVideoId) {
     const url = window.location.href;
@@ -802,17 +802,17 @@ async function skipToNextVideo() {
         const matchCa = url.match(/ca=(\d+)/);
         if (matchCa) {
           nextVideoUrl = nextVideoUrl.replace(matchCa[0], `ca=${window.nextVideoCategoryId}`);
-          console.log('skipToNextVideo: カテゴリIDを更新しました:', window.nextVideoCategoryId);
+          // console.log('skipToNextVideo: カテゴリIDを更新しました:', window.nextVideoCategoryId);
         }
       }
       
-      console.log('skipToNextVideo: 次の動画URL:', nextVideoUrl);
+      // console.log('skipToNextVideo: 次の動画URL:', nextVideoUrl);
       window.location.href = nextVideoUrl;
     } else {
-      console.log('skipToNextVideo: URLから動画IDを取得できません');
+      // console.log('skipToNextVideo: URLから動画IDを取得できません');
     }
   } else {
-    console.log('skipToNextVideo: 次の動画IDが設定されていません');
+    // console.log('skipToNextVideo: 次の動画IDが設定されていません');
   }
 }
 
@@ -831,7 +831,7 @@ function applyPlaybackSpeed(speed) {
   if (video) {
     try {
       video.playbackRate = speed;
-      console.log('applyPlaybackSpeed: 再生速度を設定しました:', speed);
+      // console.log('applyPlaybackSpeed: 再生速度を設定しました:', speed);
       
       // 再生速度変更通知を表示
       showPlaybackSpeedNotification(speed);
@@ -839,7 +839,7 @@ function applyPlaybackSpeed(speed) {
       console.error('applyPlaybackSpeed: 再生速度の設定に失敗しました:', error);
     }
   } else {
-    console.log('applyPlaybackSpeed: 動画要素が見つかりません');
+    // console.log('applyPlaybackSpeed: 動画要素が見つかりません');
   }
 }
 
@@ -858,7 +858,7 @@ function applySavedPlaybackSpeed() {
   const speed = parseFloat(savedSpeed);
   
   if (speed !== 1) {
-    console.log('applySavedPlaybackSpeed: 保存された再生速度を適用します:', speed);
+    // console.log('applySavedPlaybackSpeed: 保存された再生速度を適用します:', speed);
     
     // 動画要素を待って再生速度を適用
     if (typeof window.waitForElement !== 'function') {
@@ -950,7 +950,7 @@ function setupPlaybackSpeedShortcuts() {
           speedSelect.value = newSpeed.toString();
         }
         
-        console.log('setupPlaybackSpeedShortcuts: キーボードショートカットで再生速度を変更しました:', newSpeed);
+        // console.log('setupPlaybackSpeedShortcuts: キーボードショートカットで再生速度を変更しました:', newSpeed);
       }
     }
     
@@ -958,13 +958,13 @@ function setupPlaybackSpeedShortcuts() {
     if (event.code === 'Space' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
       if (video.paused) {
         video.play().then(() => {
-          console.log('setupPlaybackSpeedShortcuts: スペースキーで再生しました');
+          // console.log('setupPlaybackSpeedShortcuts: スペースキーで再生しました');
         }).catch(error => {
           console.error('setupPlaybackSpeedShortcuts: 再生に失敗しました:', error);
         });
       } else {
         video.pause();
-        console.log('setupPlaybackSpeedShortcuts: スペースキーで一時停止しました');
+        // console.log('setupPlaybackSpeedShortcuts: スペースキーで一時停止しました');
       }
     }
     
@@ -972,33 +972,33 @@ function setupPlaybackSpeedShortcuts() {
     if (event.code === 'ArrowLeft' && !event.ctrlKey && !event.altKey) {
       const seekTime = event.shiftKey ? 30 : 10; // Shift + 左矢印で30秒、通常で10秒
       video.currentTime = Math.max(0, video.currentTime - seekTime);
-      console.log(`setupPlaybackSpeedShortcuts: 左矢印キーで${seekTime}秒戻しました`);
+      // console.log(`setupPlaybackSpeedShortcuts: 左矢印キーで${seekTime}秒戻しました`);
     }
     
     if (event.code === 'ArrowRight' && !event.ctrlKey && !event.altKey) {
       const seekTime = event.shiftKey ? 30 : 10; // Shift + 右矢印で30秒、通常で10秒
       video.currentTime = Math.min(video.duration, video.currentTime + seekTime);
-      console.log(`setupPlaybackSpeedShortcuts: 右矢印キーで${seekTime}秒進めました`);
+      // console.log(`setupPlaybackSpeedShortcuts: 右矢印キーで${seekTime}秒進めました`);
     }
     
     // 上下矢印キーで音量調整
     if (event.code === 'ArrowUp' && !event.ctrlKey && !event.altKey) {
       const volumeChange = event.shiftKey ? 0.1 : 0.05; // Shift + 上矢印で10%、通常で5%
       video.volume = Math.min(1, video.volume + volumeChange);
-      console.log(`setupPlaybackSpeedShortcuts: 上矢印キーで音量を上げました: ${(video.volume * 100).toFixed(0)}%`);
+      // console.log(`setupPlaybackSpeedShortcuts: 上矢印キーで音量を上げました: ${(video.volume * 100).toFixed(0)}%`);
     }
     
     if (event.code === 'ArrowDown' && !event.ctrlKey && !event.altKey) {
       const volumeChange = event.shiftKey ? 0.1 : 0.05; // Shift + 下矢印で10%、通常で5%
       video.volume = Math.max(0, video.volume - volumeChange);
-      console.log(`setupPlaybackSpeedShortcuts: 下矢印キーで音量を下げました: ${(video.volume * 100).toFixed(0)}%`);
+      // console.log(`setupPlaybackSpeedShortcuts: 下矢印キーで音量を下げました: ${(video.volume * 100).toFixed(0)}%`);
     }
     
     // Mキーでミュート切り替え
     if (event.key.toLowerCase() === 'm' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
       event.preventDefault();
       video.muted = !video.muted;
-      console.log(`setupPlaybackSpeedShortcuts: Mキーでミュートを${video.muted ? 'ON' : 'OFF'}にしました`);
+      // console.log(`setupPlaybackSpeedShortcuts: Mキーでミュートを${video.muted ? 'ON' : 'OFF'}にしました`);
     }
     
     // Fキーでフルスクリーン切り替え
@@ -1006,43 +1006,43 @@ function setupPlaybackSpeedShortcuts() {
       event.preventDefault();
       if (document.fullscreenElement) {
         document.exitFullscreen();
-        console.log('setupPlaybackSpeedShortcuts: Fキーでフルスクリーンを解除しました');
+        // console.log('setupPlaybackSpeedShortcuts: Fキーでフルスクリーンを解除しました');
       } else {
         video.requestFullscreen();
-        console.log('setupPlaybackSpeedShortcuts: Fキーでフルスクリーンにしました');
+        // console.log('setupPlaybackSpeedShortcuts: Fキーでフルスクリーンにしました');
       }
     }
     
     // 0キーで最初に戻る
     if (event.key === '0' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
       video.currentTime = 0;
-      console.log('setupPlaybackSpeedShortcuts: 0キーで動画の最初に戻りました');
+      // console.log('setupPlaybackSpeedShortcuts: 0キーで動画の最初に戻りました');
     }
     
     // Endキーで最後に進む
     if (event.code === 'End' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
       video.currentTime = video.duration;
-      console.log('setupPlaybackSpeedShortcuts: Endキーで動画の最後に進みました');
+      // console.log('setupPlaybackSpeedShortcuts: Endキーで動画の最後に進みました');
     }
   });
 }
 
 // 音量自動調整機能（実際の音声レベルを測定）
 function startVolumeNormalization() {
-  console.log('startVolumeNormalization: 音量自動調整機能を開始します');
+  // console.log('startVolumeNormalization: 音量自動調整機能を開始します');
   
   // 音量自動調整設定をチェック（デフォルトは有効）
   const volumeNormalizationEnabled = window.getBooleanSetting('volumeNormalizationEnabled', true);
-  console.log('startVolumeNormalization: 音量自動調整設定:', volumeNormalizationEnabled ? '有効' : '無効');
+  // console.log('startVolumeNormalization: 音量自動調整設定:', volumeNormalizationEnabled ? '有効' : '無効');
   
   if (!volumeNormalizationEnabled) {
-    console.log('startVolumeNormalization: 音量自動調整が無効化されているため、スキップします');
+    // console.log('startVolumeNormalization: 音量自動調整が無効化されているため、スキップします');
     return;
   }
   
   // Web Audio APIのサポートチェック
   if (!window.AudioContext && !window.webkitAudioContext) {
-    console.warn('startVolumeNormalization: Web Audio APIがサポートされていません。従来の音量監視にフォールバックします');
+    // console.warn('startVolumeNormalization: Web Audio APIがサポートされていません。従来の音量監視にフォールバックします');
     startLegacyVolumeNormalization();
     return;
   }
@@ -1054,7 +1054,7 @@ function startVolumeNormalization() {
   }
   
   window.waitForElement('video', (video) => {
-    console.log('startVolumeNormalization: 動画要素が見つかりました。実際の音声レベル監視を開始します');
+    // console.log('startVolumeNormalization: 動画要素が見つかりました。実際の音声レベル監視を開始します');
     
     // Web Audio APIの初期化
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -1067,14 +1067,14 @@ function startVolumeNormalization() {
       // 音声トラックが存在するかチェック
       const audioTracks = stream.getAudioTracks();
       if (audioTracks.length === 0) {
-        console.log('startVolumeNormalization: 動画に音声トラックがありません。従来の音量監視にフォールバックします');
+        // console.log('startVolumeNormalization: 動画に音声トラックがありません。従来の音量監視にフォールバックします');
         startLegacyVolumeNormalization();
         return;
       }
       microphone = audioContext.createMediaStreamSource(stream);
     } catch (error) {
       console.error('startVolumeNormalization: 音声ストリームの取得に失敗しました:', error);
-      console.log('startVolumeNormalization: 従来の音量監視にフォールバックします');
+      // console.log('startVolumeNormalization: 従来の音量監視にフォールバックします');
       startLegacyVolumeNormalization();
       return;
     }
@@ -1136,28 +1136,28 @@ function startVolumeNormalization() {
       const audioLevelChange = Math.abs(currentAudioLevel - lastAudioLevel);
       
       if (audioLevelChange > 0.2) {
-        console.log('startVolumeNormalization: 実際の音声レベルの急激な変化を検出:', {
-          previous: lastAudioLevel.toFixed(3),
-          current: currentAudioLevel.toFixed(3),
-          change: audioLevelChange.toFixed(3),
-          previousDb: toDecibels(lastAudioLevel).toFixed(1),
-          currentDb: currentDecibels.toFixed(1)
-        });
+        // console.log('startVolumeNormalization: 実際の音声レベルの急激な変化を検出:', {
+          // previous: lastAudioLevel.toFixed(3),
+          // current: currentAudioLevel.toFixed(3),
+          // change: audioLevelChange.toFixed(3),
+          // previousDb: toDecibels(lastAudioLevel).toFixed(1),
+          // currentDb: currentDecibels.toFixed(1)
+        // });
         
         // 音声レベルが高すぎる場合は動画の音量を下げる
         if (currentAudioLevel > 0.7) {
           const targetVolume = Math.max(0.1, video.volume * 0.8);
           adjustVolumeGradually(video, video.volume, targetVolume);
-          console.log('startVolumeNormalization: 音声レベルが高すぎるため音量を調整:', video.volume.toFixed(2), '→', targetVolume.toFixed(2));
+          // console.log('startVolumeNormalization: 音声レベルが高すぎるため音量を調整:', video.volume.toFixed(2), '→', targetVolume.toFixed(2));
         }
       }
       
       // 平均音声レベルが基準を超えた場合（0.6以上）
       if (averageAudioLevel > 0.6 && audioLevelHistory.length >= 10) {
-        console.log('startVolumeNormalization: 平均音声レベルが高すぎます:', {
-          level: averageAudioLevel.toFixed(3),
-          decibels: averageDecibels.toFixed(1)
-        });
+        // console.log('startVolumeNormalization: 平均音声レベルが高すぎます:', {
+          // level: averageAudioLevel.toFixed(3),
+          // decibels: averageDecibels.toFixed(1)
+        // });
         
         // 動画の音量を下げる
         const targetVolume = Math.max(0.1, video.volume * 0.7);
@@ -1168,7 +1168,7 @@ function startVolumeNormalization() {
       if (currentAudioLevel < 0.1 && video.volume < 0.5) {
         const targetVolume = Math.min(1, video.volume * 1.2);
         adjustVolumeGradually(video, video.volume, targetVolume);
-        console.log('startVolumeNormalization: 音声レベルが低すぎるため音量を調整:', video.volume.toFixed(2), '→', targetVolume.toFixed(2));
+        // console.log('startVolumeNormalization: 音声レベルが低すぎるため音量を調整:', video.volume.toFixed(2), '→', targetVolume.toFixed(2));
       }
       
       lastAudioLevel = currentAudioLevel;
@@ -1182,52 +1182,52 @@ function startVolumeNormalization() {
       clearInterval(audioLevelMonitor);
       microphone.disconnect();
       audioContext.close();
-      console.log('startVolumeNormalization: 実際の音声レベル監視を停止しました');
+      // console.log('startVolumeNormalization: 実際の音声レベル監視を停止しました');
     };
   });
 }
 
 // ラジオ番組判定関数
 async function checkIfRadioProgram() {
-  console.log('checkIfRadioProgram: ラジオ番組判定を開始します');
+  // console.log('checkIfRadioProgram: ラジオ番組判定を開始します');
   
   try {
     // 現在の動画IDを取得
     const currentVideoId = getCurrentVideoId();
     if (!currentVideoId) {
-      console.log('checkIfRadioProgram: 動画IDを取得できませんでした');
+      // console.log('checkIfRadioProgram: 動画IDを取得できませんでした');
       return;
     }
     
-    console.log('checkIfRadioProgram: 現在の動画ID:', currentVideoId);
+    // console.log('checkIfRadioProgram: 現在の動画ID:', currentVideoId);
     
     // 動画の詳細情報を取得
     const videoData = await getVideoData(currentVideoId);
     if (!videoData) {
-      console.log('checkIfRadioProgram: 動画データを取得できませんでした');
+      // console.log('checkIfRadioProgram: 動画データを取得できませんでした');
       return;
     }
     
-    console.log('checkIfRadioProgram: 取得した動画データ:', {
-      contentId: videoData.contentId,
-      categoryId: videoData.categoryId,
-      title: videoData.title,
-      summary: videoData.summary
-    });
+    // console.log('checkIfRadioProgram: 取得した動画データ:', {
+      // contentId: videoData.contentId,
+      // categoryId: videoData.categoryId,
+      // title: videoData.title,
+      // summary: videoData.summary
+    // });
     
     // 動画データからカテゴリIDを取得
     const categoryId = videoData.categoryId;
     if (!categoryId) {
-      console.log('checkIfRadioProgram: 動画データからカテゴリIDを取得できませんでした');
+      // console.log('checkIfRadioProgram: 動画データからカテゴリIDを取得できませんでした');
       return;
     }
     
-    console.log('checkIfRadioProgram: 動画のカテゴリID:', categoryId);
+    // console.log('checkIfRadioProgram: 動画のカテゴリID:', categoryId);
     
     // カテゴリデータを取得
     const categories = await window.getCategoriesData();
     if (!categories || !Array.isArray(categories)) {
-      console.log('checkIfRadioProgram: カテゴリデータを取得できませんでした');
+      // console.log('checkIfRadioProgram: カテゴリデータを取得できませんでした');
       return;
     }
     
@@ -1235,15 +1235,15 @@ async function checkIfRadioProgram() {
     const currentCategory = categories.find(cat => cat.categoryId === categoryId);
     
     if (!currentCategory) {
-      console.log('checkIfRadioProgram: カテゴリIDに対応するカテゴリが見つかりませんでした');
+      // console.log('checkIfRadioProgram: カテゴリIDに対応するカテゴリが見つかりませんでした');
       return;
     }
     
-    console.log('checkIfRadioProgram: 見つかったカテゴリ:', {
-      categoryId: currentCategory.categoryId,
-      name: currentCategory.name,
-      summary: currentCategory.summary
-    });
+    // console.log('checkIfRadioProgram: 見つかったカテゴリ:', {
+      // categoryId: currentCategory.categoryId,
+      // name: currentCategory.name,
+      // summary: currentCategory.summary
+    // });
     
     // summary欄でラジオ番組かどうかを判定
     const isRadio = currentCategory.summary && (
@@ -1254,10 +1254,10 @@ async function checkIfRadioProgram() {
       // 字幕付きラジオ番組かどうかを判定
       const hasSubtitles = currentCategory.summary.includes('・字幕');
       
-      console.log('🎵 checkIfRadioProgram: 【ラジオ番組】を検出しました！');
-      console.log('checkIfRadioProgram: カテゴリ名:', currentCategory.name);
-      console.log('checkIfRadioProgram: サマリー:', currentCategory.summary);
-      console.log('checkIfRadioProgram: 字幕付き:', hasSubtitles ? 'はい' : 'いいえ');
+      // console.log('🎵 checkIfRadioProgram: 【ラジオ番組】を検出しました！');
+      // console.log('checkIfRadioProgram: カテゴリ名:', currentCategory.name);
+      // console.log('checkIfRadioProgram: サマリー:', currentCategory.summary);
+      // console.log('checkIfRadioProgram: 字幕付き:', hasSubtitles ? 'はい' : 'いいえ');
       
       // ラジオ番組であることをグローバル変数に保存
       window.isRadioProgram = true;
@@ -1265,13 +1265,13 @@ async function checkIfRadioProgram() {
       
       // 字幕付きでない場合のみUI表示
       if (!hasSubtitles) {
-        console.log('checkIfRadioProgram: 字幕なしラジオ番組のため、専用UIを表示します');
+        // console.log('checkIfRadioProgram: 字幕なしラジオ番組のため、専用UIを表示します');
         showRadioProgramUI();
       } else {
-        console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
+        // console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
       }
     } else {
-      console.log('📺 checkIfRadioProgram: 【通常の動画】です');
+      // console.log('📺 checkIfRadioProgram: 【通常の動画】です');
       window.isRadioProgram = false;
       window.isRadioWithSubtitles = false;
     }
@@ -1283,7 +1283,7 @@ async function checkIfRadioProgram() {
 
 // 動画データを取得する関数
 async function getVideoData(contentId) {
-  console.log('getVideoData: 動画データを取得します。contentId:', contentId);
+  // console.log('getVideoData: 動画データを取得します。contentId:', contentId);
   
   try {
     // 動画の詳細情報を取得するAPI
@@ -1295,7 +1295,7 @@ async function getVideoData(contentId) {
     }
     
     const videoData = await response.json();
-    console.log('getVideoData: 動画データ取得成功:', videoData);
+    // console.log('getVideoData: 動画データ取得成功:', videoData);
     
     return videoData;
     
@@ -1307,7 +1307,7 @@ async function getVideoData(contentId) {
 
 // ラジオ番組用のUI表示関数
 function showRadioProgramUI() {
-  console.log('showRadioProgramUI: ラジオ番組用UIを表示します');
+  // console.log('showRadioProgramUI: ラジオ番組用UIを表示します');
   
   // 既にラジオ番組UIが表示されている場合は何もしない
   if (document.getElementById('radio-program-ui')) {
@@ -1321,7 +1321,7 @@ function showRadioProgramUI() {
   }
   
   window.waitForElement('video', (video) => {
-    console.log('showRadioProgramUI: 動画要素が見つかりました。ラジオ番組用UIを挿入します');
+    // console.log('showRadioProgramUI: 動画要素が見つかりました。ラジオ番組用UIを挿入します');
     
     // ラジオ番組用のUI要素を作成
     const radioUI = document.createElement('div');
@@ -1353,7 +1353,7 @@ function showRadioProgramUI() {
       videoContainer.style.position = 'relative';
       videoContainer.appendChild(radioUI);
       
-      console.log('showRadioProgramUI: ラジオ番組用UIを挿入しました');
+      // console.log('showRadioProgramUI: ラジオ番組用UIを挿入しました');
     } else {
       console.error('showRadioProgramUI: 動画要素の親要素が見つかりませんでした');
     }
@@ -1362,7 +1362,7 @@ function showRadioProgramUI() {
 
 // 従来の音量監視（フォールバック用）
 function startLegacyVolumeNormalization() {
-  console.log('startLegacyVolumeNormalization: 従来の音量監視を開始します');
+  // console.log('startLegacyVolumeNormalization: 従来の音量監視を開始します');
   
   if (typeof window.waitForElement !== 'function') {
     setTimeout(startLegacyVolumeNormalization, 100);
@@ -1370,7 +1370,7 @@ function startLegacyVolumeNormalization() {
   }
   
   window.waitForElement('video', (video) => {
-    console.log('startLegacyVolumeNormalization: 動画要素が見つかりました。従来の音量監視を開始します');
+    // console.log('startLegacyVolumeNormalization: 動画要素が見つかりました。従来の音量監視を開始します');
     
     let lastVolume = video.volume;
     let volumeHistory = [];
@@ -1398,11 +1398,11 @@ function startLegacyVolumeNormalization() {
       
       // 音量が急激に変化した場合（0.1以上の変化）
       if (volumeChange > 0.1) {
-        console.log('startLegacyVolumeNormalization: 音量の急激な変化を検出:', {
-          previous: lastVolume.toFixed(2),
-          current: currentVolume.toFixed(2),
-          change: volumeChange.toFixed(2)
-        });
+        // console.log('startLegacyVolumeNormalization: 音量の急激な変化を検出:', {
+          // previous: lastVolume.toFixed(2),
+          // current: currentVolume.toFixed(2),
+          // change: volumeChange.toFixed(2)
+        // });
         
         // 音量を徐々に調整
         normalizeVolume(video, lastVolume, currentVolume);
@@ -1410,7 +1410,7 @@ function startLegacyVolumeNormalization() {
       
       // 平均音量が基準を超えた場合（0.8以上）
       if (averageVolume > 0.8 && volumeHistory.length >= 5) {
-        console.log('startLegacyVolumeNormalization: 平均音量が高すぎます:', averageVolume.toFixed(2));
+        // console.log('startLegacyVolumeNormalization: 平均音量が高すぎます:', averageVolume.toFixed(2));
         
         // 音量を下げる
         const targetVolume = Math.min(currentVolume * 0.7, 0.6);
@@ -1423,7 +1423,7 @@ function startLegacyVolumeNormalization() {
     // 監視を停止する関数を返す
     return () => {
       clearInterval(volumeMonitor);
-      console.log('startLegacyVolumeNormalization: 従来の音量監視を停止しました');
+      // console.log('startLegacyVolumeNormalization: 従来の音量監視を停止しました');
     };
   });
 }
@@ -1433,7 +1433,7 @@ function normalizeVolume(video, previousVolume, currentVolume) {
   const targetVolume = Math.min(currentVolume, 0.6); // 最大0.6に制限
   
   if (currentVolume > targetVolume) {
-    console.log('normalizeVolume: 音量を調整します:', currentVolume.toFixed(2), '→', targetVolume.toFixed(2));
+    // console.log('normalizeVolume: 音量を調整します:', currentVolume.toFixed(2), '→', targetVolume.toFixed(2));
     adjustVolumeGradually(video, currentVolume, targetVolume);
   }
 }
@@ -1459,7 +1459,7 @@ function adjustVolumeGradually(video, fromVolume, toVolume) {
     currentStep++;
   }, stepDuration);
   
-  console.log('adjustVolumeGradually: 音量を徐々に調整中:', fromVolume.toFixed(2), '→', toVolume.toFixed(2));
+  // console.log('adjustVolumeGradually: 音量を徐々に調整中:', fromVolume.toFixed(2), '→', toVolume.toFixed(2));
 }
 
 // グローバル関数として公開

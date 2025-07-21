@@ -60,18 +60,18 @@ function createMenuHTML() {
 
 // ロゴを待ってメニューを挿入する処理
 function waitForLogoAndInsertMenu() {
-  console.log('waitForLogoAndInsertMenu: 開始');
+  // console.log('waitForLogoAndInsertMenu: 開始');
   
   // 重複挿入防止フラグ（グローバル変数として管理）
   if (window.oujMenuInsertionInProgress) {
-    console.log('waitForLogoAndInsertMenu: メニュー挿入処理が既に進行中です。スキップします');
+    // console.log('waitForLogoAndInsertMenu: メニュー挿入処理が既に進行中です。スキップします');
     return;
   }
   
       // 既にメニューが存在する場合はスキップ（aria-labelで検索）
     const existingMenu = document.querySelector('ion-list[aria-label="拡張機能"]');
     if (existingMenu) {
-      console.log('waitForLogoAndInsertMenu: 拡張機能メニューは既に存在します。スキップします');
+      // console.log('waitForLogoAndInsertMenu: 拡張機能メニューは既に存在します。スキップします');
       return;
     }
   
@@ -80,13 +80,13 @@ function waitForLogoAndInsertMenu() {
   
   // 共通関数の存在をチェック
   if (typeof window.waitForElement !== 'function') {
-    console.log('waitForLogoAndInsertMenu: waitForElement関数が未定義、100ms後に再試行');
+    // console.log('waitForLogoAndInsertMenu: waitForElement関数が未定義、100ms後に再試行');
     window.oujMenuInsertionInProgress = false; // フラグをリセット
     setTimeout(waitForLogoAndInsertMenu, 100);
     return;
   }
   
-  console.log('waitForLogoAndInsertMenu: ロゴ要素の検索を開始');
+  // console.log('waitForLogoAndInsertMenu: ロゴ要素の検索を開始');
   
   // ロゴの存在確認
   window.waitForElement('img.logo-img[src="./assets/images/icon_logo.png"]', (logo) => {
@@ -109,7 +109,7 @@ function waitForLogoAndInsertMenu() {
     // 新しいIDで既存判定
     const existingMenuTitle = document.getElementById('ouj-extension-menu-title');
     if (existingMenuTitle) {
-      console.log('waitForLogoAndInsertMenu: 拡張機能メニューは既に挿入済みです');
+      // console.log('waitForLogoAndInsertMenu: 拡張機能メニューは既に挿入済みです');
       return;
     }
     
@@ -126,8 +126,8 @@ function waitForLogoAndInsertMenu() {
     // 挿入位置を特定（複数のセレクタを試す）
     const settingList = findInsertionPosition();
     
-    console.log('waitForLogoAndInsertMenu: 最終的な挿入位置要素:', settingList);
-    console.log('waitForLogoAndInsertMenu: 挿入位置の親要素:', settingList?.parentNode);
+    // console.log('waitForLogoAndInsertMenu: 最終的な挿入位置要素:', settingList);
+    // console.log('waitForLogoAndInsertMenu: 挿入位置の親要素:', settingList?.parentNode);
     
     if (!settingList) {
       return;
@@ -135,7 +135,7 @@ function waitForLogoAndInsertMenu() {
     
     // 設定リストの前に挿入
     settingList.parentNode.insertBefore(menuList, settingList);
-    console.log('waitForLogoAndInsertMenu: メニュー挿入完了。挿入された要素:', menuList);
+    // console.log('waitForLogoAndInsertMenu: メニュー挿入完了。挿入された要素:', menuList);
     
     // 挿入直後に監視を開始（無限ループ対策付き）
     let reinsertionCount = 0;
@@ -155,16 +155,16 @@ function waitForLogoAndInsertMenu() {
               return;
             }
             
-            console.log('waitForLogoAndInsertMenu: メニューが削除されました。再挿入を試行します');
+            // console.log('waitForLogoAndInsertMenu: メニューが削除されました。再挿入を試行します');
             
             if (reinsertionCount >= maxReinsertions) {
-              console.log('waitForLogoAndInsertMenu: 最大再挿入回数に達しました。監視を停止します');
+              // console.log('waitForLogoAndInsertMenu: 最大再挿入回数に達しました。監視を停止します');
               observer.disconnect();
               return;
             }
             
             reinsertionCount++;
-            console.log(`waitForLogoAndInsertMenu: 再挿入試行 ${reinsertionCount}/${maxReinsertions}`);
+            // console.log(`waitForLogoAndInsertMenu: 再挿入試行 ${reinsertionCount}/${maxReinsertions}`);
             
             // 少し遅延してから再挿入
             setTimeout(() => {
@@ -178,7 +178,7 @@ function waitForLogoAndInsertMenu() {
       const menuParent = settingList.parentNode;
       if (menuParent) {
         observer.observe(menuParent, { childList: true, subtree: true });
-        console.log('waitForLogoAndInsertMenu: メニュー削除監視を開始しました');
+        // console.log('waitForLogoAndInsertMenu: メニュー削除監視を開始しました');
       }
       
       return observer;
@@ -189,36 +189,36 @@ function waitForLogoAndInsertMenu() {
     
     // 挿入確認のための遅延チェック
     setTimeout(() => {
-      console.log('waitForLogoAndInsertMenu: 遅延チェック開始');
+      // console.log('waitForLogoAndInsertMenu: 遅延チェック開始');
       
       // 複数のセレクタでメニューの存在を確認
       const insertedMenuByAriaLabel = document.querySelector('ion-list[aria-label="拡張機能"]');
       const insertedMenuById = document.getElementById('ouj-extension-menu-title');
       const allMenuLists = document.querySelectorAll('#menu ion-list');
       
-      console.log('waitForLogoAndInsertMenu: 遅延チェック - aria-labelセレクタ結果:', insertedMenuByAriaLabel);
-      console.log('waitForLogoAndInsertMenu: 遅延チェック - IDセレクタ結果:', insertedMenuById);
-      console.log('waitForLogoAndInsertMenu: 遅延チェック - 全ion-list要素数:', allMenuLists.length);
+      // console.log('waitForLogoAndInsertMenu: 遅延チェック - aria-labelセレクタ結果:', insertedMenuByAriaLabel);
+      // console.log('waitForLogoAndInsertMenu: 遅延チェック - IDセレクタ結果:', insertedMenuById);
+      // console.log('waitForLogoAndInsertMenu: 遅延チェック - 全ion-list要素数:', allMenuLists.length);
       
       // 全ion-list要素の詳細をログ出力
-      allMenuLists.forEach((list, index) => {
-        console.log(`waitForLogoAndInsertMenu: 遅延チェック - ion-list[${index}]:`, list);
-        console.log(`waitForLogoAndInsertMenu: 遅延チェック - ion-list[${index}]のクラス:`, list.className);
-        console.log(`waitForLogoAndInsertMenu: 遅延チェック - ion-list[${index}]のaria-label:`, list.getAttribute('aria-label'));
-      });
+      // allMenuLists.forEach((list, index) => {
+      //   console.log(`waitForLogoAndInsertMenu: 遅延チェック - ion-list[${index}]:`, list);
+      //   console.log(`waitForLogoAndInsertMenu: 遅延チェック - ion-list[${index}]のクラス:`, list.className);
+      //   console.log(`waitForLogoAndInsertMenu: 遅延チェック - ion-list[${index}]のaria-label:`, list.getAttribute('aria-label'));
+      // });
       
       if (insertedMenuByAriaLabel || insertedMenuById) {
-        console.log('waitForLogoAndInsertMenu: メニューが正常に挿入されました');
+        // console.log('waitForLogoAndInsertMenu: メニューが正常に挿入されました');
         return;
       }
       
-      console.error('waitForLogoAndInsertMenu: メニューの挿入に失敗しました');
-      console.log('waitForLogoAndInsertMenu: DOM構造を確認中...');
+      // console.error('waitForLogoAndInsertMenu: メニューの挿入に失敗しました');
+      // console.log('waitForLogoAndInsertMenu: DOM構造を確認中...');
       
       // #menu要素の現在の構造を確認
       const menuElement = document.getElementById('menu');
       if (menuElement) {
-        console.log('waitForLogoAndInsertMenu: #menu要素の現在のHTML:', menuElement.innerHTML.substring(0, 1000) + '...');
+        // console.log('waitForLogoAndInsertMenu: #menu要素の現在のHTML:', menuElement.innerHTML.substring(0, 1000) + '...');
       }
       
       // 挿入に失敗した場合、再挿入を試行
@@ -227,7 +227,7 @@ function waitForLogoAndInsertMenu() {
       }
       
       reinsertionCount++;
-      console.log(`waitForLogoAndInsertMenu: 初回挿入失敗。再挿入を試行 ${reinsertionCount}/${maxReinsertions}`);
+      // console.log(`waitForLogoAndInsertMenu: 初回挿入失敗。再挿入を試行 ${reinsertionCount}/${maxReinsertions}`);
       setTimeout(() => {
         reinsertMenu();
       }, 100);
@@ -235,7 +235,7 @@ function waitForLogoAndInsertMenu() {
     
     // イベントリスナーを追加
     addMenuEventListeners();
-    console.log('waitForLogoAndInsertMenu: 完了');
+    // console.log('waitForLogoAndInsertMenu: 完了');
     
     // 挿入処理完了フラグをリセット
     window.oujMenuInsertionInProgress = false;
@@ -271,7 +271,7 @@ function findInsertionPosition() {
 function reinsertMenu(observer = null) {
   // 重複挿入防止チェック
   if (document.querySelector('ion-list[aria-label="拡張機能"]')) {
-    console.log('waitForLogoAndInsertMenu: 再挿入時に既にメニューが存在します。スキップします');
+    // console.log('waitForLogoAndInsertMenu: 再挿入時に既にメニューが存在します。スキップします');
     return;
   }
   
@@ -284,7 +284,7 @@ function reinsertMenu(observer = null) {
   newMenuContainer.innerHTML = createMenuHTML();
   const newMenuList = newMenuContainer.firstElementChild;
   currentSettingList.parentNode.insertBefore(newMenuList, currentSettingList);
-  console.log('waitForLogoAndInsertMenu: メニューを再挿入しました');
+  // console.log('waitForLogoAndInsertMenu: メニューを再挿入しました');
   addMenuEventListeners();
   
   // 監視を継続する場合
@@ -1288,11 +1288,11 @@ function addMenuEventListeners() {
           }
           // スコア分布（上位10件）
           const sortedScores = allScores.sort((a, b) => b.score - a.score);
-          console.log('【類似コース検索】全カテゴリ数:', allCategories.length);
-          console.log('【類似コース検索】閾値超え候補数:', similarCourses.length);
-          console.log('【類似コース検索】スコア上位10件:', sortedScores.slice(0, 10));
+          // console.log('【類似コース検索】全カテゴリ数:', allCategories.length);
+          // console.log('【類似コース検索】閾値超え候補数:', similarCourses.length);
+          // console.log('【類似コース検索】スコア上位10件:', sortedScores.slice(0, 10));
           const result = similarCourses.sort((a, b) => b.score - a.score).slice(0, 5).map(item => item.category);
-          console.log('【類似コース検索】最終表示件数:', result.length, result);
+          // console.log('【類似コース検索】最終表示件数:', result.length, result);
           return result;
         }
 
@@ -1433,7 +1433,7 @@ function addMenuEventListeners() {
             if (recommendList.length >= 7) break; // 履歴2個 + お気に入り5個まで
             if (usedCategoryIds.has(categoryId)) continue; // 重複チェック
             if (historyUsedCategoryIds.has(categoryId)) {
-              console.log('お気に入りコースが履歴と重複のため除外:', categoryId);
+              // console.log('お気に入りコースが履歴と重複のため除外:', categoryId);
               continue; // 履歴で使用済みのコースは除外
             }
             
@@ -1517,22 +1517,22 @@ function addMenuEventListeners() {
           for (const cat of similarCategories) {
             if (seenIds.has(cat.categoryId)) {
               idDupCount++;
-              console.log('【類似コース重複除外:ID】categoryId:', cat.categoryId, cat.name);
+              // console.log('【類似コース重複除外:ID】categoryId:', cat.categoryId, cat.name);
               continue;
             }
             const normName = normalizeName(cat.name);
             if (seenNames.has(normName)) {
               nameDupCount++;
-              console.log('【類似コース重複除外:コース名】', cat.name);
+              // console.log('【類似コース重複除外:コース名】', cat.name);
               continue;
             }
             uniqueSimilarCategories.push(cat);
             seenIds.add(cat.categoryId);
             seenNames.add(normName);
           }
-          console.log('【類似コース重複除外:ID件数】', idDupCount);
-          console.log('【類似コース重複除外:コース名件数】', nameDupCount);
-          console.log('【類似コース最終表示リスト】', uniqueSimilarCategories);
+          // console.log('【類似コース重複除外:ID件数】', idDupCount);
+          // console.log('【類似コース重複除外:コース名件数】', nameDupCount);
+          // console.log('【類似コース最終表示リスト】', uniqueSimilarCategories);
           
           // 履歴とお気に入りで使用済みのコースIDを収集
           const historyAndFavoritesUsedCategoryIds = new Set();
@@ -1548,7 +1548,7 @@ function addMenuEventListeners() {
             
             const categoryId = category.categoryId;
             if (historyAndFavoritesUsedCategoryIds.has(categoryId)) {
-              console.log('類似コースが履歴・お気に入りと重複のため除外:', categoryId);
+              // console.log('類似コースが履歴・お気に入りと重複のため除外:', categoryId);
               continue; // 履歴・お気に入りで使用済みのコースは除外
             }
             
@@ -1582,7 +1582,7 @@ function addMenuEventListeners() {
                 progress: foundStatus ? foundStatus.currentTimeRate : 0, 
                 source: 'similar' 
               };
-              console.log('類似コース動画データ:', videoWithSource);
+              // console.log('類似コース動画データ:', videoWithSource);
               recommendList.push(videoWithSource);
               usedCategoryIds.add(categoryId); // コースレベルでの重複チェック
               similarCount++;
@@ -1591,7 +1591,7 @@ function addMenuEventListeners() {
           
           // 類似コースが見つからない場合のフォールバック
           if (similarCount === 0) {
-            console.log('類似コースが見つからないため、お気に入りから追加の動画を取得');
+            // console.log('類似コースが見つからないため、お気に入りから追加の動画を取得');
             // お気に入りから追加の動画を取得（重複を避けて）
             for (const categoryId of favorites) {
               if (recommendList.length >= 12) break;
@@ -1625,7 +1625,7 @@ function addMenuEventListeners() {
                   progress: foundStatus ? foundStatus.currentTimeRate : 0, 
                   source: 'favorites' 
                 };
-                console.log('フォールバック動画データ:', videoWithSource);
+                // console.log('フォールバック動画データ:', videoWithSource);
                 recommendList.push(videoWithSource);
                 usedCategoryIds.add(categoryId);
               }
@@ -1636,25 +1636,25 @@ function addMenuEventListeners() {
         let listHtml = recommendList.map(item => {
           // サムネイル画像
           let thumb = '';
-          console.log('おすすめ動画 - 動画データ:', item);
-          console.log('おすすめ動画 - summary:', item.summary);
+          // console.log('おすすめ動画 - 動画データ:', item);
+          // console.log('おすすめ動画 - summary:', item.summary);
           
           // 1. まずcontentIdからサムネイルURLを生成（最優先）
           if (item.contentId) {
             thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail/large2`;
-            console.log('おすすめ動画 - contentIdから生成したサムネイルURL:', thumb);
+            // console.log('おすすめ動画 - contentIdから生成したサムネイルURL:', thumb);
           }
           
           // 2. 生成したURLがない場合のみ、APIから取得したデータを使用
           if (!thumb) {
             thumb = item.thumbnailUrl || item.imageUrl || '';
-            console.log('おすすめ動画 - APIから取得したサムネイルURL:', thumb);
+            // console.log('おすすめ動画 - APIから取得したサムネイルURL:', thumb);
           }
           
           // 3. それでもない場合の代替手段
           if (!thumb && item.contentId) {
             thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail`;
-            console.log('おすすめ動画 - 代替サムネイルURL:', thumb);
+            // console.log('おすすめ動画 - 代替サムネイルURL:', thumb);
           }
           // コース名（カテゴリ名）
           let courseName = '';
@@ -1663,7 +1663,7 @@ function addMenuEventListeners() {
             courseName = cat ? cat.name : '';
             courseName = courseName.replace(/^[0-9]+\s*/, '');
             courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-            console.log('コース名取得:', { categoryId: item.categoryId, courseName: courseName, source: item.source });
+            // console.log('コース名取得:', { categoryId: item.categoryId, courseName: courseName, source: item.source });
           }
           
           // ソース表示（履歴 or お気に入り or 類似）
@@ -1762,7 +1762,7 @@ function addHistoryEntry(categoryId, title = '') {
   if (history.length > 20) history = history.slice(0, 20);
   window.saveSetting('history', history);
   window.saveSetting(lastHistoryKey, now);
-  console.log(`addHistoryEntry: 現在のページを履歴に追加しました。カテゴリID: ${categoryId}, タイトル: ${title}`);
+  // console.log(`addHistoryEntry: 現在のページを履歴に追加しました。カテゴリID: ${categoryId}, タイトル: ${title}`);
 }
 
 // グローバル関数として公開
