@@ -726,64 +726,64 @@ function addHistoryMenuEventListener() {
       }
     });
   }
-}
-
+  }
+  
 // お気に入りメニューのイベントリスナー
 function addFavoritesMenuEventListener() {
   const favoritesItem = document.getElementById('favorites-menu-item');
   if (!favoritesItem) return;
-  favoritesItem.addEventListener('click', async () => {
-    // 既存パネルがあれば削除
-    let panel = document.getElementById('favorite-list-panel');
+    favoritesItem.addEventListener('click', async () => {
+      // 既存パネルがあれば削除
+      let panel = document.getElementById('favorite-list-panel');
     if (panel) panel.remove();
-    // パネル生成
-    panel = document.createElement('div');
-    panel.id = 'favorite-list-panel';
-    panel.className = 'favorite-panel';
-    panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-labelledby', 'favorite-panel-title');
-    panel.setAttribute('aria-modal', 'true');
-    // #mainの幅・スタイルを取得
-    const main = document.getElementById('main');
+      // パネル生成
+      panel = document.createElement('div');
+      panel.id = 'favorite-list-panel';
+      panel.className = 'favorite-panel';
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-labelledby', 'favorite-panel-title');
+      panel.setAttribute('aria-modal', 'true');
+      // #mainの幅・スタイルを取得
+      const main = document.getElementById('main');
     let mainWidth = '800px';
-    let mainFont = '';
+      let mainFont = '';
     let mainFontSize = '14px';
-    if (main) {
-      const style = window.getComputedStyle(main);
-      mainWidth = style.width;
-      mainFont = style.fontFamily;
-      mainFontSize = style.fontSize;
-    }
-    Object.assign(panel.style, {
-      position: 'fixed',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      width: 'min(90vw, 600px)',
-      maxWidth: mainWidth,
-      minHeight: '480px',
-      maxHeight: '480px',
-      height: '480px',
-      background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
-      fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize: mainFontSize || '14px',
-      border: 'none',
-      borderRadius: '12px 12px 0 0',
-      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-      padding: '0',
-      zIndex: '9999',
-      overflow: 'hidden',
-      opacity: '0',
-      transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.2)'
-    });
+      if (main) {
+        const style = window.getComputedStyle(main);
+        mainWidth = style.width;
+        mainFont = style.fontFamily;
+        mainFontSize = style.fontSize;
+      }
+      Object.assign(panel.style, {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 'min(90vw, 600px)',
+        maxWidth: mainWidth,
+        minHeight: '480px',
+        maxHeight: '480px',
+        height: '480px',
+        background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
+        fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontSize: mainFontSize || '14px',
+        border: 'none',
+        borderRadius: '12px 12px 0 0',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        padding: '0',
+        zIndex: '9999',
+        overflow: 'hidden',
+        opacity: '0',
+        transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      });
     // 検索ボックスのHTML
-    const searchBoxHtml = `
-      <div class="favorite-search-box" style="background: #232c3a; border-radius: 10px; padding: 10px 18px; margin: 0 24px 14px 24px; box-shadow: 0 2px 8px rgba(30,40,60,0.18); border: 1.5px solid #3a4658;">
-        <input id="favorite-search-input" type="text" placeholder="コース名・親カテゴリ名で検索" style="width: 100%; background: #232c3a; color: #fff; border: none; outline: none; font-size: 16px; padding: 10px 12px; border-radius: 6px; letter-spacing: 0.5px;">
-      </div>
-    `;
+      const searchBoxHtml = `
+        <div class="favorite-search-box" style="background: #232c3a; border-radius: 10px; padding: 10px 18px; margin: 0 24px 14px 24px; box-shadow: 0 2px 8px rgba(30,40,60,0.18); border: 1.5px solid #3a4658;">
+          <input id="favorite-search-input" type="text" placeholder="コース名・親カテゴリ名で検索" style="width: 100%; background: #232c3a; color: #fff; border: none; outline: none; font-size: 16px; padding: 10px 12px; border-radius: 6px; letter-spacing: 0.5px;">
+        </div>
+      `;
     // ローディング表示
     panel.innerHTML = `
       <div class="favorite-panel-header">
@@ -843,13 +843,8 @@ function addFavoritesMenuEventListener() {
       });
     }
     // 非同期でカテゴリデータ取得・リスト描画
-    // categories.jsのgetCategoryDictionariesを利用
     let favorites = window.getSetting('favorites', []).map(String);
     let history = window.getSetting('history', []);
-    console.log('[DEBUG] favorites:', favorites);
-    const { idToName, idToParentName } = await window.getCategoryDictionaries();
-    console.log('[DEBUG] idToName:', idToName);
-    console.log('[DEBUG] idToParentName:', idToParentName);
     // ピン止め情報取得関数
     function getPinnedFavorites() {
       try {
@@ -866,18 +861,16 @@ function addFavoritesMenuEventListener() {
       const pinnedFavorites = getPinnedFavorites();
       let listHtml = '';
       if (favorites.length) {
-        const favoriteItemsWithParent = favorites.map((id) => {
+        // categories.jsのAPI経由でカテゴリ名・親カテゴリ名を取得
+        const favoriteItemsWithParent = await Promise.all(favorites.map(async (id) => {
           const idStr = id.toString();
           // 履歴のtitleを優先
           const historyEntry = history.find(h => String(h.categoryId) === idStr);
-          const categoryName = historyEntry && historyEntry.title ? historyEntry.title : idToName[idStr];
-          const parentCategoryName = idToParentName[idStr];
+          let categoryName = historyEntry && historyEntry.title ? historyEntry.title : null;
           if (!categoryName) {
-            console.warn('[DEBUG] 不明なコースID:', idStr, 'idToName:', idToName, 'favorites:', favorites);
+            categoryName = await window.getCategoryNameById(idStr);
           }
-          if (!parentCategoryName) {
-            console.warn('[DEBUG] 不明な親カテゴリ名ID:', idStr, 'idToParentName:', idToParentName);
-          }
+          const parentCategoryName = await window.getParentCategoryName(idStr);
           const displayName = categoryName || `不明なコース (ID: ${idStr})`;
           return {
             id: idStr,
@@ -886,140 +879,140 @@ function addFavoritesMenuEventListener() {
             hasParent: !!parentCategoryName,
             pinned: pinnedFavorites.includes(idStr)
           };
-        });
+        }));
         const filteredItems = filter.trim() ? favoriteItemsWithParent.filter(item => {
-          const keyword = filter.trim().toLowerCase();
-          return item.categoryName.toLowerCase().includes(keyword) || item.parentCategoryName.toLowerCase().includes(keyword);
-        }) : favoriteItemsWithParent;
-        const pinnedItems = filteredItems.filter(item => item.pinned);
-        const unpinnedItems = filteredItems.filter(item => !item.pinned);
-        const groupedFavorites = {};
-        unpinnedItems.forEach(item => {
-          const parentKey = item.parentCategoryName;
-          if (!groupedFavorites[parentKey]) {
-            groupedFavorites[parentKey] = [];
-          }
-          groupedFavorites[parentKey].push(item);
-        });
-        const sortedGroups = Object.entries(groupedFavorites).sort(([aName], [bName]) => {
-          const aNum = parseInt(aName.match(/^[0-9]+/)?.[0] || '0', 10);
-          const bNum = parseInt(bName.match(/^[0-9]+/)?.[0] || '0', 10);
-          return aNum - bNum;
-        });
-        let pinnedHtml = '';
-        if (pinnedItems.length) {
-          pinnedHtml = `
-            <div class="favorite-group">
-              <div class="favorite-group-header" style="display:flex;align-items:center;gap:6px;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M6 3v12l6-3 6 3V3"/></svg>
-                ピン止め
-              </div>
-              <ul class="favorite-group-list">
-                ${pinnedItems.map(item => `
-                  <li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${item.categoryName}を開く">
-                    <div class="favorite-item-content">
-                      <div class="favorite-child-category">${item.categoryName}</div>
-                    </div>
-                    <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="ピンを外す" title="ピンを外す" style="background:none;border:none;cursor:pointer;padding:0 8px;">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="${item.pinned ? '#ffd600' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>
-                    </button>
-                    <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-                  </li>
-                `).join('')}
-              </ul>
-            </div>
-          `;
-        }
-        const groupHtmls = sortedGroups.map(([parentName, items]) => {
-          const sortedItems = items.sort((a, b) => {
-            const aNum = parseInt(a.categoryName.match(/^[0-9]+/)?.[0] || '0', 10);
-            const bNum = parseInt(b.categoryName.match(/^[0-9]+/)?.[0] || '0', 10);
+            const keyword = filter.trim().toLowerCase();
+            return item.categoryName.toLowerCase().includes(keyword) || item.parentCategoryName.toLowerCase().includes(keyword);
+          }) : favoriteItemsWithParent;
+          const pinnedItems = filteredItems.filter(item => item.pinned);
+          const unpinnedItems = filteredItems.filter(item => !item.pinned);
+          const groupedFavorites = {};
+          unpinnedItems.forEach(item => {
+            const parentKey = item.parentCategoryName;
+            if (!groupedFavorites[parentKey]) {
+              groupedFavorites[parentKey] = [];
+            }
+            groupedFavorites[parentKey].push(item);
+          });
+          const sortedGroups = Object.entries(groupedFavorites).sort(([aName], [bName]) => {
+            const aNum = parseInt(aName.match(/^[0-9]+/)?.[0] || '0', 10);
+            const bNum = parseInt(bName.match(/^[0-9]+/)?.[0] || '0', 10);
             return aNum - bNum;
           });
-          const itemsHtml = sortedItems.map(item => {
-              return `<li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${parentName}の${item.categoryName}を開く">
-                <div class="favorite-item-content">
-                  <div class="favorite-child-category">${item.categoryName}</div>
+          let pinnedHtml = '';
+          if (pinnedItems.length) {
+            pinnedHtml = `
+              <div class="favorite-group">
+                <div class="favorite-group-header" style="display:flex;align-items:center;gap:6px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M6 3v12l6-3 6 3V3"/></svg>
+                  ピン止め
                 </div>
-              <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="${item.pinned ? 'ピンを外す' : 'ピン止め'}" title="${item.pinned ? 'ピンを外す' : 'ピン止め'}" style="background:none;border:none;cursor:pointer;padding:0 8px;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="${item.pinned ? '#ffd600' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>
-              </button>
-              <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-              </li>`;
-          }).join('');
-          return `
-            <div class="favorite-group">
-              <div class="favorite-group-header">${parentName}</div>
-              <ul class="favorite-group-list">${itemsHtml}</ul>
-            </div>
-          `;
-        });
-        listHtml = pinnedHtml + groupHtmls.join('');
-        if (!filteredItems.length) {
-          listHtml = '<li class="favorite-empty">該当するお気に入りはありません</li>';
+                <ul class="favorite-group-list">
+                  ${pinnedItems.map(item => `
+                    <li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${item.categoryName}を開く">
+                      <div class="favorite-item-content">
+                        <div class="favorite-child-category">${item.categoryName}</div>
+                      </div>
+                      <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="ピンを外す" title="ピンを外す" style="background:none;border:none;cursor:pointer;padding:0 8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="${item.pinned ? '#ffd600' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>
+                      </button>
+                      <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            `;
+          }
+          const groupHtmls = sortedGroups.map(([parentName, items]) => {
+            const sortedItems = items.sort((a, b) => {
+              const aNum = parseInt(a.categoryName.match(/^[0-9]+/)?.[0] || '0', 10);
+              const bNum = parseInt(b.categoryName.match(/^[0-9]+/)?.[0] || '0', 10);
+              return aNum - bNum;
+            });
+            const itemsHtml = sortedItems.map(item => {
+                return `<li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${parentName}の${item.categoryName}を開く">
+                  <div class="favorite-item-content">
+                    <div class="favorite-child-category">${item.categoryName}</div>
+                  </div>
+                <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="${item.pinned ? 'ピンを外す' : 'ピン止め'}" title="${item.pinned ? 'ピンを外す' : 'ピン止め'}" style="background:none;border:none;cursor:pointer;padding:0 8px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="${item.pinned ? '#ffd600' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>
+                </button>
+                <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                </li>`;
+            }).join('');
+            return `
+              <div class="favorite-group">
+                <div class="favorite-group-header">${parentName}</div>
+                <ul class="favorite-group-list">${itemsHtml}</ul>
+              </div>
+            `;
+          });
+          listHtml = pinnedHtml + groupHtmls.join('');
+          if (!filteredItems.length) {
+            listHtml = '<li class="favorite-empty">該当するお気に入りはありません</li>';
+          }
+        } else {
+          listHtml = '<li class="favorite-empty">お気に入りはありません</li>';
         }
-      } else {
-        listHtml = '<li class="favorite-empty">お気に入りはありません</li>';
+        // パネルのリスト部分を書き換え
+        const listContainer = panel.querySelector('.favorite-list');
+        if (listContainer) {
+          listContainer.innerHTML = listHtml;
+        }
+        // 再度イベントリスナーを付与
+        attachFavoriteItemListeners();
+        attachPinButtonListeners();
       }
-      // パネルのリスト部分を書き換え
-      const listContainer = panel.querySelector('.favorite-list');
-      if (listContainer) {
-        listContainer.innerHTML = listHtml;
+      // ピンボタンのイベントリスナー
+      function attachPinButtonListeners() {
+        const pinButtons = panel.querySelectorAll('.favorite-pin-btn');
+        pinButtons.forEach(button => {
+          button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const categoryId = button.getAttribute('data-category-id');
+            let pinned = getPinnedFavorites();
+            if (pinned.includes(categoryId)) {
+              pinned = pinned.filter(id => id !== categoryId);
+            } else {
+              pinned.push(categoryId);
+            }
+            setPinnedFavorites(pinned);
+            renderFavoriteList(searchValue);
+          });
+        });
       }
-      // 再度イベントリスナーを付与
-      attachFavoriteItemListeners();
-      attachPinButtonListeners();
-    }
-    // ピンボタンのイベントリスナー
-    function attachPinButtonListeners() {
-      const pinButtons = panel.querySelectorAll('.favorite-pin-btn');
-      pinButtons.forEach(button => {
-        button.addEventListener('click', (event) => {
-          event.stopPropagation();
-          const categoryId = button.getAttribute('data-category-id');
-          let pinned = getPinnedFavorites();
-          if (pinned.includes(categoryId)) {
-            pinned = pinned.filter(id => id !== categoryId);
-          } else {
-            pinned.push(categoryId);
-          }
-          setPinnedFavorites(pinned);
-          renderFavoriteList(searchValue);
-        });
-      });
-    }
-    // お気に入り項目のクリックイベントリスナー
-    function attachFavoriteItemListeners() {
-      const favoriteItems = panel.querySelectorAll('.favorite-item');
-      favoriteItems.forEach((item, index) => {
-        item.addEventListener('click', (event) => {
-          event.preventDefault();
-          const categoryId = item.getAttribute('data-category-id');
-          if (categoryId) {
-            closePanel();
-            setTimeout(() => {
-              window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=${categoryId}`;
-            }, 200);
-          }
-        });
-        item.addEventListener('keydown', (event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
+      // お気に入り項目のクリックイベントリスナー
+      function attachFavoriteItemListeners() {
+        const favoriteItems = panel.querySelectorAll('.favorite-item');
+        favoriteItems.forEach((item, index) => {
+          item.addEventListener('click', (event) => {
             event.preventDefault();
-            item.click();
-          } else if (event.key === 'ArrowDown') {
-            event.preventDefault();
-            const nextItem = favoriteItems[index + 1];
-            if (nextItem) nextItem.focus();
-          } else if (event.key === 'ArrowUp') {
-            event.preventDefault();
-            const prevItem = favoriteItems[index - 1];
-            if (prevItem) prevItem.focus();
-          }
+            const categoryId = item.getAttribute('data-category-id');
+            if (categoryId) {
+              closePanel();
+              setTimeout(() => {
+                window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=${categoryId}`;
+              }, 200);
+            }
+          });
+          item.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              item.click();
+            } else if (event.key === 'ArrowDown') {
+              event.preventDefault();
+              const nextItem = favoriteItems[index + 1];
+              if (nextItem) nextItem.focus();
+            } else if (event.key === 'ArrowUp') {
+              event.preventDefault();
+              const prevItem = favoriteItems[index - 1];
+              if (prevItem) prevItem.focus();
+            }
+          });
         });
-      });
-    }
-    // 初回リスト描画
-    renderFavoriteList('');
+      }
+      // 初回リスト描画
+      renderFavoriteList('');
   });
 }
 
@@ -1027,9 +1020,9 @@ function addFavoritesMenuEventListener() {
 function addRecommendMenuEventListener() {
   const recommendItem = document.getElementById('recommend-menu-item');
   if (!recommendItem) return;
-  recommendItem.addEventListener('click', async () => {
-    // 既存パネルがあれば削除
-    let panel = document.getElementById('recommend-list-panel');
+    recommendItem.addEventListener('click', async () => {
+      // 既存パネルがあれば削除
+      let panel = document.getElementById('recommend-list-panel');
     if (panel) panel.remove();
     panel = createRecommendPanel();
     document.body.appendChild(panel);
@@ -1041,146 +1034,146 @@ function addRecommendMenuEventListener() {
 
 function createRecommendPanel() {
   const panel = document.createElement('div');
-  panel.id = 'recommend-list-panel';
-  panel.className = 'recommend-panel';
-  panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-labelledby', 'recommend-panel-title');
-  panel.setAttribute('aria-modal', 'true');
-  // #mainの幅・スタイルを取得
-  const main = document.getElementById('main');
+      panel.id = 'recommend-list-panel';
+      panel.className = 'recommend-panel';
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-labelledby', 'recommend-panel-title');
+      panel.setAttribute('aria-modal', 'true');
+      // #mainの幅・スタイルを取得
+      const main = document.getElementById('main');
   let mainWidth = '800px';
-  let mainFont = '';
+      let mainFont = '';
   let mainFontSize = '14px';
-  if (main) {
-    const style = window.getComputedStyle(main);
-    mainWidth = style.width;
-    mainFont = style.fontFamily;
-    mainFontSize = style.fontSize;
-  }
-  Object.assign(panel.style, {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 'min(90vw, 600px)',
-    maxWidth: mainWidth,
-    minHeight: '480px',
-    maxHeight: '480px',
-    height: '480px',
-    background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
-    fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    fontSize: mainFontSize || '14px',
-    border: 'none',
-    borderRadius: '12px 12px 0 0',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    padding: '0',
-    zIndex: '9999',
-    overflow: 'hidden',
-    opacity: '0',
-    transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
-    backdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255, 255, 255, 0.2)'
-  });
-  // ローディング表示（ダミーカード付き）
-  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const cardBg = isDark ? '#232c3a' : '#fff';
-  const cardText = isDark ? '#fff' : '#222';
-  const cardSubText = isDark ? '#b0b8c9' : '#666';
-  const barBg = isDark ? '#374151' : '#e5e7eb';
-  const thumbBg = isDark ? '#444' : '#eee';
-  const dummyCards = Array.from({ length: 5 }, (_, i) => `
-    <div class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);margin-bottom:8px;padding:0;opacity:0.7;">
-      <div style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;">
-        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;">
-          <div style="display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);animation:pulse 1.5s ease-in-out infinite;"></div>
-          <div style="font-size:10px;color:${isDark ? '#60a5fa' : '#3b82f6'};background:${isDark ? '#60a5fa20' : '#3b82f620'};padding:2px 6px;border-radius:4px;text-align:center;font-weight:500;width:fit-content;margin:0 auto;animation:pulse 1.5s ease-in-out infinite;">取得中</div>
-        </div>
-        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;">
-          <div style="display:flex;align-items:baseline;gap:8px;">
-            <div style="font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:18px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
-            <div style="font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:14px;background:${barBg};border-radius:4px;width:80px;animation:pulse 1.5s ease-in-out infinite;"></div>
-          </div>
-          <div style="font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;height:36px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
-          <div style="height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);animation:pulse 1.5s ease-in-out infinite;"></div>
-        </div>
-      </div>
-    </div>
-  `).join('');
-  panel.innerHTML = `
-    <div class="history-panel-header">
-      <h3 id="recommend-panel-title" class="history-panel-title">
-        <ion-icon name="play" class="history-panel-icon" aria-hidden="true"></ion-icon>
-        おすすめ動画
-      </h3>
-      <button id="close-recommend-list-panel" class="history-panel-close" aria-label="パネルを閉じる">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 6L6 18M6 6l12 12"/>
-        </svg>
-      </button>
-    </div>
-    <div class="history-panel-content">
-      <div class="history-list">
-        ${dummyCards}
-      </div>
-    </div>
-    <style>
-      @keyframes pulse {
-        0%, 100% { opacity: 0.6; }
-        50% { opacity: 1; }
+      if (main) {
+        const style = window.getComputedStyle(main);
+        mainWidth = style.width;
+        mainFont = style.fontFamily;
+        mainFontSize = style.fontSize;
       }
-    </style>
-  `;
+      Object.assign(panel.style, {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 'min(90vw, 600px)',
+        maxWidth: mainWidth,
+        minHeight: '480px',
+        maxHeight: '480px',
+        height: '480px',
+        background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
+        fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontSize: mainFontSize || '14px',
+        border: 'none',
+        borderRadius: '12px 12px 0 0',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        padding: '0',
+        zIndex: '9999',
+        overflow: 'hidden',
+        opacity: '0',
+        transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      });
+      // ローディング表示（ダミーカード付き）
+      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const cardBg = isDark ? '#232c3a' : '#fff';
+      const cardText = isDark ? '#fff' : '#222';
+      const cardSubText = isDark ? '#b0b8c9' : '#666';
+      const barBg = isDark ? '#374151' : '#e5e7eb';
+      const thumbBg = isDark ? '#444' : '#eee';
+      const dummyCards = Array.from({ length: 5 }, (_, i) => `
+        <div class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);margin-bottom:8px;padding:0;opacity:0.7;">
+          <div style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;">
+            <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;">
+              <div style="display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);animation:pulse 1.5s ease-in-out infinite;"></div>
+              <div style="font-size:10px;color:${isDark ? '#60a5fa' : '#3b82f6'};background:${isDark ? '#60a5fa20' : '#3b82f620'};padding:2px 6px;border-radius:4px;text-align:center;font-weight:500;width:fit-content;margin:0 auto;animation:pulse 1.5s ease-in-out infinite;">取得中</div>
+            </div>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;">
+              <div style="display:flex;align-items:baseline;gap:8px;">
+                <div style="font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:18px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
+                <div style="font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:14px;background:${barBg};border-radius:4px;width:80px;animation:pulse 1.5s ease-in-out infinite;"></div>
+              </div>
+              <div style="font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;height:36px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
+              <div style="height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);animation:pulse 1.5s ease-in-out infinite;"></div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      panel.innerHTML = `
+        <div class="history-panel-header">
+          <h3 id="recommend-panel-title" class="history-panel-title">
+            <ion-icon name="play" class="history-panel-icon" aria-hidden="true"></ion-icon>
+            おすすめ動画
+          </h3>
+          <button id="close-recommend-list-panel" class="history-panel-close" aria-label="パネルを閉じる">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="history-panel-content">
+          <div class="history-list">
+            ${dummyCards}
+          </div>
+        </div>
+        <style>
+          @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+          }
+        </style>
+      `;
   return panel;
 }
 
 function showPanelAnimation(panel) {
-  requestAnimationFrame(() => {
-    panel.style.opacity = '1';
-    panel.style.transform = 'translate(-50%, -50%) scale(1)';
-  });
-  setTimeout(() => {
-    const content = panel.querySelector('.history-panel-content');
-    if (content) {
-      // CSSファイルで設定済みのため、JavaScriptでの設定は不要
-    }
-  }, 0);
+      requestAnimationFrame(() => {
+        panel.style.opacity = '1';
+        panel.style.transform = 'translate(-50%, -50%) scale(1)';
+      });
+      setTimeout(() => {
+        const content = panel.querySelector('.history-panel-content');
+        if (content) {
+          // CSSファイルで設定済みのため、JavaScriptでの設定は不要
+        }
+      }, 0);
 }
-
+      
 function addRecommendPanelListeners(panel) {
-  const closePanel = () => {
-    panel.style.opacity = '0';
-    panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
-    setTimeout(() => {
-      panel.remove();
-    }, 200);
-  };
-  const closePanelOnOutsideClick = (event) => {
-    if (document.getElementById('confirm-dialog')) return;
-    if (!panel.contains(event.target)) {
-      closePanel();
-    }
-  };
-  const closePanelOnEscape = (event) => {
-    if (event.key === 'Escape') {
-      closePanel();
-    }
-  };
-  setTimeout(() => {
-    document.addEventListener('click', closePanelOnOutsideClick);
-    document.addEventListener('keydown', closePanelOnEscape);
-  }, 100);
-  document.getElementById('close-recommend-list-panel').onclick = () => {
-    closePanel();
-  };
+      const closePanel = () => {
+        panel.style.opacity = '0';
+        panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
+        setTimeout(() => {
+          panel.remove();
+        }, 200);
+      };
+      const closePanelOnOutsideClick = (event) => {
+        if (document.getElementById('confirm-dialog')) return;
+        if (!panel.contains(event.target)) {
+          closePanel();
+        }
+      };
+      const closePanelOnEscape = (event) => {
+        if (event.key === 'Escape') {
+          closePanel();
+        }
+      };
+      setTimeout(() => {
+        document.addEventListener('click', closePanelOnOutsideClick);
+        document.addEventListener('keydown', closePanelOnEscape);
+      }, 100);
+      document.getElementById('close-recommend-list-panel').onclick = () => {
+        closePanel();
+      };
 }
 
 async function renderRecommendList(panel) {
-  let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
-  let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
-  if (!favorites.length && !history.length) {
-    panel.querySelector('.recommend-panel-content').innerHTML = '<li class="recommend-empty">お気に入りコースと履歴がありません</li>';
-    return;
-  }
+        let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
+        let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
+        if (!favorites.length && !history.length) {
+          panel.querySelector('.recommend-panel-content').innerHTML = '<li class="recommend-empty">お気に入りコースと履歴がありません</li>';
+          return;
+        }
   // ... 以降は元のおすすめ動画リスト生成処理 ...
 }
 

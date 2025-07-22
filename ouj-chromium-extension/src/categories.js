@@ -187,6 +187,69 @@ async function getCategoryDictionaries() {
   return { idToName, idToParentName };
 }
 
+/**
+ * 高速: カテゴリIDからカテゴリ名を取得
+ * @param {string|number} categoryId
+ * @returns {Promise<string|null>}
+ */
+async function getCategoryNameById(categoryId) {
+  const { idToName } = await getCategoryDictionaries();
+  const name = idToName[String(categoryId)];
+  return name || null;
+}
+
+/**
+ * 高速: カテゴリIDから親カテゴリ名を取得
+ * @param {string|number} categoryId
+ * @returns {Promise<string|null>}
+ */
+async function getParentCategoryName(categoryId) {
+  const { idToParentName } = await getCategoryDictionaries();
+  const name = idToParentName[String(categoryId)];
+  return name || null;
+}
+
+/**
+ * カテゴリIDから親IDを取得
+ * @param {string|number} categoryId
+ * @returns {Promise<string|null>}
+ */
+async function getParentIdByCategoryId(categoryId) {
+  let categories = [];
+  try {
+    const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
+    const cachedData = result[CATEGORIES_STORAGE_KEY];
+    categories = cachedData && cachedData.data ? cachedData.data : cachedData;
+    if (!Array.isArray(categories) || categories.length === 0) {
+      categories = await getCategoriesData();
+    }
+  } catch (e) {
+    categories = await getCategoriesData();
+  }
+  const cat = categories.find(c => String(c.categoryId) === String(categoryId));
+  return cat && cat.parentId != null ? String(cat.parentId) : null;
+}
+
+/**
+ * 親カテゴリIDから子カテゴリIDリストを取得
+ * @param {string|number} parentId
+ * @returns {Promise<string[]>}
+ */
+async function getChildIdsByParentId(parentId) {
+  let categories = [];
+  try {
+    const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
+    const cachedData = result[CATEGORIES_STORAGE_KEY];
+    categories = cachedData && cachedData.data ? cachedData.data : cachedData;
+    if (!Array.isArray(categories) || categories.length === 0) {
+      categories = await getCategoriesData();
+    }
+  } catch (e) {
+    categories = await getCategoriesData();
+  }
+  return categories.filter(c => String(c.parentId) === String(parentId)).map(c => String(c.categoryId));
+}
+
 window.getCategoriesData = getCategoriesData;
 window.getChildIds = getChildIds;
 window.getCurrentCategoryId = getCurrentCategoryId;
@@ -194,3 +257,5 @@ window.getParentCategoryName = getParentCategoryName;
 window.parentCategories = parentCategories;
 window.getCategoryNameById = getCategoryNameById;
 window.getCategoryDictionaries = getCategoryDictionaries;
+window.getParentIdByCategoryId = getParentIdByCategoryId;
+window.getChildIdsByParentId = getChildIdsByParentId;
