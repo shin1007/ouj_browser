@@ -2,17 +2,31 @@
 // コース一覧の各動画にお気に入りボタンを追加
 async function addFavoriteButtonsToCategoryList() {
   console.log("[お気に入り] addFavoriteButtonsToCategoryList 開始");
+  // 追加前に既存の.favorite-btnを全て削除
+  document.querySelectorAll('.favorite-btn').forEach(btn => btn.remove());
   // 現在のURLのcaパラメータを取得をcategoryNumとして、子のcategoryIdを取得
   // hash以降のcaを取得（https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=10ではca=10）
   // ハッシュのhashParams.get('ca')でcaを取得できないので、手動でcaを取得
   // ハッシュのcaを取得
 
   const hash = window.location.hash;
-  // hashのcaを取得。
-  const params = hash.split('?')[1];
-  const ca = params.split('ca=')[1];
-  console.log("[お気に入り] hash, params, ca:", hash, params, ca);
-
+  // hashからcaパラメータを安全にパース
+  let ca = null;
+  if (hash.includes('?')) {
+    const params = hash.split('?')[1];
+    const paramPairs = params.split('&');
+    for (const pair of paramPairs) {
+      const [key, value] = pair.split('=');
+      if (key === 'ca') {
+        ca = value;
+        break;
+      }
+    }
+  }
+  if (!ca) {
+    console.log("[お気に入り] hashからcaパラメータが取得できませんでした。処理を中断します:", hash);
+    return;
+  }
   const currentCategoryNum = parseInt(ca, 10);
   const childCategories = await window.getChildIds(currentCategoryNum);
   console.log("[お気に入り] childCategories:", childCategories);
@@ -30,8 +44,8 @@ async function addFavoriteButtonsToCategoryList() {
     const item = items[i];
     const category = childCategories[i];
     
-    // すでに追加済みならスキップ
-    if (item.querySelector('.favorite-btn')) {
+    // すでに追加済みならスキップ（item.parentNode全体で確認）
+    if (item.parentNode.querySelector('.favorite-btn')) {
       console.log(`[お気に入り] 既にボタン追加済み: index=${i}`);
       continue;
     }
@@ -98,8 +112,23 @@ async function waitThenAddFavBtnToCategoryList() {
   }
   // 現在のページのカテゴリIDを取得
   const hash = window.location.hash;
-  const params = hash.split('?')[1];
-  const ca = params.split('ca=')[1];
+  // hashからcaパラメータを安全にパース
+  let ca = null;
+  if (hash.includes('?')) {
+    const params = hash.split('?')[1];
+    const paramPairs = params.split('&');
+    for (const pair of paramPairs) {
+      const [key, value] = pair.split('=');
+      if (key === 'ca') {
+        ca = value;
+        break;
+      }
+    }
+  }
+  if (!ca) {
+    console.log("[お気に入り] hashからcaパラメータが取得できませんでした。処理を中断します:", hash);
+    return;
+  }
   const currentCategoryNum = parseInt(ca, 10);
   console.log("[お気に入り] currentCategoryNum:", currentCategoryNum);
   // categoryIdからsummaryを取得、なければ何もしない
