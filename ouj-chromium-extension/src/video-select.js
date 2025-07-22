@@ -18,13 +18,10 @@ async function addFavoriteButtonToCategoryTop() {
     if (window.addHistoryEntry && categoryId) {
       // カテゴリ名を取得して履歴に保存
       try {
-        const categories = await window.getCategoriesData();
-        const category = categories.find(cat => cat.categoryId.toString() === categoryId);
-        const title = category ? category.name : `コース (ID: ${categoryId})`;
-        window.addHistoryEntry(categoryId, title);
+        const title = await window.getCategoryNameById(categoryId);
+        window.addHistoryEntry(categoryId, title || `コース (ID: ${categoryId})`);
       } catch (error) {
         console.error('addFavoriteButtonToCategoryTop: 履歴追加でエラーが発生しました:', error);
-        // エラーが発生した場合はタイトルなしで履歴に追加
         window.addHistoryEntry(categoryId);
       }
     }

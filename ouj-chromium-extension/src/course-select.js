@@ -2,24 +2,22 @@
 // コース一覧の各動画にお気に入りボタンを追加
 async function addFavoriteButtonsToCategoryList() {
   
-  // 現在のURLのcaパラメータを取得をcategoryNumとして、子のcategoryIdを取得
-  // hash以降のcaを取得（https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=10ではca=10）
-  // ハッシュのhashParams.get('ca')でcaを取得できないので、手動でcaを取得
-  // ハッシュのcaを取得
-
+  // 現在のURLのcaパラメータを取得
   const hash = window.location.hash;
-  // hashのcaを取得。
   const params = hash.split('?')[1];
   const ca = params.split('ca=')[1];
-
-  const currentCategoryNum = parseInt(ca, 10);
-  const childCategories = await window.getChildIds(currentCategoryNum);
+  const currentCategoryNum = ca;
+  // categories.jsのAPIで子カテゴリIDリストを取得
+  const childCategoryIds = await window.getChildIdsByParentId(currentCategoryNum);
+  // 各子カテゴリの情報をまとめて取得
+  const childCategories = await Promise.all(childCategoryIds.map(async (id) => {
+    const name = await window.getCategoryNameById(id);
+    return { categoryId: id, name };
+  }));
   const favorites = window.getFavorites ? window.getFavorites() : [];
-
   // ion-list#common-list-content内のion-itemを全て取得
   const items = document.querySelectorAll('#main div.icon-text > .icon-area');
-  
-  // childCategoriesとitemsを一緒にループ（Pythonのzipのような動作）
+  // childCategoriesとitemsを一緒にループ
   const minLength = Math.min(childCategories.length, items.length);
   
   for (let i = 0; i < minLength; i++) {
@@ -28,6 +26,7 @@ async function addFavoriteButtonsToCategoryList() {
     
     // すでに追加済みならスキップ
     if (item.querySelector('.favorite-btn')) continue;
+    console.log('[DEBUG][fav-btn] 追加対象 category:', category);
     
     // お気に入りボタン作成
     const favBtn = document.createElement('button');
@@ -60,17 +59,20 @@ async function addFavoriteButtonsToCategoryList() {
       // 現在のお気に入り状態を再取得
       const currentFavorites = window.getFavorites();
       const currentlyFavorite = currentFavorites.includes(categoryId);
+      console.log('[DEBUG][fav-btn] クリック categoryId:', categoryId, '現在の状態:', currentlyFavorite);
       
       if (currentlyFavorite) {
         // お気に入りから削除
         const updatedFavorites = currentFavorites.filter(id => id !== categoryId);
         window.saveSetting('favorites', updatedFavorites);
         favBtn.innerHTML = '<ion-icon name="star-outline" class="icon icon-md ion-md-star-outline item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
+        console.log('[DEBUG][fav-btn] お気に入りから削除:', categoryId);
       } else {
         // お気に入りに追加
         const updatedFavorites = [...currentFavorites, categoryId];
         window.saveSetting('favorites', updatedFavorites);
         favBtn.innerHTML = '<ion-icon name="star" class="icon icon-md ion-md-star item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
+        console.log('[DEBUG][fav-btn] お気に入りに追加:', categoryId);
       }
     });
     

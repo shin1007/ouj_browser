@@ -20,11 +20,7 @@ async function initializeVideoPlayer() {
       let courseName = 'コース';
       if (matchCa) {
         try {
-          const categories = await window.getCategoriesData();
-          const category = categories.find(cat => cat.categoryId.toString() === matchCa[1]);
-          if (category) {
-            courseName = category.name;
-          }
+          courseName = await window.getCategoryNameById(matchCa[1]);
         } catch (error) {
           console.error('initializeVideoPlayer: コース名取得でエラーが発生しました:', error);
         }
