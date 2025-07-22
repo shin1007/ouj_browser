@@ -122,8 +122,29 @@ async function parentCategories() {
   return Array.from(parentIdSet);
 }
 
+/**
+ * 指定されたカテゴリIDからカテゴリ名を取得する（ID型を問わず）
+ * @param {string|number} categoryId
+ * @returns {Promise<string|null>} カテゴリ名、またはnull
+ */
+async function getCategoryNameById(categoryId) {
+  try {
+    const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
+    const cachedData = result[CATEGORIES_STORAGE_KEY];
+    // 新しいキャッシュ構造に対応
+    const data = cachedData && cachedData.data ? cachedData.data : cachedData;
+    if (!Array.isArray(data)) return null;
+    const cat = data.find(item => item.categoryId.toString() === categoryId.toString());
+    return cat ? cat.name : null;
+  } catch (error) {
+    console.error("getCategoryNameById: カテゴリ名の取得に失敗しました:", error);
+    return null;
+  }
+}
+
 window.getCategoriesData = getCategoriesData;
 window.getChildIds = getChildIds;
 window.getCurrentCategoryId = getCurrentCategoryId;
 window.getParentCategoryName = getParentCategoryName;
 window.parentCategories = parentCategories;
+window.getCategoryNameById = getCategoryNameById;
