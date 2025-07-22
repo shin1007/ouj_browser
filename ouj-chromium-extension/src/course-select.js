@@ -1,22 +1,30 @@
 
 // コース一覧の各動画にお気に入りボタンを追加
+// グローバル変数で直近の呼び出し情報を管理
+window.lastFavBtnCall = window.lastFavBtnCall || { url: '', ts: 0 };
+
 async function addFavoriteButtonsToCategoryList() {
-  
+  const now = Date.now();
+  const url = window.location.href;
+  // 直近の呼び出しが同じURLで1秒以内ならスキップ
+  if (window.lastFavBtnCall.url === url && now - window.lastFavBtnCall.ts < 1000) {
+    console.log('[DEBUG][fav-btn] 重複呼び出しスキップ:', url, now);
+    return;
+  }
+  window.lastFavBtnCall = { url, ts: now };
+  console.log('[DEBUG][fav-btn] addFavoriteButtonsToCategoryList呼び出し location.href:', window.location.href, 'hash:', window.location.hash);
   // 現在のURLのcaパラメータを取得
   const hash = window.location.hash;
   const params = hash.split('?')[1];
   const ca = params.split('ca=')[1];
   const currentCategoryNum = ca;
-  // categories.jsのAPIで子カテゴリIDリストを取得
-  const childCategoryIds = await window.getChildIdsByParentId(currentCategoryNum);
-  // 各子カテゴリの情報をまとめて取得
-  const childCategories = await Promise.all(childCategoryIds.map(async (id) => {
-    const name = await window.getCategoryNameById(id);
-    return { categoryId: id, name };
-  }));
+  // summaryが空でない子カテゴリのみ取得
+  const childCategories = await window.getChildCategoriesWithSummary(currentCategoryNum);
+  console.log('[DEBUG][fav-btn] summaryあり子カテゴリ:', childCategories);
   const favorites = window.getFavorites ? window.getFavorites() : [];
   // ion-list#common-list-content内のion-itemを全て取得
   const items = document.querySelectorAll('#main div.icon-text > .icon-area');
+  console.log('[DEBUG][fav-btn] items.length:', items.length, 'childCategories.length:', childCategories.length);
   // childCategoriesとitemsを一緒にループ
   const minLength = Math.min(childCategories.length, items.length);
   
@@ -25,8 +33,11 @@ async function addFavoriteButtonsToCategoryList() {
     const category = childCategories[i];
     
     // すでに追加済みならスキップ
-    if (item.querySelector('.favorite-btn')) continue;
-    console.log('[DEBUG][fav-btn] 追加対象 category:', category);
+    if (item.querySelector('.favorite-btn')) {
+      console.log('[DEBUG][fav-btn] 既にボタンあり category:', category);
+      continue;
+    }
+    console.log('[DEBUG][fav-btn] 追加対象 category:', category, 'item:', item);
     
     // お気に入りボタン作成
     const favBtn = document.createElement('button');
@@ -84,39 +95,32 @@ async function addFavoriteButtonsToCategoryList() {
 }
 
 async function waitThenAddFavBtnToCategoryList() {
-  
-  // getChildIds関数が利用可能かチェック
+  console.log('[DEBUG][fav-btn] waitThenAddFavBtnToCategoryList呼び出し location.href:', window.location.href, 'hash:', window.location.hash);
   if (typeof window.getChildIds !== 'function') {
-    console.error('getChildIds関数が未定義です。categories.jsが読み込まれているか確認してください。');
+    console.error('[DEBUG][fav-btn] getChildIds未定義でreturn');
     setTimeout(waitThenAddFavBtnToCategoryList, 100);
     return;
   }
-  // 現在のページのカテゴリIDを取得
   const hash = window.location.hash;
   const params = hash.split('?')[1];
-  const ca = params.split('ca=')[1];
+  const ca = params && params.split('ca=')[1];
+  console.log('[DEBUG][fav-btn] hash:', hash, 'params:', params, 'ca:', ca);
   const currentCategoryNum = parseInt(ca, 10);
-  
   // categoryIdからsummaryを取得、なければ何もしない
   const categories = await window.getCategoriesData();
   const category = categories.find(cat => cat.categoryId === currentCategoryNum);
-
-  const summary = category ? category.summary : '';
-  if (!summary) return;
-
-  // getFavorites関数が利用可能かチェック
   if (typeof window.getFavorites !== 'function') {
-    console.error('getFavorites関数が未定義です。helpers.jsが読み込まれているか確認してください。');
+    console.error('[DEBUG][fav-btn] getFavorites未定義でreturn');
     setTimeout(waitThenAddFavBtnToCategoryList, 100);
     return;
   }
-  
   const items = document.querySelectorAll('#main div.icon-text > .icon-area');
   if (!items.length) {
+    console.warn('[DEBUG][fav-btn] items.length==0でreturn');
     setTimeout(waitThenAddFavBtnToCategoryList, 100);
     return;
   }
-  
+  console.log('[DEBUG][fav-btn] addFavoriteButtonsToCategoryListを呼び出します');
   await addFavoriteButtonsToCategoryList();
   
   // 現在のページ（親カテゴリ）を履歴に追加

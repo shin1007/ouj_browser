@@ -250,6 +250,26 @@ async function getChildIdsByParentId(parentId) {
   return categories.filter(c => String(c.parentId) === String(parentId)).map(c => String(c.categoryId));
 }
 
+/**
+ * 親カテゴリIDから、summaryが空でない子カテゴリオブジェクトのリストを取得
+ * @param {string|number} parentId
+ * @returns {Promise<Array>} 子カテゴリオブジェクト配列
+ */
+async function getChildCategoriesWithSummary(parentId) {
+  let categories = [];
+  try {
+    const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
+    const cachedData = result[CATEGORIES_STORAGE_KEY];
+    categories = cachedData && cachedData.data ? cachedData.data : cachedData;
+    if (!Array.isArray(categories) || categories.length === 0) {
+      categories = await getCategoriesData();
+    }
+  } catch (e) {
+    categories = await getCategoriesData();
+  }
+  return categories.filter(cat => String(cat.parentId) === String(parentId) && cat.summary && cat.summary.trim() !== '');
+}
+
 window.getCategoriesData = getCategoriesData;
 window.getChildIds = getChildIds;
 window.getCurrentCategoryId = getCurrentCategoryId;
@@ -259,3 +279,4 @@ window.getCategoryNameById = getCategoryNameById;
 window.getCategoryDictionaries = getCategoryDictionaries;
 window.getParentIdByCategoryId = getParentIdByCategoryId;
 window.getChildIdsByParentId = getChildIdsByParentId;
+window.getChildCategoriesWithSummary = getChildCategoriesWithSummary;

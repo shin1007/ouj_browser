@@ -804,23 +804,23 @@ function addFavoritesMenuEventListener() {
     let favorites = window.getSetting('favorites', []).map(String);
     let history = window.getSetting('history', []);
     // ピン止め情報取得関数
-    function getPinnedFavorites() {
-      try {
-        return window.getSetting('pinnedFavorites', []);
-      } catch (e) {
-        return [];
+      function getPinnedFavorites() {
+        try {
+          return window.getSetting('pinnedFavorites', []);
+        } catch (e) {
+          return [];
+        }
       }
-    }
-    function setPinnedFavorites(pinned) {
-      window.saveSetting('pinnedFavorites', pinned);
-    }
+      function setPinnedFavorites(pinned) {
+        window.saveSetting('pinnedFavorites', pinned);
+      }
     // --- ここから下は既存のrenderFavoriteListの内容を使う ---
-    async function renderFavoriteList(filter = '') {
-      const pinnedFavorites = getPinnedFavorites();
-      let listHtml = '';
-      if (favorites.length) {
+      async function renderFavoriteList(filter = '') {
+        const pinnedFavorites = getPinnedFavorites();
+        let listHtml = '';
+        if (favorites.length) {
         // categories.jsのAPI経由でカテゴリ名・親カテゴリ名を取得
-        const favoriteItemsWithParent = await Promise.all(favorites.map(async (id) => {
+          const favoriteItemsWithParent = await Promise.all(favorites.map(async (id) => {
           const idStr = id.toString();
           // 履歴のtitleを優先
           const historyEntry = history.find(h => String(h.categoryId) === idStr);
@@ -830,15 +830,15 @@ function addFavoritesMenuEventListener() {
           }
           const parentCategoryName = await window.getParentCategoryName(idStr);
           const displayName = categoryName || `不明なコース (ID: ${idStr})`;
-          return {
+            return {
             id: idStr,
-            categoryName: displayName,
-            parentCategoryName: parentCategoryName || 'その他',
-            hasParent: !!parentCategoryName,
+              categoryName: displayName,
+              parentCategoryName: parentCategoryName || 'その他',
+              hasParent: !!parentCategoryName,
             pinned: pinnedFavorites.includes(idStr)
-          };
-        }));
-        const filteredItems = filter.trim() ? favoriteItemsWithParent.filter(item => {
+            };
+          }));
+          const filteredItems = filter.trim() ? favoriteItemsWithParent.filter(item => {
             const keyword = filter.trim().toLowerCase();
             return item.categoryName.toLowerCase().includes(keyword) || item.parentCategoryName.toLowerCase().includes(keyword);
           }) : favoriteItemsWithParent;
