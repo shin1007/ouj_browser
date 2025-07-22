@@ -142,9 +142,55 @@ async function getCategoryNameById(categoryId) {
   }
 }
 
+/**
+ * 全カテゴリデータからID→カテゴリ名・親カテゴリ名の辞書を一括で返す
+ * @returns {Promise<{idToName: Object, idToParentName: Object}>}
+ */
+async function getCategoryDictionaries() {
+  let categories = [];
+  // まずキャッシュを取得
+  try {
+    const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
+    const cachedData = result[CATEGORIES_STORAGE_KEY];
+    categories = cachedData && cachedData.data ? cachedData.data : cachedData;
+    if (!Array.isArray(categories) || categories.length === 0) {
+      // キャッシュが空ならAPIから取得
+      categories = await getCategoriesData();
+      // 取得できたらキャッシュに保存
+      if (Array.isArray(categories) && categories.length > 0) {
+        await chrome.storage.local.set({ [CATEGORIES_STORAGE_KEY]: { data: categories } });
+      }
+    }
+  } catch (e) {
+    categories = await getCategoriesData();
+    if (Array.isArray(categories) && categories.length > 0) {
+      await chrome.storage.local.set({ [CATEGORIES_STORAGE_KEY]: { data: categories } });
+    }
+  }
+  // ここでcategoriesが空なら、API取得失敗なので空辞書を返す
+  const idToName = {};
+  const idToParentName = {};
+  const parentIdToName = {};
+  categories.forEach(cat => {
+    parentIdToName[String(cat.categoryId)] = cat.name;
+  });
+  categories.forEach(cat => {
+    const catIdStr = String(cat.categoryId);
+    idToName[catIdStr] = cat.name;
+    const parentIdStr = cat.parentId != null ? String(cat.parentId) : null;
+    if (parentIdStr && parentIdToName[parentIdStr]) {
+      idToParentName[catIdStr] = parentIdToName[parentIdStr];
+    } else {
+      idToParentName[catIdStr] = 'その他';
+    }
+  });
+  return { idToName, idToParentName };
+}
+
 window.getCategoriesData = getCategoriesData;
 window.getChildIds = getChildIds;
 window.getCurrentCategoryId = getCurrentCategoryId;
 window.getParentCategoryName = getParentCategoryName;
 window.parentCategories = parentCategories;
 window.getCategoryNameById = getCategoryNameById;
+window.getCategoryDictionaries = getCategoryDictionaries;
