@@ -1126,13 +1126,92 @@ function addRecommendPanelListeners(panel) {
 }
 
 async function renderRecommendList(panel) {
-        let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
-        let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
-        if (!favorites.length && !history.length) {
-          panel.querySelector('.recommend-panel-content').innerHTML = '<li class="recommend-empty">お気に入りコースと履歴がありません</li>';
-          return;
+    let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
+    let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
+    if (!favorites.length && !history.length) {
+      panel.querySelector('.history-panel-content').innerHTML = '<li class="recommend-empty">お気に入りコースと履歴がありません</li>';
+      return;
+    }
+
+    // ダークモード判定
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const cardBg = isDark ? '#232c3a' : '#fff';
+    const cardText = isDark ? '#fff' : '#222';
+    const cardSubText = isDark ? '#b0b8c9' : '#666';
+
+    // 1. 履歴コースIDリストを取得
+    const historyCourseIds = history.map(item => item.categoryId);
+    const shownVideoIds = new Set();
+    let recommendVideos = [];
+
+    // 2. 各コースの未再生動画のうち一番若いものだけ抽出
+    for (const courseId of historyCourseIds) {
+      // コース内の動画リストを取得
+      let videos = [];
+      if (typeof window.getChildCategoriesWithSummary === 'function') {
+        try {
+          videos = await window.getChildCategoriesWithSummary(courseId);
+        } catch (e) {
+          continue;
         }
-  // ... 以降は元のおすすめ動画リスト生成処理 ...
+      }
+      // categoryIdで昇順ソート
+      videos.sort((a, b) => parseInt(a.categoryId) - parseInt(b.categoryId));
+      let found = false;
+      for (const video of videos) {
+        if (shownVideoIds.has(video.categoryId)) continue;
+        // 未再生判定
+        let status = null;
+        if (typeof window.getVideoViewingStatus === 'function') {
+          try {
+            status = await window.getVideoViewingStatus(video.categoryId);
+          } catch (e) {}
+        }
+        if (!status || status.currentTimeRate === 0) {
+          recommendVideos.push({
+            ...video,
+            courseId,
+          });
+          shownVideoIds.add(video.categoryId);
+          found = true;
+          break; // 各コースで1件のみ
+        }
+      }
+    }
+
+    // 3. コース名を非同期で取得
+    for (const video of recommendVideos) {
+      if (!video.courseName && typeof window.getCategoryNameById === 'function') {
+        try {
+          video.courseName = await window.getCategoryNameById(video.courseId);
+        } catch (e) {
+          video.courseName = 'コース';
+        }
+      }
+    }
+
+    // 4. UIに反映
+    const content = panel.querySelector('.history-panel-content');
+    if (!recommendVideos.length) {
+      content.innerHTML = '<li class="recommend-empty">未再生のおすすめ動画はありません</li>';
+      return;
+    }
+    content.innerHTML = recommendVideos.map(video => `
+      <div class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);margin-bottom:8px;padding:0;">
+        <div style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;">
+          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;">
+            <div style="display:block;width:110px;height:62px;background:#444;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);"></div>
+          </div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;">
+            <div style="display:flex;align-items:baseline;gap:8px;">
+              <div style="font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;">${video.name || '動画'}</div>
+            </div>
+            <div style="font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;">${video.summary || ''}</div>
+            <div style="font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;">コース: ${video.courseName || video.courseId}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
 }
 
 // 履歴をlocalStorageに保存する関数

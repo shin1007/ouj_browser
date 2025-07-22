@@ -8,11 +8,9 @@ async function addFavoriteButtonsToCategoryList() {
   const url = window.location.href;
   // 直近の呼び出しが同じURLで1秒以内ならスキップ
   if (window.lastFavBtnCall.url === url && now - window.lastFavBtnCall.ts < 1000) {
-    console.log('[DEBUG][fav-btn] 重複呼び出しスキップ:', url, now);
     return;
   }
   window.lastFavBtnCall = { url, ts: now };
-  console.log('[DEBUG][fav-btn] addFavoriteButtonsToCategoryList呼び出し location.href:', window.location.href, 'hash:', window.location.hash);
   // 現在のURLのcaパラメータを取得
   const hash = window.location.hash;
   const params = hash.split('?')[1];
@@ -20,11 +18,9 @@ async function addFavoriteButtonsToCategoryList() {
   const currentCategoryNum = ca;
   // summaryが空でない子カテゴリのみ取得
   const childCategories = await window.getChildCategoriesWithSummary(currentCategoryNum);
-  console.log('[DEBUG][fav-btn] summaryあり子カテゴリ:', childCategories);
   const favorites = window.getFavorites ? window.getFavorites() : [];
   // ion-list#common-list-content内のion-itemを全て取得
   const items = document.querySelectorAll('#main div.icon-text > .icon-area');
-  console.log('[DEBUG][fav-btn] items.length:', items.length, 'childCategories.length:', childCategories.length);
   // childCategoriesとitemsを一緒にループ
   const minLength = Math.min(childCategories.length, items.length);
   
@@ -34,10 +30,8 @@ async function addFavoriteButtonsToCategoryList() {
     
     // すでに追加済みならスキップ
     if (item.querySelector('.favorite-btn')) {
-      console.log('[DEBUG][fav-btn] 既にボタンあり category:', category);
       continue;
     }
-    console.log('[DEBUG][fav-btn] 追加対象 category:', category, 'item:', item);
     
     // お気に入りボタン作成
     const favBtn = document.createElement('button');
@@ -70,20 +64,17 @@ async function addFavoriteButtonsToCategoryList() {
       // 現在のお気に入り状態を再取得
       const currentFavorites = window.getFavorites();
       const currentlyFavorite = currentFavorites.includes(categoryId);
-      console.log('[DEBUG][fav-btn] クリック categoryId:', categoryId, '現在の状態:', currentlyFavorite);
       
       if (currentlyFavorite) {
         // お気に入りから削除
         const updatedFavorites = currentFavorites.filter(id => id !== categoryId);
         window.saveSetting('favorites', updatedFavorites);
         favBtn.innerHTML = '<ion-icon name="star-outline" class="icon icon-md ion-md-star-outline item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
-        console.log('[DEBUG][fav-btn] お気に入りから削除:', categoryId);
       } else {
         // お気に入りに追加
         const updatedFavorites = [...currentFavorites, categoryId];
         window.saveSetting('favorites', updatedFavorites);
         favBtn.innerHTML = '<ion-icon name="star" class="icon icon-md ion-md-star item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
-        console.log('[DEBUG][fav-btn] お気に入りに追加:', categoryId);
       }
     });
     
@@ -95,32 +86,29 @@ async function addFavoriteButtonsToCategoryList() {
 }
 
 async function waitThenAddFavBtnToCategoryList() {
-  console.log('[DEBUG][fav-btn] waitThenAddFavBtnToCategoryList呼び出し location.href:', window.location.href, 'hash:', window.location.hash);
   if (typeof window.getChildIds !== 'function') {
-    console.error('[DEBUG][fav-btn] getChildIds未定義でreturn');
     setTimeout(waitThenAddFavBtnToCategoryList, 100);
     return;
   }
   const hash = window.location.hash;
   const params = hash.split('?')[1];
   const ca = params && params.split('ca=')[1];
-  console.log('[DEBUG][fav-btn] hash:', hash, 'params:', params, 'ca:', ca);
   const currentCategoryNum = parseInt(ca, 10);
-  // categoryIdからsummaryを取得、なければ何もしない
   const categories = await window.getCategoriesData();
   const category = categories.find(cat => cat.categoryId === currentCategoryNum);
+  const summary = category ? category.summary : '';
+  if (!summary) {
+    return;
+  }
   if (typeof window.getFavorites !== 'function') {
-    console.error('[DEBUG][fav-btn] getFavorites未定義でreturn');
     setTimeout(waitThenAddFavBtnToCategoryList, 100);
     return;
   }
   const items = document.querySelectorAll('#main div.icon-text > .icon-area');
   if (!items.length) {
-    console.warn('[DEBUG][fav-btn] items.length==0でreturn');
     setTimeout(waitThenAddFavBtnToCategoryList, 100);
     return;
   }
-  console.log('[DEBUG][fav-btn] addFavoriteButtonsToCategoryListを呼び出します');
   await addFavoriteButtonsToCategoryList();
   
   // 現在のページ（親カテゴリ）を履歴に追加
