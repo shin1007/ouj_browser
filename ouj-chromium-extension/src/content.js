@@ -221,3 +221,19 @@ if (document.readyState === "complete" || document.readyState === "interactive")
     その場合はsetIntervalのフォールバックで最低限の検知を担保
   */
 })();
+
+// 同じ関数を同じURLで二度呼ばない共通ラッパー
+window.__alreadyCalledOnUrl = window.__alreadyCalledOnUrl || {};
+function callOncePerUrl(fn, fnName) {
+  const url = location.href;
+  const key = fnName + '::' + url;
+  if (window.__alreadyCalledOnUrl[key]) {
+    console.log(`[callOncePerUrl] ${fnName} はこのURLで既に呼ばれています`);
+    return;
+  }
+  window.__alreadyCalledOnUrl[key] = true;
+  fn();
+}
+
+// 既存の呼び出しをラップ
+callOncePerUrl(window.waitThenAddFavBtnToCategoryList, 'waitThenAddFavBtnToCategoryList');
