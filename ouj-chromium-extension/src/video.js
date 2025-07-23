@@ -10,34 +10,11 @@ async function initializeVideoPlayer() {
   waitForVideoElementAndInsertPanel();
 
   
-  // 履歴に追加
-  if (window.addHistoryEntry) {
-    try {
-      const url = window.location.href;
-      const matchCa = url.match(/ca=(\d+)/);
-      
-      // コース名を取得
-      let courseName = 'コース';
-      if (matchCa) {
-        try {
-          const categories = await window.getCategoriesData();
-          const category = categories.find(cat => cat.categoryId.toString() === matchCa[1]);
-          if (category) {
-            courseName = category.name;
-          }
-        } catch (error) {
-          console.error('initializeVideoPlayer: コース名取得でエラーが発生しました:', error);
-        }
-      }
-      
-      // コース全体を履歴に保存
-      const historyId = matchCa ? matchCa[1] : 'unknown';
-      
-      window.addHistoryEntry(historyId, courseName);
-      // console.log(`initializeVideoPlayer: 履歴に追加しました。コースID: ${historyId}, コース名: ${courseName}`);
-    } catch (error) {
-      console.error('initializeVideoPlayer: 履歴追加でエラーが発生しました:', error);
-    }
+  // 動画ページのcontentIdを取得し、履歴に追加
+  const url = window.location.href;
+  const matchCo = url.match(/co=(\d+)/);
+  if (window.addHistoryEntry && matchCo) {
+    window.addHistoryEntry(matchCo[1]);
   }
     
   // ラジオ番組判定を実行

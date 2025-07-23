@@ -114,25 +114,11 @@ async function main() {
   window.getCategoriesData().then(categories => {
     
     if (pageType === 'player') {
-      // 動画再生画面の処理
-      // ・再生速度の調整（記憶させておいたもの）
-      // ・EDスキップ
-      // ・自動で次を再生
-      window.initializeVideoPlayer();
-      // キーボード操作機能を実装完了: スペースキー（再生/一時停止）、矢印キー（シーク・音量調整）、Mキー（ミュート）、Fキー（フルスクリーン）、0キー（最初に戻る）、Endキー（最後に進む）
-      
+      window.initializeVideoPlayer();      
     } else if (pageType === 'course-select') {
-      // コース選択画面
-      // ・お気に入りされているかの確認
-      // ・お気に入りボタンを追加
       window.waitThenAddFavBtnToCategoryList();
     } else if (pageType === 'video-select') {
-      // 動画選択画面
-      // ・お気に入りされているかの確認
-      // ・お気に入りボタンを追加
       window.addFavoriteButtonToCategoryTop();
-      // ・どれくらい再生されているのかを取得
-      // ・どこまで再生したかの表示
     } else {
       // その他の処理
     }

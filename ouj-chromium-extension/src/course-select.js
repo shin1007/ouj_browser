@@ -158,17 +158,17 @@ async function waitThenAddFavBtnToCategoryList() {
     return;
   }
   await addFavoriteButtonsToCategoryList();
-  // 現在のページ（親カテゴリ）を履歴に追加
-  if (window.addHistoryEntry) {
-    try {
-      const category = categories.find(cat => cat.categoryId === currentCategoryNum);
-      const title = category ? category.name : `コース (ID: ${currentCategoryNum})`;
-      window.addHistoryEntry(currentCategoryNum.toString(), title);
-      console.log("[お気に入り] 履歴追加:", currentCategoryNum, title);
-    } catch (error) {
-      console.error('[お気に入り] waitThenAddFavBtnToCategoryList: 履歴追加でエラーが発生しました:', error);
-    }
-  }
-  console.log("[お気に入り] waitThenAddFavBtnToCategoryList 終了");
+  // // 現在のページ（親カテゴリ）を履歴に追加
+  // if (window.addHistoryEntry) {
+  //   try {
+  //     const category = categories.find(cat => cat.categoryId === currentCategoryNum);
+  //     const title = category ? category.name : `コース (ID: ${currentCategoryNum})`;
+  //     window.addHistoryEntry(currentCategoryNum.toString(), title);
+  //     console.log("[お気に入り] 履歴追加:", currentCategoryNum, title);
+  //   } catch (error) {
+  //     console.error('[お気に入り] waitThenAddFavBtnToCategoryList: 履歴追加でエラーが発生しました:', error);
+  //   }
+  // }
+  // console.log("[お気に入り] waitThenAddFavBtnToCategoryList 終了");
 }
 window.waitThenAddFavBtnToCategoryList = waitThenAddFavBtnToCategoryList;

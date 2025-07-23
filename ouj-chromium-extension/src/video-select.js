@@ -15,19 +15,20 @@ async function addFavoriteButtonToCategoryTop() {
     const categoryId = window.getCurrentCategoryId();
     
     // 履歴に追加（お気に入りボタンの存在に関係なく実行）
-    if (window.addHistoryEntry && categoryId) {
-      // カテゴリ名を取得して履歴に保存
-      try {
-        const categories = await window.getCategoriesData();
-        const category = categories.find(cat => cat.categoryId.toString() === categoryId);
-        const title = category ? category.name : `コース (ID: ${categoryId})`;
-        window.addHistoryEntry(categoryId, title);
-      } catch (error) {
-        console.error('addFavoriteButtonToCategoryTop: 履歴追加でエラーが発生しました:', error);
-        // エラーが発生した場合はタイトルなしで履歴に追加
-        window.addHistoryEntry(categoryId);
-      }
-    }
+    // 動画ページ以外では履歴を追加しないように修正
+    // if (window.addHistoryEntry && categoryId) {
+    //   // カテゴリ名を取得して履歴に保存
+    //   try {
+    //     const categories = await window.getCategoriesData();
+    //     const category = categories.find(cat => cat.categoryId.toString() === categoryId);
+    //     const title = category ? category.name : `コース (ID: ${categoryId})`;
+    //     window.addHistoryEntry(categoryId, title);
+    //   } catch (error) {
+    //     console.error('addFavoriteButtonToCategoryTop: 履歴追加でエラーが発生しました:', error);
+    //     // エラーが発生した場合はタイトルなしで履歴に追加
+    //     window.addHistoryEntry(categoryId);
+    //   }
+    // }
     
     // 既にお気に入りボタンがある場合は何もしない
     if (document.getElementById('favorite-button')) {
