@@ -469,102 +469,371 @@ function addMenuEventListeners() {
 function addHistoryMenuEventListener() {
   const historyItem = document.getElementById('history-menu-item');
   if (!historyItem) return;
-  historyItem.addEventListener('click', async () => {
-    // 1. データ取得
-    let history = [];
-    try {
-      history = window.getSetting('history', []);
-    } catch (e) {
-      history = [];
-    }
-    // 動画情報を取得
-    const categories = await window.getCategoriesData();
-    // 各履歴アイテムに動画情報を付与
-    const videoItems = await Promise.all(history.map(async (item) => {
-      if (!item.contentId) return null;
-      let video = null;
-      try {
-        const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}`;
-        video = await window.fetchWithCache(url, `cachedVodContent_${item.contentId}`) || {};
-        if (!video.title) throw new Error('動画情報取得失敗');
-      } catch (e) {
-        // fetchWithCache失敗時は履歴から削除
-        let history = [];
-        try {
-          history = window.getSetting('history', []);
-        } catch (e) {
-          history = [];
-        }
-        history = history.filter(h => h.contentId !== item.contentId);
-        window.saveSetting('history', history);
-        return null;
+    historyItem.addEventListener('click', async () => {
+      // 既存パネルがあれば削除
+      let panel = document.getElementById('history-list-panel');
+      if (panel) {
+        panel.remove();
       }
-      // video情報をitemに含めて返す
-      return { ...item, video };
-    }));
-    // null除去
-    const validVideoItems = videoItems.filter(Boolean);
-    // 新しい順
-    const sortedItems = validVideoItems.sort((a, b) => new Date(b.date) - new Date(a.date));
-    // 2. HTML生成
-    const searchBoxHtml = `
-      <div class="history-search-box" style="background: #232c3a; border-radius: 10px; padding: 10px 18px; margin: 0 24px 14px 24px; box-shadow: 0 2px 8px rgba(30,40,60,0.18); border: 1.5px solid #3a4658;">
-        <input id="history-search-input" type="text" placeholder="コース名・親カテゴリ名で検索" style="width: 100%; background: #232c3a; color: #fff; border: none; outline: none; font-size: 16px; padding: 10px 12px; border-radius: 6px; letter-spacing: 0.5px;">
-      </div>
-    `;
-    let listHtml = '';
-    if (sortedItems.length) {
-      listHtml = sortedItems.map(item => {
-        const video = item.video;
-        const title = video.title || `動画 (ID: ${item.contentId})`;
-        let courseName = '';
-        if (video.categoryId && Array.isArray(categories)) {
-          const cat = categories.find(c => c.categoryId == video.categoryId);
-          courseName = cat ? cat.name : '';
-          courseName = courseName.replace(/^[0-9]+\s*/, '');
-          courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-        }
-        const summary = video.summary || '';
-        const progress = item.progress || 0;
-        const date = new Date(item.date);
-        const dateStr = date.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        return renderVideoCard({
-          contentId: item.contentId,
-          categoryId: video.categoryId,
-          title,
-          courseName,
-          summary,
-          progress,
-          dateStr,
-          showDelete: true,
-          cardType: 'history',
-          isDark
-        });
-      }).join('');
-    } else {
-      listHtml = '<div class="history-empty" style="color:#222;padding:16px;text-align:center;">履歴はありません</div>';
-    }
-    const contentHtml = `${searchBoxHtml}<div class="history-list">${listHtml}</div>`;
-    // 3. パネル表示
-    window.createModalPanel(
-      'history-list-panel',
-      '履歴一覧',
-      contentHtml,
-      {
+      // パネル生成
+      panel = document.createElement('div');
+      panel.id = 'history-list-panel';
+      panel.className = 'history-panel';
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-labelledby', 'history-panel-title');
+      panel.setAttribute('aria-modal', 'true');
+      
+      // #mainの幅・スタイルを取得
+      const main = document.getElementById('main');
+      let mainWidth = '800px'; // デフォルト
+      let mainBg = '#fff';
+      let mainFont = '';
+      let mainFontSize = '14px'; // デフォルト
+      if (main) {
+        const style = window.getComputedStyle(main);
+        mainWidth = style.width;
+        mainBg = style.backgroundColor;
+        mainFont = style.fontFamily;
+        mainFontSize = style.fontSize;
+      }
+      
+      // モダンなスタイルを適用
+      Object.assign(panel.style, {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
         width: 'min(90vw, 600px)',
+        maxWidth: mainWidth,
+        minHeight: '480px',
+        maxHeight: '480px',
         height: '480px',
-        showCloseButton: true,
-        closeOnOutsideClick: true,
-        closeOnEscape: true,
-        onClose: () => { /* 必要ならコールバック */ }
-      }
-    );
-    // 4. イベントリスナー再設定（検索・クリック・削除など）
-    // ... ここでdocument.getElementById('history-search-input')などで再取得してaddEventListener ...
-  });
-}
+        background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
+        fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontSize: mainFontSize || '14px',
+        border: 'none',
+        borderRadius: '12px 12px 0 0',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        padding: '0',
+        zIndex: '9999',
+        overflow: 'hidden',
+        opacity: '0',
+        transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      });
 
+      // 履歴データを取得
+      let history = [];
+      try {
+        history = window.getSetting('history', []);
+      } catch (e) {
+        history = [];
+      }
+
+      // 検索ボックスを追加
+      let searchValue = '';
+      // 検索ボックスのHTML（履歴）
+      const searchBoxHtml = `
+        <div class="history-search-box" style="background: #232c3a; border-radius: 10px; padding: 10px 18px; margin: 0 24px 14px 24px; box-shadow: 0 2px 8px rgba(30,40,60,0.18); border: 1.5px solid #3a4658;">
+          <input id="history-search-input" type="text" placeholder="コース名・親カテゴリ名で検索" style="width: 100%; background: #232c3a; color: #fff; border: none; outline: none; font-size: 16px; padding: 10px 12px; border-radius: 6px; letter-spacing: 0.5px;">
+        </div>
+      `;
+
+      // 履歴リストの描画関数
+      async function renderHistoryList(filter = '', sortType = 'date') {
+        let listHtml = '';
+        if (history.length) {
+        // contentIdごとに動画情報を取得
+        const categories = await window.getCategoriesData();
+        const videoItems = await Promise.all(history.map(async (item) => {
+          if (!item.contentId) return null;
+          let video = null;
+          try {
+            const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}`;
+            video = await window.fetchWithCache(url, `cachedVodContent_${item.contentId}`) || {};
+            if (!video.title) throw new Error('動画情報取得失敗');
+          } catch (e) {
+            // fetchWithCache失敗時は履歴から削除
+            let history = [];
+            try {
+              history = window.getSetting('history', []);
+            } catch (e) {
+              history = [];
+            }
+            history = history.filter(h => h.contentId !== item.contentId);
+            window.saveSetting('history', history);
+            return null;
+          }
+          // video情報をitemに含めて返す
+          return { ...item, video };
+        }));
+        // null除去
+        const validVideoItems = videoItems.filter(Boolean);
+          // 検索フィルタ適用
+        const filteredItems = filter.trim() ? validVideoItems.filter(item => {
+            const keyword = filter.trim().toLowerCase();
+          return (item.video.title || '').toLowerCase().includes(keyword) || (item.video.categoryId && Array.isArray(categories) && categories.find(c => c.categoryId == item.video.categoryId)?.name?.toLowerCase().includes(keyword));
+        }) : validVideoItems;
+        // 新しい順
+        const sortedItems = filteredItems.sort((a, b) => new Date(b.date) - new Date(a.date));
+        listHtml = sortedItems.map(item => {
+          const video = item.video;
+          const title = video.title || `動画 (ID: ${item.contentId})`;
+          let courseName = '';
+          if (video.categoryId && Array.isArray(categories)) {
+            const cat = categories.find(c => c.categoryId == video.categoryId);
+            courseName = cat ? cat.name : '';
+            courseName = courseName.replace(/^[0-9]+\s*/, '');
+            courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+          }
+          // summary
+          const summary = video.summary || '';
+          // 進捗
+          const progress = item.progress || 0;
+          console.log('[履歴カード] contentId:', item.contentId, 'progress:', progress);
+          // 日付
+          const date = new Date(item.date);
+          const dateStr = date.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+          // ダーク/ライト
+          const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          return renderVideoCard({
+            contentId: item.contentId,
+            categoryId: video.categoryId,
+            title,
+            courseName,
+            summary,
+            progress,
+            dateStr,
+            showDelete: true,
+            cardType: 'history',
+            isDark
+          });
+        }).join('');
+        } else {
+        listHtml = '<div class="history-empty" style="color:#222;padding:16px;text-align:center;">履歴はありません</div>';
+        }
+        // パネルのリスト部分を書き換え
+        const listContainer = panel.querySelector('.history-list');
+        if (listContainer) {
+          listContainer.innerHTML = listHtml;
+
+          // 追加: カードクリックでパネルを閉じる（削除ボタン以外）
+          const cards = listContainer.querySelectorAll('.recommend-card');
+          cards.forEach(card => {
+            card.addEventListener('click', (event) => {
+              // 削除ボタンがクリックされた場合は閉じない
+              if (event.target.closest('.history-delete-btn')) return;
+              closePanel();
+            });
+          });
+        }
+        
+        // 全削除ボタンの表示/非表示を制御
+        const clearAllBtn = panel.querySelector('#clear-all-history');
+        if (clearAllBtn) {
+          clearAllBtn.style.display = history.length > 0 ? 'flex' : 'none';
+        }
+        
+        // 再度イベントリスナーを付与
+        attachHistoryItemListeners();
+        attachDeleteButtonListeners();
+      }
+
+      // 履歴項目のクリックイベントリスナー
+      function attachHistoryItemListeners() {
+        const historyItems = panel.querySelectorAll('.history-item');
+        historyItems.forEach((item, index) => {
+          // クリックイベント
+          item.addEventListener('click', (event) => {
+            // 削除ボタンがクリックされた場合は処理しない
+            if (event.target.closest('.history-delete-btn')) {
+              return;
+            }
+            event.preventDefault();
+            const categoryId = item.getAttribute('data-category-id');
+            if (categoryId) {
+              // パネルを閉じてからページ遷移
+              closePanel();
+              // 少し遅延させてからページ遷移（アニメーション完了を待つ）
+              setTimeout(() => {
+                window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=${categoryId}`;
+              }, 200);
+            }
+          });
+
+          // キーボードナビゲーション
+          item.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              item.click();
+            } else if (event.key === 'ArrowDown') {
+              event.preventDefault();
+              const nextItem = historyItems[index + 1];
+              if (nextItem) nextItem.focus();
+            } else if (event.key === 'ArrowUp') {
+              event.preventDefault();
+              const prevItem = historyItems[index - 1];
+              if (prevItem) prevItem.focus();
+            }
+          });
+        });
+      }
+
+      // 削除ボタンのイベントリスナー
+      function attachDeleteButtonListeners() {
+      const deleteBtns = panel.querySelectorAll('.history-delete-btn');
+      deleteBtns.forEach(btn => {
+        btn.onclick = (event) => {
+          event.preventDefault();
+            event.stopPropagation();
+          const contentId = btn.getAttribute('data-content-id');
+          console.log('[履歴削除] 削除ボタン押下: contentId=', contentId);
+          let history = [];
+          try {
+            history = window.getSetting('history', []);
+          } catch (e) {
+            history = [];
+          }
+          const beforeCount = history.length;
+          history = history.filter(item => item.contentId !== contentId);
+                  window.saveSetting('history', history);
+          const afterCount = history.length;
+          console.log(`[履歴削除] 履歴保存: before=${beforeCount}, after=${afterCount}`);
+          // UIから該当カードを即時削除
+          const card = btn.closest('.recommend-card');
+          if (card) {
+            card.remove();
+            console.log('[履歴削除] カード要素をUIから削除しました');
+          } else {
+            console.log('[履歴削除] カード要素が見つかりませんでした');
+          }
+          // 履歴が空になった場合のみ再描画（空表示用）
+          const listContainer = panel.querySelector('.history-list');
+          if (listContainer && listContainer.children.length === 0) {
+            console.log('[履歴削除] 履歴が空になったので空表示に切り替えます');
+            listContainer.innerHTML = `<div class="history-empty" style="color:#222;padding:16px;text-align:center;">履歴はありません</div>`;
+          }
+        };
+        });
+      }
+
+      // 履歴を全削除する関数
+      async function clearAllHistory() {
+        if (history.length === 0) return;
+        
+        // 共通化した確認ダイアログを使用
+        if (typeof window.showConfirmDialog === 'function') {
+          const confirmed = await window.showConfirmDialog(
+            `履歴を全て削除しますか？（${history.length}件）`,
+            '履歴の全削除'
+          );
+          if (confirmed) {
+            history = [];
+            window.saveSetting('history', history);
+            renderHistoryList();
+          }
+        } else {
+          // フォールバック: 従来のconfirmを使用
+          if (confirm(`履歴を全て削除しますか？（${history.length}件）`)) {
+            history = [];
+            window.saveSetting('history', history);
+            renderHistoryList();
+          }
+        }
+      }
+
+      // パネルHTML
+      panel.innerHTML = `
+        <div class="history-panel-header">
+          <h3 id="history-panel-title" class="history-panel-title">
+            <ion-icon name="time" class="history-panel-icon" aria-hidden="true"></ion-icon>
+            履歴一覧
+          </h3>
+          <div class="history-panel-actions">
+            <button id="clear-all-history" class="history-clear-all-btn" aria-label="履歴を全て削除" title="全削除">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
+              </svg>
+            </button>
+            <button id="close-history-list-panel" class="history-panel-close" aria-label="パネルを閉じる">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        ${searchBoxHtml}
+        <div class="history-panel-content">
+          <ul class="history-list"></ul>
+        </div>
+      `;
+      document.body.appendChild(panel);
+
+      // アニメーション効果を追加
+      requestAnimationFrame(() => {
+        panel.style.opacity = '1';
+        panel.style.transform = 'translate(-50%, -50%) scale(1)';
+      });
+
+      // 常に日時順（新しい順）で表示
+      let currentSortType = 'date';
+      renderHistoryList('', currentSortType);
+
+      // パネルを閉じる共通関数
+      const closePanel = () => {
+        panel.style.opacity = '0';
+        panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
+        setTimeout(() => {
+          panel.remove();
+          document.removeEventListener('click', closePanelOnOutsideClick);
+          document.removeEventListener('keydown', closePanelOnEscape);
+        }, 200);
+      };
+      
+      // パネル外クリックで閉じる機能
+      const closePanelOnOutsideClick = (event) => {
+        // モーダルが出ている場合はパネルを閉じない
+        if (document.getElementById('confirm-dialog')) return;
+        if (!panel.contains(event.target)) {
+          closePanel();
+        }
+      };
+      
+      // エスケープキーで閉じる機能
+      const closePanelOnEscape = (event) => {
+        if (event.key === 'Escape') {
+          closePanel();
+        }
+      };
+      
+      // イベントリスナーを追加（少し遅延させてパネル表示後のクリックを検知）
+      setTimeout(() => {
+        document.addEventListener('click', closePanelOnOutsideClick);
+        document.addEventListener('keydown', closePanelOnEscape);
+      }, 100);
+      
+      // 閉じるボタンのイベントリスナー
+      document.getElementById('close-history-list-panel').onclick = () => {
+        closePanel();
+      };
+      
+      // 全削除ボタンのイベントリスナー
+      document.getElementById('clear-all-history').onclick = () => {
+        clearAllHistory();
+      };
+
+      // 検索ボックスのイベントリスナー
+      const searchInput = panel.querySelector('#history-search-input');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          searchValue = e.target.value;
+          renderHistoryList(searchValue, currentSortType);
+        });
+      }
+    });
+  }
+  
 // 履歴をlocalStorageに保存する関数
 async function addHistoryEntry(contentId) {
   if (!contentId) return;
@@ -1112,10 +1381,22 @@ function addRecommendMenuEventListener() {
         panel.remove();
       }, 200);
     };
-
+    // パネル外クリックで閉じる機能
+    const closePanelOnOutsideClick = (event) => {
+      if (document.getElementById('confirm-dialog')) return;
+      if (!panel.contains(event.target)) {
+        closePanel();
+      }
+    };
+    // エスケープキーで閉じる機能
+    const closePanelOnEscape = (event) => {
+      if (event.key === 'Escape') {
+        closePanel();
+      }
+    };
     setTimeout(() => {
-      document.addEventListener('click', window.closePanelOnOutsideClick);
-      document.addEventListener('keydown', window.closePanelOnEscape);
+      document.addEventListener('click', closePanelOnOutsideClick);
+      document.addEventListener('keydown', closePanelOnEscape);
     }, 100);
     // 閉じるボタンのイベントリスナー
     document.getElementById('close-recommend-list-panel').onclick = () => {
