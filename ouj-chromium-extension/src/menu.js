@@ -298,6 +298,63 @@ function reinsertMenu(observer = null) {
   }
 }
 
+// 共通の動画カード描画関数
+function renderVideoCard({
+  contentId,
+  categoryId,
+  title,
+  courseName,
+  summary,
+  progress = 0,
+  dateStr = '',
+  showDelete = false,
+  onDelete = null,
+  cardType = 'history', // 'history' or 'recommend'
+  isDark = false,
+  sourceLabel = '',
+  sourceColor = ''
+}) {
+  const cardBg = isDark ? '#232c3a' : '#fff';
+  const cardText = isDark ? '#fff' : '#222';
+  const cardSubText = isDark ? '#b0b8c9' : '#666';
+  const barBg = isDark ? '#374151' : '#e5e7eb';
+  const barFg = isDark ? '#60a5fa' : '#3b82f6';
+  const thumbBg = isDark ? '#444' : '#eee';
+  const borderColor = isDark ? '#2d3748' : '#e5e7eb';
+  const labelColor = isDark ? '#60a5fa' : '#3b82f6';
+  const progressPercent = Math.floor(progress * 100);
+  const thumb = contentId ? `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/thumbnail/large2` : '';
+  return `
+    <div class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);margin-bottom:8px;padding:0;position:relative;">
+      <a href="https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${contentId}&ct=V&ca=${categoryId || ''}" class="recommend-card-link" style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;text-decoration:none;color:inherit;position:relative;width:100%;">
+        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;">
+          <div style="display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);">
+            <img src="${thumb}" alt="サムネイル" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';">
+          </div>
+          <div style="font-size:10px;color:${cardType === 'history' ? labelColor : sourceColor};background:${cardType === 'history' ? labelColor : sourceColor}20;padding:2px 6px;border-radius:4px;text-align:center;font-weight:500;width:fit-content;margin:0 auto;">
+            ${cardType === 'history' ? dateStr : sourceLabel}
+          </div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;">
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <div style="font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;">${title}</div>
+            <div style="font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;">${courseName || ''}</div>
+          </div>
+          <div style="font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;line-height:1.5;">${summary && summary.trim() ? summary.replace(/<[^>]*>/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : 'サマリー情報なし'}</div>
+          <div style="height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);">
+            <div style="width:${progressPercent}%;height:100%;background:${barFg};"></div>
+          </div>
+        </div>
+        ${showDelete ? `<button class="history-delete-btn" data-content-id="${contentId}" aria-label="この履歴を削除" title="削除" style="position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;z-index:2;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
+          </svg>
+        </button>` : ''}
+      </a>
+    </div>
+  `;
+}
+
 // 履歴リストを日付順で描画する関数
 function renderHistoryListByDate(filteredItems) {
   if (!filteredItems.length) {
@@ -527,48 +584,31 @@ function addHistoryMenuEventListener() {
           if (video.categoryId && Array.isArray(categories)) {
             const cat = categories.find(c => c.categoryId == video.categoryId);
             courseName = cat ? cat.name : '';
+            courseName = courseName.replace(/^[0-9]+\s*/, '');
+            courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
           }
-          // サムネイル
-          let thumb = '';
-          if (item.contentId) {
-            thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail/large2`;
-          }
+          // summary
+          const summary = video.summary || '';
+          // 進捗
+          const progress = item.progress || 0;
+          console.log('[履歴カード] contentId:', item.contentId, 'progress:', progress);
           // 日付
           const date = new Date(item.date);
           const dateStr = date.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-          // ダーク/ライト配色
+          // ダーク/ライト
           const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          const cardBg = isDark ? '#232c3a' : '#fff';
-          const cardText = isDark ? '#fff' : '#222';
-          const cardSubText = isDark ? '#b0b8c9' : '#666';
-          const barBg = isDark ? '#374151' : '#e5e7eb';
-          const thumbBg = isDark ? '#444' : '#eee';
-          const borderColor = isDark ? '#2d3748' : '#e5e7eb';
-          const labelColor = isDark ? '#60a5fa' : '#3b82f6';
-          // おすすめカードと同じ構造
-          return `
-            <div class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);margin-bottom:8px;padding:0;position:relative;">
-              <a href="https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${item.contentId}&ct=V&ca=${video && video.categoryId ? video.categoryId : ''}" class="recommend-card-link" style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;text-decoration:none;color:inherit;position:relative;width:100%;">
-                <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;">
-                  <div style="display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);">
-                    <img src="${thumb}" alt="サムネイル" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';">
-                  </div>
-                  <div style="font-size:10px;color:${labelColor};background:${labelColor}20;padding:2px 6px;border-radius:4px;text-align:center;font-weight:500;width:fit-content;margin:0 auto;">${dateStr}</div>
-                </div>
-                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;">
-                  <div style="display:flex;align-items:baseline;gap:8px;">
-                    <div style="font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;">${title}</div>
-                    <div style="font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;">${courseName || ''}</div>
-                  </div>
-                </div>
-                <button class="history-delete-btn" data-date="${item.date}" data-content-id="${item.contentId}" aria-label="この履歴を削除" title="削除" style="position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;z-index:2;">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
-                  </svg>
-                </button>
-              </a>
-            </div>
-          `;
+          return renderVideoCard({
+            contentId: item.contentId,
+            categoryId: video.categoryId,
+            title,
+            courseName,
+            summary,
+            progress,
+            dateStr,
+            showDelete: true,
+            cardType: 'history',
+            isDark
+          });
         }).join('');
       } else {
         listHtml = '<div class="history-empty" style="color:#222;padding:16px;text-align:center;">履歴はありません</div>';
@@ -785,7 +825,7 @@ function addHistoryMenuEventListener() {
 }
 
 // 履歴をlocalStorageに保存する関数
-function addHistoryEntry(contentId) {
+async function addHistoryEntry(contentId) {
   if (!contentId) return;
   // 最近の履歴追加をチェック（5秒以内の同じcontentIdは無視）
   const lastHistoryKey = `lastHistory_${contentId}`;
@@ -794,9 +834,21 @@ function addHistoryEntry(contentId) {
   if (now - lastHistoryTime < 5000) {
     return;
   }
+  // 進捗取得（おすすめ機能と同じ方式）
+  let progress = 0;
+  try {
+    if (window.getVideoViewingStatus) {
+      const status = await window.getVideoViewingStatus(contentId, { cacheSeconds: 5 });
+      progress = status.currentTimeRate || 0;
+      console.log('[addHistoryEntry] contentId:', contentId, 'progress:', progress);
+    }
+  } catch (e) {
+    console.warn('[addHistoryEntry] 進捗取得失敗:', e);
+  }
   const entry = {
     contentId,
     date: new Date().toISOString(),
+    progress
   };
   let history = [];
   try {
@@ -1737,25 +1789,14 @@ function addRecommendMenuEventListener() {
       let listHtml = recommendList.map(item => {
         // サムネイル画像
         let thumb = '';
-        // console.log('おすすめ動画 - 動画データ:', item);
-        // console.log('おすすめ動画 - summary:', item.summary);
-        
-        // 1. まずcontentIdからサムネイルURLを生成（最優先）
         if (item.contentId) {
           thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail/large2`;
-          // console.log('おすすめ動画 - contentIdから生成したサムネイルURL:', thumb);
         }
-        
-        // 2. 生成したURLがない場合のみ、APIから取得したデータを使用
         if (!thumb) {
           thumb = item.thumbnailUrl || item.imageUrl || '';
-          // console.log('おすすめ動画 - APIから取得したサムネイルURL:', thumb);
         }
-        
-        // 3. それでもない場合の代替手段
         if (!thumb && item.contentId) {
           thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail`;
-          // console.log('おすすめ動画 - 代替サムネイルURL:', thumb);
         }
         // コース名（カテゴリ名）
         let courseName = '';
@@ -1764,11 +1805,9 @@ function addRecommendMenuEventListener() {
           courseName = cat ? cat.name : '';
           courseName = courseName.replace(/^[0-9]+\s*/, '');
           courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-          // console.log('コース名取得:', { categoryId: item.categoryId, courseName: courseName, source: item.source });
         }
-        
         // ソース表示（履歴 or お気に入り or 類似）
-        let sourceLabel, sourceColor;
+        let sourceLabel = '', sourceColor = '';
         if (item.source === 'history') {
           sourceLabel = '履歴';
           sourceColor = isDark ? '#60a5fa' : '#3b82f6';
@@ -1779,42 +1818,27 @@ function addRecommendMenuEventListener() {
           sourceLabel = '類似';
           sourceColor = isDark ? '#10b981' : '#059669';
         }
+        // summary
+        const summary = item.summary || '';
         // 進捗バー
         let progress = item.progress || 0;
-        const progressPercent = Math.floor(progress * 100);
-        // ダーク/ライト配色
-        const cardBg = isDark ? '#232c3a' : '#fff';
-        const cardText = isDark ? '#fff' : '#222';
-        const cardSubText = isDark ? '#b0b8c9' : '#666';
-        const barBg = isDark ? '#374151' : '#e5e7eb';
-        const barFg = isDark ? '#60a5fa' : '#3b82f6';
-        const thumbBg = isDark ? '#444' : '#eee';
-        const borderColor = isDark ? '#2d3748' : '#e5e7eb';
-        // カード全体を<a>にする
-        return `
-          <a href="https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${item.contentId}&ct=V&ca=${item.categoryId}" class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);transition:all 0.2s ease;cursor:pointer;text-decoration:none;margin-bottom:8px;padding:0;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(30,40,60,0.15)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(30,40,60,0.10)'">
-            <div style=\"display:flex;align-items:flex-start;gap:16px;padding:16px 20px;\">
-              <div style=\"display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;\">
-                <div style=\"display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);\">
-                  ${thumb ? `<img src=\"${thumb}\" alt=\"サムネイル\" style=\"width:100%;height:100%;object-fit:cover;\" onerror=\"this.style.display='none';this.nextElementSibling.style.display='inline-block';\">` : ''}
-                  <span style=\"display:${thumb ? 'none' : 'inline-block'};width:100%;height:100%;background:${thumbBg};background-image:url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 96 54\" fill=\"%23ccc\"><rect width=\"96\" height=\"54\" fill=\"%23f0f0f0\"/><text x=\"48\" y=\"27\" text-anchor=\"middle\" dy=\".3em\" font-family=\"Arial\" font-size=\"12\" fill=\"%23999\">動画</text></svg>');background-size:cover;background-position:center;\"></span>
-                </div>
-                <div style=\"font-size:10px;color:${sourceColor};background:${sourceColor}20;padding:2px 6px;border-radius:4px;text-align:center;font-weight:500;width:fit-content;margin:0 auto;\">${sourceLabel}</div>
-              </div>
-                                <div style=\"flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;\">
-              <div style=\"display:flex;align-items:baseline;gap:8px;\">
-                <div style=\"font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;\">${item.title}</div>
-                <div style=\"font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;\">${courseName}</div>
-              </div>
-              <div style=\"font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;line-height:1.5;\">${item.summary && item.summary.trim() ? item.summary.replace(/<[^>]*>/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : 'サマリー情報なし'}</div>
-              <div style=\"height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);\">
-                <div style=\"width:${progressPercent}%;height:100%;background:${barFg};\"></div>
-              </div>
-            </div>
-          </div>
-        </a>
-      `;
-    }).join('');
+        const dateStr = item.dateStr || '';
+        // おすすめカードは削除ボタンなし
+        return renderVideoCard({
+          contentId: item.contentId,
+          categoryId: item.categoryId,
+          title: item.title,
+          courseName,
+          summary,
+          progress,
+          dateStr,
+          showDelete: false,
+          cardType: 'recommend',
+          isDark,
+          sourceLabel,
+          sourceColor
+        });
+      }).join('');
     if (!listHtml) listHtml = `<div class=\"history-empty\" style=\"color:${isDark ? '#fff' : '#222'};padding:16px;text-align:center;\">おすすめ動画はありません（全て再生済み）</div>`;
     panel.querySelector('.history-panel-content').innerHTML = `<div class=\"history-list\">${listHtml}</div>`;
 
