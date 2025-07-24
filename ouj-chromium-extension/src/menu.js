@@ -481,11 +481,9 @@ function handleHistoryPanelOpen() {
     id: 'history-list-panel',
     className: 'history-panel',
     title: '履歴一覧',
-    iconHtml: '<ion-icon name="time" class="history-panel-icon" aria-hidden="true"></ion-icon>',
+    iconHtml: getIconHtml('history'),
     actionHtml: `<button id="clear-all-history" class="history-clear-all-btn" aria-label="履歴を全て削除" title="全削除" style="background:none;border:none;cursor:pointer;padding:0 8px;display:flex;align-items:center;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
-      </svg>
+      ${getIconHtml('delete')}
     </button>`,
     searchBoxHtml: searchBoxHtml,
     listHtml: '',
@@ -730,7 +728,7 @@ function handleFavoritesPanelOpen() {
     id: 'favorite-list-panel',
     className: 'favorite-panel',
     title: 'お気に入りコース一覧',
-    iconHtml: '<ion-icon name="star" class="history-panel-icon" aria-hidden="true"></ion-icon>',
+    iconHtml: getIconHtml('favorite'),
     actionHtml: '',
     searchBoxHtml: searchBoxHtml,
     listHtml: '',
@@ -842,7 +840,7 @@ function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idTo
         pinnedHtml = `
           <div class="favorite-group">
             <div class="favorite-group-header" style="display:flex;align-items:center;gap:6px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M6 3v12l6-3 6 3V3"/></svg>
+              ${getIconHtml('pin')}
               ピン止め
             </div>
             <ul class="favorite-group-list">
@@ -854,7 +852,7 @@ function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idTo
                   <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="ピンを外す" title="ピンを外す" style="background:none;border:none;cursor:pointer;padding:0 8px;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="${item.pinned ? '#ffd600' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>
                   </button>
-                  <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                  ${getIconHtml('arrow')}
                 </li>
               `).join('')}
             </ul>
@@ -875,7 +873,7 @@ function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idTo
             <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="${item.pinned ? 'ピンを外す' : 'ピン止め'}" title="${item.pinned ? 'ピンを外す' : 'ピン止め'}" style="background:none;border:none;cursor:pointer;padding:0 8px;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="${item.pinned ? '#ffd600' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>
             </button>
-            <svg class="favorite-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            ${getIconHtml('arrow')}
             </li>`;
         }).join('');
         return `
@@ -1003,7 +1001,7 @@ function handleRecommendPanelOpen() {
     id: 'recommend-list-panel',
     className: 'recommend-panel',
     title: 'おすすめ動画',
-    iconHtml: '<ion-icon name="play" class="history-panel-icon" aria-hidden="true"></ion-icon>',
+    iconHtml: getIconHtml('recommend'),
     actionHtml: '',
     searchBoxHtml: '',
     listHtml: dummyCards,
@@ -1632,5 +1630,31 @@ function setupPanelSearchBox(panel, inputId, onInput) {
     searchInput.addEventListener('input', (e) => {
       onInput(e.target.value);
     });
+  }
+}
+
+// アイコンやSVGのHTMLを共通化
+function getIconHtml(type) {
+  switch (type) {
+    case 'history':
+      return '<ion-icon name="time" class="history-panel-icon" aria-hidden="true"></ion-icon>';
+    case 'favorite':
+      return '<ion-icon name="star" class="history-panel-icon" aria-hidden="true"></ion-icon>';
+    case 'recommend':
+      return '<ion-icon name="play" class="history-panel-icon" aria-hidden="true"></ion-icon>';
+    case 'delete':
+      return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
+      </svg>`;
+    case 'close':
+      return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>`;
+    case 'pin':
+      return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>`;
+    case 'arrow':
+      return `<svg class="history-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>`;
+    default:
+      return '';
   }
 }
