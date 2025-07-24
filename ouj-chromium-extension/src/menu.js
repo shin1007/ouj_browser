@@ -539,33 +539,14 @@ function handleHistoryPanelOpen() {
     panel.style.transform = 'translate(-50%, -50%) scale(1)';
   });
   // パネルを閉じる共通関数
-  const closePanel = () => {
+  const closePanelRaw = () => {
     panel.style.opacity = '0';
     panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
     setTimeout(() => {
       panel.remove();
-      document.removeEventListener('click', closePanelOnOutsideClick);
-      document.removeEventListener('keydown', closePanelOnEscape);
     }, 200);
   };
-  const closePanelOnOutsideClick = (event) => {
-    if (document.getElementById('confirm-dialog')) return;
-    if (!panel.contains(event.target)) {
-      closePanel();
-    }
-  };
-  const closePanelOnEscape = (event) => {
-    if (event.key === 'Escape') {
-      closePanel();
-    }
-  };
-  setTimeout(() => {
-    document.addEventListener('click', closePanelOnOutsideClick);
-    document.addEventListener('keydown', closePanelOnEscape);
-  }, 100);
-  document.getElementById('close-history-list-panel').onclick = () => {
-    closePanel();
-  };
+  const closePanel = setupPanelCloseEvents(panel, closePanelRaw, 'close-history-list-panel');
   // 履歴リスト生成・描画
   generateAndRenderHistoryList(panel, closePanel);
 }
@@ -843,33 +824,14 @@ function handleFavoritesPanelOpen() {
     panel.style.transform = 'translate(-50%, -50%) scale(1)';
   });
   // パネルを閉じる共通関数
-  const closePanel = () => {
+  const closePanelRaw = () => {
     panel.style.opacity = '0';
     panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
     setTimeout(() => {
       panel.remove();
-      document.removeEventListener('click', closePanelOnOutsideClick);
-      document.removeEventListener('keydown', closePanelOnEscape);
     }, 200);
   };
-  const closePanelOnOutsideClick = (event) => {
-    if (document.getElementById('confirm-dialog')) return;
-    if (!panel.contains(event.target)) {
-      closePanel();
-    }
-  };
-  const closePanelOnEscape = (event) => {
-    if (event.key === 'Escape') {
-      closePanel();
-    }
-  };
-  setTimeout(() => {
-    document.addEventListener('click', closePanelOnOutsideClick);
-    document.addEventListener('keydown', closePanelOnEscape);
-  }, 100);
-  document.getElementById('close-favorite-list-panel').onclick = () => {
-    closePanel();
-  };
+  const closePanel = setupPanelCloseEvents(panel, closePanelRaw, 'close-favorite-list-panel');
   // お気に入りリスト生成・描画
   generateAndRenderFavoriteList(panel, closePanel);
 }
@@ -1183,31 +1145,14 @@ function handleRecommendPanelOpen() {
     }
   }, 0);
   // パネルを閉じる共通関数
-  const closePanel = () => {
+  const closePanelRaw = () => {
     panel.style.opacity = '0';
     panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
     setTimeout(() => {
       panel.remove();
     }, 200);
   };
-  const closePanelOnOutsideClick = (event) => {
-    if (document.getElementById('confirm-dialog')) return;
-    if (!panel.contains(event.target)) {
-      closePanel();
-    }
-  };
-  const closePanelOnEscape = (event) => {
-    if (event.key === 'Escape') {
-      closePanel();
-    }
-  };
-  setTimeout(() => {
-    document.addEventListener('click', closePanelOnOutsideClick);
-    document.addEventListener('keydown', closePanelOnEscape);
-  }, 100);
-  document.getElementById('close-recommend-list-panel').onclick = () => {
-    closePanel();
-  };
+  const closePanel = setupPanelCloseEvents(panel, closePanelRaw, 'close-recommend-list-panel');
   // おすすめリスト生成・描画
   generateAndRenderRecommendList(panel, closePanel);
 }
@@ -1701,4 +1646,41 @@ function createSearchBoxHtml(type) {
       <input id="${id}" type="text" placeholder="${placeholder}" style="width: 100%; background: #232c3a; color: #fff; font-size: 14px; padding: 6px 8px; border-radius: 6px; letter-spacing: 0.5px;">
     </div>
   `;
+}
+
+// パネルの閉じるイベントを共通化
+function setupPanelCloseEvents(panel, closePanel, closeBtnId) {
+  const closePanelOnOutsideClick = (event) => {
+    if (document.getElementById('confirm-dialog')) return;
+    if (!panel.contains(event.target)) {
+      closePanel();
+    }
+  };
+  const closePanelOnEscape = (event) => {
+    if (event.key === 'Escape') {
+      closePanel();
+    }
+  };
+  setTimeout(() => {
+    document.addEventListener('click', closePanelOnOutsideClick);
+    document.addEventListener('keydown', closePanelOnEscape);
+  }, 100);
+  if (closeBtnId) {
+    const closeBtn = document.getElementById(closeBtnId);
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        closePanel();
+      };
+    }
+  }
+  // パネルが閉じられたらイベント解除
+  const cleanup = () => {
+    document.removeEventListener('click', closePanelOnOutsideClick);
+    document.removeEventListener('keydown', closePanelOnEscape);
+  };
+  // closePanelをラップしてクリーンアップ
+  return () => {
+    closePanel();
+    cleanup();
+  };
 }
