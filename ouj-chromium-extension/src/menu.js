@@ -639,13 +639,9 @@ function renderHistoryListHtml(panel, closePanel, { history, categories, validVi
     if (clearAllBtn) {
       clearAllBtn.style.display = history.length > 0 ? 'flex' : 'none';
     }
-    attachHistoryItemListeners();
-    attachDeleteButtonListeners();
-  }
-  function attachHistoryItemListeners() {
-    const historyItems = panel.querySelectorAll('.history-item');
-    historyItems.forEach((item, index) => {
-      item.addEventListener('click', (event) => {
+    // setupListItemEventsで共通化
+    setupListItemEvents(panel, '.history-item', {
+      onClick: (event, item) => {
         if (event.target.closest('.history-delete-btn')) {
           return;
         }
@@ -657,22 +653,23 @@ function renderHistoryListHtml(panel, closePanel, { history, categories, validVi
             window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=${categoryId}`;
           }, 200);
         }
-      });
-      item.addEventListener('keydown', (event) => {
+      },
+      onKeydown: (event, item, index, items) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           item.click();
         } else if (event.key === 'ArrowDown') {
           event.preventDefault();
-          const nextItem = historyItems[index + 1];
+          const nextItem = items[index + 1];
           if (nextItem) nextItem.focus();
         } else if (event.key === 'ArrowUp') {
           event.preventDefault();
-          const prevItem = historyItems[index - 1];
+          const prevItem = items[index - 1];
           if (prevItem) prevItem.focus();
         }
-      });
+      }
     });
+    attachDeleteButtonListeners();
   }
   function attachDeleteButtonListeners() {
     const deleteBtns = panel.querySelectorAll('.history-delete-btn');
@@ -832,7 +829,33 @@ function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idTo
     if (listContainer) {
       listContainer.innerHTML = listHtml;
     }
-    attachFavoriteItemListeners();
+    // setupListItemEventsで共通化
+    setupListItemEvents(panel, '.favorite-item', {
+      onClick: (event, item) => {
+        event.preventDefault();
+        const categoryId = item.getAttribute('data-category-id');
+        if (categoryId) {
+          closePanel();
+          setTimeout(() => {
+            window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=${categoryId}`;
+          }, 200);
+        }
+      },
+      onKeydown: (event, item, index, items) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          item.click();
+        } else if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          const nextItem = items[index + 1];
+          if (nextItem) nextItem.focus();
+        } else if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          const prevItem = items[index - 1];
+          if (prevItem) prevItem.focus();
+        }
+      }
+    });
     attachPinButtonListeners();
   }
   function attachPinButtonListeners() {
@@ -852,35 +875,7 @@ function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idTo
       });
     });
   }
-  function attachFavoriteItemListeners() {
-    const favoriteItems = panel.querySelectorAll('.favorite-item');
-    favoriteItems.forEach((item, index) => {
-      item.addEventListener('click', (event) => {
-        event.preventDefault();
-        const categoryId = item.getAttribute('data-category-id');
-        if (categoryId) {
-          closePanel();
-          setTimeout(() => {
-            window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=${categoryId}`;
-          }, 200);
-        }
-      });
-      item.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          item.click();
-        } else if (event.key === 'ArrowDown') {
-          event.preventDefault();
-          const nextItem = favoriteItems[index + 1];
-          if (nextItem) nextItem.focus();
-        } else if (event.key === 'ArrowUp') {
-          event.preventDefault();
-          const prevItem = favoriteItems[index - 1];
-          if (prevItem) prevItem.focus();
-        }
-      });
-    });
-  }
+  // 検索ボックスイベント
   const searchInput = panel.querySelector('#favorite-search-input');
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
@@ -949,11 +944,25 @@ function renderRecommendListHtml(panel, closePanel, recommendList) {
     }).join('');
     if (!listHtml) listHtml = `<div class=\"history-empty\" style=\"color:${isDark ? '#fff' : '#222'};padding:16px;text-align:center;\">おすすめ動画はありません（全て再生済み）</div>`;
     panel.querySelector('.history-panel-content').innerHTML = `<div class=\"history-list\">${listHtml}</div>`;
-    const recommendLinks = panel.querySelectorAll('.recommend-card');
-    recommendLinks.forEach(link => {
-      link.addEventListener('click', () => {
+    // setupListItemEventsで共通化
+    setupListItemEvents(panel, '.recommend-card', {
+      onClick: (event, item) => {
         closePanel();
-      });
+      },
+      onKeydown: (event, item, index, items) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          item.click();
+        } else if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          const nextItem = items[index + 1];
+          if (nextItem) nextItem.focus();
+        } else if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          const prevItem = items[index - 1];
+          if (prevItem) prevItem.focus();
+        }
+      }
     });
     console.log('[おすすめ描画] recommendList:', recommendList.map(item => ({
       contentId: item.contentId,
@@ -1386,7 +1395,7 @@ function createPanel({ id, className, ariaLabelledby, ariaModal = 'true', mainId
 }
 
 // 汎用：パネル内リストアイテムのイベント登録
-function setupPanelListItemEvents(panel, selector, { onClick, onKeydown }) {
+function setupListItemEvents(panel, selector, { onClick, onKeydown }) {
   const items = panel.querySelectorAll(selector);
   items.forEach((item, index) => {
     if (onClick) {
