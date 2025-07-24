@@ -7,7 +7,7 @@ window.currentVideoIndexInCourse = null;
 
 // 動画再生画面の初期化関数（最初に呼ばれる）
 async function initializeVideoPlayer() {
-  console.log('[動画] initializeVideoPlayer: 初期化開始');
+  // console.log('[動画] initializeVideoPlayer: 初期化開始');
   
   
   // videoタグの出現を監視し、出現した瞬間に設定パネルを挿入
@@ -35,9 +35,9 @@ async function initializeVideoPlayer() {
   
   // 次の動画IDを取得
   await fetchNextVideoId();
-  console.log('[動画] initializeVideoPlayer: fetchNextVideoId完了, nextVideoId=', nextVideoId);
+  // console.log('[動画] initializeVideoPlayer: fetchNextVideoId完了, nextVideoId=', nextVideoId);
   startVideoEndMonitoring();
-  console.log('[動画] initializeVideoPlayer: startVideoEndMonitoring呼び出し');
+  // console.log('[動画] initializeVideoPlayer: startVideoEndMonitoring呼び出し');
   
   // エンディング検出を開始
   window.startEndingDetection();
@@ -296,12 +296,12 @@ async function fetchNextVideoId() {
     const currentVideoId = matchCo[1];
     const setting = window.getSetting('nextVideoSetting', 'same-course');
     if (setting === 'same-course') {
-      console.log('[動画] fetchNextVideoId: fetchNextVideoFromSameCourse呼び出し', {currentCourseId, currentVideoId});
+      // console.log('[動画] fetchNextVideoId: fetchNextVideoFromSameCourse呼び出し', {currentCourseId, currentVideoId});
       await fetchNextVideoFromSameCourse(currentCourseId, currentVideoId);
     } else if (setting === 'favorites-random') {
       await fetchNextVideoFromFavorites();
     }
-    console.log('[動画] fetchNextVideoId: nextVideoId=', nextVideoId);
+    // console.log('[動画] fetchNextVideoId: nextVideoId=', nextVideoId);
   } else {
     console.warn('[動画] fetchNextVideoId: URLからコースIDまたは動画IDを取得できません', url);
     nextVideoId = null;
@@ -313,7 +313,7 @@ async function fetchNextVideoFromSameCourse(currentCourseId, currentVideoId) {
   try {
     const cacheKey = `cachedVodContents_${currentCourseId}`;
     const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${currentCourseId}&offset=0&limit=30&sortType=1&sortOrder=asc`;
-    console.log('[動画] fetchNextVideoFromSameCourse: fetchWithCache呼び出し', {url, cacheKey});
+    // console.log('[動画] fetchNextVideoFromSameCourse: fetchWithCache呼び出し', {url, cacheKey});
     const res = await fetchWithCache(url, cacheKey);
     // --- 追加: グローバルに動画リストとインデックスを保持 ---
     window.videoListInCourse = Array.isArray(res) ? res : null;
@@ -321,24 +321,24 @@ async function fetchNextVideoFromSameCourse(currentCourseId, currentVideoId) {
     if (!Array.isArray(res)) {
       console.error('[動画] fetchNextVideoFromSameCourse: fetchWithCacheの返り値が配列でない', res);
     }
-    console.log('[動画] fetchNextVideoFromSameCourse: APIレスポンス.length:', Array.isArray(res) ? res.length : 'N/A', '内容:', res);
+    // console.log('[動画] fetchNextVideoFromSameCourse: APIレスポンス.length:', Array.isArray(res) ? res.length : 'N/A', '内容:', res);
     if (Array.isArray(res) && res.length > 0) {
       const currentVideoIndex = res.findIndex(item => String(item.contentId) === String(currentVideoId));
       window.currentVideoIndexInCourse = currentVideoIndex;
-      console.log('[動画] fetchNextVideoFromSameCourse: currentVideoId=', currentVideoId, 'currentVideoIndex=', currentVideoIndex, 'res.length=', res.length);
+      // console.log('[動画] fetchNextVideoFromSameCourse: currentVideoId=', currentVideoId, 'currentVideoIndex=', currentVideoIndex, 'res.length=', res.length);
       if (currentVideoIndex !== -1) {
         const nextVideoIndex = currentVideoIndex + 1;
         if (nextVideoIndex < res.length) {
           nextVideoId = res[nextVideoIndex].contentId;
           window.nextVideoCategoryId = null;
-          console.log('[動画] fetchNextVideoFromSameCourse: 次の動画IDを設定:', nextVideoId, 'タイトル:', res[nextVideoIndex].title);
+          // console.log('[動画] fetchNextVideoFromSameCourse: 次の動画IDを設定:', nextVideoId, 'タイトル:', res[nextVideoIndex].title);
         } else {
-          console.log('[動画] fetchNextVideoFromSameCourse: 最後の動画です');
+          // console.log('[動画] fetchNextVideoFromSameCourse: 最後の動画です');
           nextVideoId = null;
           window.nextVideoCategoryId = null;
         }
       } else {
-        console.log('[動画] fetchNextVideoFromSameCourse: 現在の動画が見つかりません', {currentVideoId, res});
+        // console.log('[動画] fetchNextVideoFromSameCourse: 現在の動画が見つかりません', {currentVideoId, res});
         nextVideoId = null;
       }
     } else {
@@ -720,11 +720,11 @@ function removeAutoPlayFailedNotification() {
 
 // 動画終了監視機能
 function startVideoEndMonitoring() {
-  console.log('[動画] startVideoEndMonitoring: 開始');
+  // console.log('[動画] startVideoEndMonitoring: 開始');
   const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
-  console.log('[動画] startVideoEndMonitoring: autoNextVideoEnabled=', autoNextVideoEnabled);
+  // console.log('[動画] startVideoEndMonitoring: autoNextVideoEnabled=', autoNextVideoEnabled);
   if (!autoNextVideoEnabled) {
-    console.log('[動画] startVideoEndMonitoring: 自動次の動画遷移が無効化されているため、スキップします');
+    // console.log('[動画] startVideoEndMonitoring: 自動次の動画遷移が無効化されているため、スキップします');
     return;
   }
   if (typeof window.waitForElement !== 'function') {
@@ -732,17 +732,17 @@ function startVideoEndMonitoring() {
     return;
   }
   window.waitForElement('video', (video) => {
-    console.log('[動画] startVideoEndMonitoring: video要素取得', video);
+    // console.log('[動画] startVideoEndMonitoring: video要素取得', video);
     const handleVideoEnded = () => {
-      console.log('[動画] startVideoEndMonitoring: 動画が終了しました, nextVideoId=', nextVideoId);
+      // console.log('[動画] startVideoEndMonitoring: 動画が終了しました, nextVideoId=', nextVideoId);
       if (nextVideoId) {
-        console.log('[動画] startVideoEndMonitoring: 次の動画に自動遷移します');
+        // console.log('[動画] startVideoEndMonitoring: 次の動画に自動遷移します');
         showVideoEndNotification();
         setTimeout(() => {
           skipToNextVideo();
         }, 2000);
       } else {
-        console.log('[動画] startVideoEndMonitoring: 次の動画がないため、自動遷移しません');
+        // console.log('[動画] startVideoEndMonitoring: 次の動画がないため、自動遷移しません');
       }
     };
     video.removeEventListener('ended', handleVideoEnded);

@@ -1,7 +1,6 @@
 
 // コース一覧の各動画にお気に入りボタンを追加
 async function addFavoriteButtonsToCategoryList() {
-  console.log("[お気に入り] addFavoriteButtonsToCategoryList 開始");
   // 追加前に既存の.favorite-btnを全て削除
   document.querySelectorAll('.favorite-btn').forEach(btn => btn.remove());
   // 現在のURLのcaパラメータを取得をcategoryNumとして、子のcategoryIdを取得
@@ -24,18 +23,14 @@ async function addFavoriteButtonsToCategoryList() {
     }
   }
   if (!ca) {
-    console.log("[お気に入り] hashからcaパラメータが取得できませんでした。処理を中断します:", hash);
     return;
   }
   const currentCategoryNum = parseInt(ca, 10);
   const childCategories = await window.getChildIds(currentCategoryNum);
-  console.log("[お気に入り] childCategories:", childCategories);
   const favorites = window.getFavorites ? window.getFavorites() : [];
-  console.log("[お気に入り] favorites:", favorites);
 
   // ion-list#common-list-content内のion-itemを全て取得
   const items = document.querySelectorAll('#main div.icon-text > .icon-area');
-  console.log("[お気に入り] items.length:", items.length);
   
   // childCategoriesとitemsを一緒にループ（Pythonのzipのような動作）
   const minLength = Math.min(childCategories.length, items.length);
@@ -46,7 +41,6 @@ async function addFavoriteButtonsToCategoryList() {
     
     // すでに追加済みならスキップ（item.parentNode全体で確認）
     if (item.parentNode.querySelector('.favorite-btn')) {
-      console.log(`[お気に入り] 既にボタン追加済み: index=${i}`);
       continue;
     }
     
@@ -97,16 +91,12 @@ async function addFavoriteButtonsToCategoryList() {
     
     // タイトルの右側に追加
     item.parentNode.appendChild(favBtn);
-    console.log(`[お気に入り] ボタン追加: index=${i}, categoryId=${category.categoryId}`);
   }
-  console.log("[お気に入り] addFavoriteButtonsToCategoryList 終了");
 }
 
 async function waitThenAddFavBtnToCategoryList() {
-  console.log("[お気に入り] waitThenAddFavBtnToCategoryList 開始");
   // getChildIds関数が利用可能かチェック
   if (typeof window.getChildIds !== 'function') {
-    console.error('[お気に入り] getChildIds関数が未定義です。categories.jsが読み込まれているか確認してください。');
     setTimeout(waitThenAddFavBtnToCategoryList, 100);
     return;
   }
@@ -126,11 +116,9 @@ async function waitThenAddFavBtnToCategoryList() {
     }
   }
   if (!ca) {
-    console.log("[お気に入り] hashからcaパラメータが取得できませんでした。処理を中断します:", hash);
     return;
   }
   const currentCategoryNum = parseInt(ca, 10);
-  console.log("[お気に入り] currentCategoryNum:", currentCategoryNum);
   // categoryIdからsummaryを取得、なければ何もしない
   const categories = await window.getCategoriesData();
   const childCategories = await window.getChildIds(currentCategoryNum);
@@ -139,21 +127,16 @@ async function waitThenAddFavBtnToCategoryList() {
     const cat = categories.find(c => c.categoryId === child.categoryId);
     return cat && cat.summary;
   });
-  console.log("[お気に入り] hasSummaryInChildren:", hasSummaryInChildren);
   if (!hasSummaryInChildren) {
-    console.log("[お気に入り] 子カテゴリにsummaryがないため終了");
     return;
   }
   // getFavorites関数が利用可能かチェック
   if (typeof window.getFavorites !== 'function') {
-    console.error('[お気に入り] getFavorites関数が未定義です。helpers.jsが読み込まれているか確認してください。');
     setTimeout(waitThenAddFavBtnToCategoryList, 100);
     return;
   }
   const items = document.querySelectorAll('#main div.icon-text > .icon-area');
-  console.log("[お気に入り] items.length:", items.length);
   if (!items.length) {
-    console.log("[お気に入り] itemsが見つからないためリトライ");
     setTimeout(waitThenAddFavBtnToCategoryList, 100);
     return;
   }

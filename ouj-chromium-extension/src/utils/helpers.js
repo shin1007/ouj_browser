@@ -62,11 +62,11 @@ const fetchWithCache = async (url, cacheKey) => {
     // 1.cachedData.dataが空でなく、かつ、timestampが当日のものであれば、それを返す
     if (cachedData && cachedData.data && cachedData.timestamp) {
         if (cachedData.data.length === 0) {
-            console.log(`fetchWithCache: ${cacheKey} のキャッシュは空です。ネットワークからデータ取得を試行中...`);
+            // console.log(`fetchWithCache: ${cacheKey} のキャッシュは空です。ネットワークからデータ取得を試行中...`);
         } else if(isSameDate(cachedData.timestamp, new Date().toISOString())) {
             return cachedData.data;
         } else {
-            console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものではありません。ネットワークからデータ取得を試行中...`);
+            // console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものではありません。ネットワークからデータ取得を試行中...`);
         }
     }
     // 2. 当日のキャッシュがない場合のみネットワークリクエストを試みる
@@ -80,14 +80,14 @@ const fetchWithCache = async (url, cacheKey) => {
         await chrome.storage.local.set({ [cacheKey]: cacheData });
         return fetchResult;
     }
-    console.log(`fetchWithCache: ${cacheKey} のネットワークからのデータ取得に失敗しました。`);
+    // console.log(`fetchWithCache: ${cacheKey} のネットワークからのデータ取得に失敗しました。`);
     // 3. 古いキャッシュがあれば、それを返す
     if (cachedData && cachedData.data) {
         // console.log(`fetchWithCache: ${cacheKey} のネットワークエラーのため、古いキャッシュを利用します。`, cachedData.data);
         return cachedData.data;
     }
     // 4. 古いキャッシュもない場合は、nullを返す
-    console.warn(`fetchWithCache: ${cacheKey} のキャッシュされたデータも見つかりませんでした。`);
+    // console.warn(`fetchWithCache: ${cacheKey} のキャッシュされたデータも見つかりませんでした。`);
     return null;
 };
 const fetchFromNetwork = async (url) => {
@@ -95,7 +95,7 @@ const fetchFromNetwork = async (url) => {
         const response = await fetch(url);
         return response.json();
     } catch (error) {
-        console.warn(`fetchFromNetwork: ${url} のネットワークからのデータ取得に失敗しました。エラー: ${error.message}`);
+        // console.warn(`fetchFromNetwork: ${url} のネットワークからのデータ取得に失敗しました。エラー: ${error.message}`);
         return null;
     }
 };
@@ -121,7 +121,7 @@ const waitForElement = (selector, callback, interval = 100, maxAttempts = null) 
         }
         
         if (maxAttempts && attempts >= maxAttempts) {
-            console.warn(`waitForElement: 最大試行回数に達しました: ${selector}`);
+            // console.warn(`waitForElement: 最大試行回数に達しました: ${selector}`);
             return;
         }
         
@@ -152,7 +152,7 @@ const waitForCondition = (condition, callback, interval = 100, maxAttempts = nul
         }
         
         if (maxAttempts && attempts >= maxAttempts) {
-            console.warn('waitForCondition: 最大試行回数に達しました');
+            // console.warn('waitForCondition: 最大試行回数に達しました');
             return;
         }
         
@@ -342,7 +342,7 @@ const saveSetting = (key, value) => {
         localStorage.setItem(key, JSON.stringify(value));
         // console.log(`saveSetting: 設定を保存しました - ${key}:`, value);
     } catch (error) {
-        console.error(`saveSetting: 設定の保存に失敗しました - ${key}:`, error);
+        // console.error(`saveSetting: 設定の保存に失敗しました - ${key}:`, error);
     }
 };
 
@@ -367,7 +367,7 @@ const getSetting = (key, defaultValue = null) => {
             return value;
         }
     } catch (error) {
-        console.error(`getSetting: 設定の取得に失敗しました - ${key}:`, error);
+        // console.error(`getSetting: 設定の取得に失敗しました - ${key}:`, error);
         return defaultValue;
     }
 };
@@ -398,7 +398,7 @@ const removeSetting = (key) => {
         localStorage.removeItem(key);
         // console.log(`removeSetting: 設定を削除しました - ${key}`);
     } catch (error) {
-        console.error(`removeSetting: 設定の削除に失敗しました - ${key}:`, error);
+        // console.error(`removeSetting: 設定の削除に失敗しました - ${key}:`, error);
     }
 };
 

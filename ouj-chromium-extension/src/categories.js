@@ -52,13 +52,11 @@ function getCurrentCategoryId() {
   // hashのcaを取得
   const params = hash.split('?')[1];
   if (!params) {
-    console.error("getCurrentCategoryId: URLパラメータが見つかりません");
     return null;
   }
   
   const caMatch = params.match(/ca=(\d+)/);
   if (!caMatch) {
-    console.error("getCurrentCategoryId: caパラメータが見つかりません");
     return null;
   }
   
