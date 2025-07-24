@@ -515,11 +515,7 @@ function handleHistoryPanelOpen() {
     border: '1px solid rgba(255, 255, 255, 0.2)'
   });
   // 検索ボックスのHTML（履歴）
-  const searchBoxHtml = `
-    <div class="history-search-box" style="background: #232c3a; border-radius: 10px; padding: 4px 12px; margin: 0 24px 10px 24px; box-shadow: 0 2px 8px rgba(30,40,60,0.18); border: 1.5px solid #3a4658;">
-      <input id="history-search-input" type="text" placeholder="コース名・親カテゴリ名で検索" style="width: 100%; background: #232c3a; color: #fff; border: none; outline: none; font-size: 14px; padding: 6px 8px; border-radius: 6px; letter-spacing: 0.5px;">
-    </div>
-  `;
+  const searchBoxHtml = createSearchBoxHtml('history');
   // 履歴パネル
   panel.innerHTML = window.createCommonPanelHTML({
     id: 'history-list-panel',
@@ -827,11 +823,7 @@ function handleFavoritesPanelOpen() {
     border: '1px solid rgba(255, 255, 255, 0.2)'
   });
   // 検索ボックスのHTML（お気に入り）
-  const searchBoxHtml = `
-    <div class="favorite-search-box" style="background: #232c3a; border-radius: 10px; padding: 4px 12px; margin: 0 24px 10px 24px; box-shadow: 0 2px 8px rgba(30,40,60,0.18); border: 1.5px solid #3a4658;">
-      <input id="favorite-search-input" type="text" placeholder="コース名・親カテゴリ名で検索" style="width: 100%; background: #232c3a; color: #fff; border: none; outline: none; font-size: 14px; padding: 6px 8px; border-radius: 6px; letter-spacing: 0.5px;">
-    </div>
-  `;
+  const searchBoxHtml = createSearchBoxHtml('favorite');
   // お気に入りパネル
   panel.innerHTML = window.createCommonPanelHTML({
     id: 'favorite-list-panel',
@@ -1698,3 +1690,15 @@ async function addHistoryEntry(contentId) {
   window.saveSetting(lastHistoryKey, now);
 }
 window.addHistoryEntry = addHistoryEntry;
+
+// 検索ボックスHTML生成の共通関数
+function createSearchBoxHtml(type) {
+  const id = type === 'history' ? 'history-search-input' : 'favorite-search-input';
+  const boxClass = type === 'history' ? 'history-search-box' : 'favorite-search-box';
+  const placeholder = 'コース名・親カテゴリ名で検索';
+  return `
+    <div class="${boxClass}" style="background: #232c3a; border-radius: 10px; padding: 4px 12px; margin: 0 24px 10px 24px; box-shadow: 0 2px 8px rgba(30,40,60,0.18); border: 1.5px solid #3a4658;">
+      <input id="${id}" type="text" placeholder="${placeholder}" style="width: 100%; background: #232c3a; color: #fff; font-size: 14px; padding: 6px 8px; border-radius: 6px; letter-spacing: 0.5px;">
+    </div>
+  `;
+}
