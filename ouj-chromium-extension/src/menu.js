@@ -520,11 +520,17 @@ function handleHistoryPanelOpen() {
       <input id="history-search-input" type="text" placeholder="コース名・親カテゴリ名で検索" style="width: 100%; background: #232c3a; color: #fff; border: none; outline: none; font-size: 16px; padding: 10px 12px; border-radius: 6px; letter-spacing: 0.5px;">
     </div>
   `;
+  // 履歴パネル
   panel.innerHTML = window.createCommonPanelHTML({
     id: 'history-list-panel',
     className: 'history-panel',
     title: '履歴一覧',
     iconHtml: '<ion-icon name="time" class="history-panel-icon" aria-hidden="true"></ion-icon>',
+    actionHtml: `<button id="clear-all-history" class="history-clear-all-btn" aria-label="履歴を全て削除" title="全削除" style="background:none;border:none;cursor:pointer;padding:0 8px;display:flex;align-items:center;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
+      </svg>
+    </button>`,
     searchBoxHtml: searchBoxHtml,
     listHtml: '',
     closeBtnId: 'close-history-list-panel',
@@ -826,11 +832,13 @@ function handleFavoritesPanelOpen() {
       <input id="favorite-search-input" type="text" placeholder="コース名・親カテゴリ名で検索" style="width: 100%; background: #232c3a; color: #fff; border: none; outline: none; font-size: 16px; padding: 10px 12px; border-radius: 6px; letter-spacing: 0.5px;">
     </div>
   `;
+  // お気に入りパネル
   panel.innerHTML = window.createCommonPanelHTML({
     id: 'favorite-list-panel',
     className: 'favorite-panel',
     title: 'お気に入りコース一覧',
-    iconHtml: '',
+    iconHtml: '<ion-icon name="star" class="history-panel-icon" aria-hidden="true"></ion-icon>',
+    actionHtml: '',
     searchBoxHtml: searchBoxHtml,
     listHtml: '',
     closeBtnId: 'close-favorite-list-panel',
@@ -1157,13 +1165,15 @@ function handleRecommendPanelOpen() {
       </div>
     </div>
   `).join('');
+  // おすすめパネル
   panel.innerHTML = window.createCommonPanelHTML({
     id: 'recommend-list-panel',
     className: 'recommend-panel',
     title: 'おすすめ動画',
     iconHtml: '<ion-icon name="play" class="history-panel-icon" aria-hidden="true"></ion-icon>',
+    actionHtml: '',
     searchBoxHtml: '',
-    listHtml: dummyCards, // ローディング時はダミーカード
+    listHtml: dummyCards,
     closeBtnId: 'close-recommend-list-panel',
     contentClass: 'history-panel-content',
     listClass: 'history-list'

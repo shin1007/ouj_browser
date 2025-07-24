@@ -589,6 +589,7 @@ const closeNotification = (notification) => {
  *   - className: パネルクラス
  *   - title: タイトル
  *   - iconHtml: アイコンHTML（任意）
+ *   - actionHtml: アクションボタンHTML（任意、例：全削除ボタン）
  *   - searchBoxHtml: 検索ボックスHTML（任意）
  *   - listHtml: リストHTML
  *   - closeBtnId: 閉じるボタンID
@@ -596,18 +597,21 @@ const closeNotification = (notification) => {
  *   - listClass: リストul/divのクラス
  * @returns {string} パネルHTML
  */
-function createCommonPanelHTML({ id, className, title, iconHtml = '', searchBoxHtml = '', listHtml, closeBtnId, contentClass, listClass }) {
+function createCommonPanelHTML({ id, className, title, iconHtml = '', actionHtml = '', searchBoxHtml = '', listHtml, closeBtnId, contentClass, listClass }) {
   return `
-    <div class="${className}-header">
-      <h3 id="${id}-title" class="${className}-title">
+    <div class="${className}-header" style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 20px;height:56px;border-bottom:1px solid #3a4658;background:#232c3a;">
+      <div style="display:flex;align-items:center;gap:10px;">
         ${iconHtml ? iconHtml : ''}
-        ${title}
-      </h3>
-      <button id="${closeBtnId}" class="${className}-close" aria-label="パネルを閉じる">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 6L6 18M6 6l12 12"/>
-        </svg>
-      </button>
+        <h3 id="${id}-title" class="${className}-title" style="margin:0;font-size:18px;font-weight:600;color:#fff;letter-spacing:0.5px;">${title}</h3>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        ${actionHtml ? actionHtml : ''}
+        <button id="${closeBtnId}" class="${className}-close" aria-label="パネルを閉じる" style="background:none;border:none;padding:0 0 0 8px;cursor:pointer;display:flex;align-items:center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
     </div>
     ${searchBoxHtml}
     <div class="${contentClass}">
