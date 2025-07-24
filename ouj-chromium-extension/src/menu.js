@@ -1021,6 +1021,15 @@ async function createFavoriteListData() {
 }
 
 async function createRecommendListData() {
+  // =============================
+  // おすすめ動画リスト選定ロジック
+  // =============================
+  // 1. おすすめリスト・使用済みIDセットを初期化
+  let recommendList = [];
+  let usedCategoryIds = new Set();
+  const usedContentIds = new Set();
+  
+  // 2. お気に入り・履歴・カテゴリ情報を取得
   let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
   let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
   const categories = await window.getCategoriesData();
@@ -1028,13 +1037,15 @@ async function createRecommendListData() {
   // console.log('[おすすめデバッグ] history:', history);
   // console.log('[おすすめデバッグ] categories:', categories);
 
+  // 3. 履歴のcontentIdから動画情報を取得
   const historyContentIds = history.map(item => item.contentId).filter(Boolean);
   const historyVideos = await getPanelDataVideoPattern(historyContentIds);
   // console.log('[おすすめデバッグ] historyVideos:', historyVideos);
 
-  let recommendList = [];
-  let usedCategoryIds = new Set();
-  const usedContentIds = new Set();
+  // 4. 履歴からのおすすめ（最大2件）
+  //   - 進捗0.95未満の未視聴動画はそのまま追加
+  //   - 進捗0.95以上（見終わった動画）は、同カテゴリ内の次動画（未視聴）を探して追加
+
   let historyRecommendCount = 0;
   for (let i = 0; i < history.length && historyRecommendCount < 2; i++) {
     const historyItem = history[i];
@@ -1112,6 +1123,10 @@ async function createRecommendListData() {
       }
     }
   }
+  // 5. お気に入りからのおすすめ
+  //   - お気に入りカテゴリをランダムにシャッフル
+  //   - すでにおすすめに入っているカテゴリや履歴で使われたカテゴリは除外
+  //   - そのカテゴリ内で未視聴（進捗0.95未満）の動画を探して追加
   if (favorites.length) {
     const historyUsedCategoryIds = new Set();
     for (const item of recommendList) {
@@ -1168,8 +1183,12 @@ async function createRecommendListData() {
       }
     }
   }
+  // 6. 類似コースからのおすすめ（未実装）
   // ...（類似コース部分も同様に詳細ログを追加可能）...
   // console.log('[おすすめデバッグ] 最終recommendList:', recommendList);
+
+  // 7. おすすめリストを返却
+
   return recommendList;
 }
 
