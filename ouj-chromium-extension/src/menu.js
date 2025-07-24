@@ -569,42 +569,50 @@ function handleHistoryPanelOpen() {
 }
 
 async function generateAndRenderHistoryList(panel, closePanel) {
-  // 履歴データを取得
+  const historyListData = await createHistoryListData();
+  renderHistoryListHtml(panel, closePanel, historyListData);
+}
+
+// 履歴リストの取得・整形
+async function createHistoryListData() {
   let history = [];
   try {
     history = window.getSetting('history', []);
   } catch (e) {
     history = [];
   }
+  const categories = await window.getCategoriesData();
+  const videoItems = await Promise.all(history.map(async (item) => {
+    if (!item.contentId) return null;
+    let video = null;
+    try {
+      const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}`;
+      video = await window.fetchWithCache(url, `cachedVodContent_${item.contentId}`) || {};
+      if (!video.title) throw new Error('動画情報取得失敗');
+    } catch (e) {
+      let history = [];
+      try {
+        history = window.getSetting('history', []);
+      } catch (e) {
+        history = [];
+      }
+      history = history.filter(h => h.contentId !== item.contentId);
+      window.saveSetting('history', history);
+      return null;
+    }
+    return { ...item, video };
+  }));
+  const validVideoItems = videoItems.filter(Boolean);
+  return { history, categories, validVideoItems };
+}
+
+// HTML描画・イベント登録
+function renderHistoryListHtml(panel, closePanel, { history, categories, validVideoItems }) {
   let searchValue = '';
   let currentSortType = 'date';
-
-  // 履歴リストの描画関数
   async function renderHistoryList(filter = '', sortType = 'date') {
     let listHtml = '';
     if (history.length) {
-      const categories = await window.getCategoriesData();
-      const videoItems = await Promise.all(history.map(async (item) => {
-        if (!item.contentId) return null;
-        let video = null;
-        try {
-          const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}`;
-          video = await window.fetchWithCache(url, `cachedVodContent_${item.contentId}`) || {};
-          if (!video.title) throw new Error('動画情報取得失敗');
-        } catch (e) {
-          let history = [];
-          try {
-            history = window.getSetting('history', []);
-          } catch (e) {
-            history = [];
-          }
-          history = history.filter(h => h.contentId !== item.contentId);
-          window.saveSetting('history', history);
-          return null;
-        }
-        return { ...item, video };
-      }));
-      const validVideoItems = videoItems.filter(Boolean);
       const filteredItems = filter.trim() ? validVideoItems.filter(item => {
         const keyword = filter.trim().toLowerCase();
         return (item.video.title || '').toLowerCase().includes(keyword) || (item.video.categoryId && Array.isArray(categories) && categories.find(c => c.categoryId == item.video.categoryId)?.name?.toLowerCase().includes(keyword));
@@ -644,7 +652,6 @@ async function generateAndRenderHistoryList(panel, closePanel) {
     const listContainer = panel.querySelector('.history-list');
     if (listContainer) {
       listContainer.innerHTML = listHtml;
-      // 追加: カードクリックでパネルを閉じる（削除ボタン以外）
       const cards = listContainer.querySelectorAll('.recommend-card');
       cards.forEach(card => {
         card.addEventListener('click', (event) => {
@@ -653,17 +660,13 @@ async function generateAndRenderHistoryList(panel, closePanel) {
         });
       });
     }
-    // 全削除ボタンの表示/非表示を制御
     const clearAllBtn = panel.querySelector('#clear-all-history');
     if (clearAllBtn) {
       clearAllBtn.style.display = history.length > 0 ? 'flex' : 'none';
     }
-    // 再度イベントリスナーを付与
     attachHistoryItemListeners();
     attachDeleteButtonListeners();
   }
-
-  // 履歴項目のクリックイベントリスナー
   function attachHistoryItemListeners() {
     const historyItems = panel.querySelectorAll('.history-item');
     historyItems.forEach((item, index) => {
@@ -696,8 +699,6 @@ async function generateAndRenderHistoryList(panel, closePanel) {
       });
     });
   }
-
-  // 削除ボタンのイベントリスナー
   function attachDeleteButtonListeners() {
     const deleteBtns = panel.querySelectorAll('.history-delete-btn');
     deleteBtns.forEach(btn => {
@@ -724,8 +725,6 @@ async function generateAndRenderHistoryList(panel, closePanel) {
       };
     });
   }
-
-  // 履歴を全削除する関数
   async function clearAllHistory() {
     if (history.length === 0) return;
     if (typeof window.showConfirmDialog === 'function') {
@@ -746,8 +745,6 @@ async function generateAndRenderHistoryList(panel, closePanel) {
       }
     }
   }
-
-  // 全削除ボタンのイベントリスナー
   setTimeout(() => {
     const clearAllBtn = panel.querySelector('#clear-all-history');
     if (clearAllBtn) {
@@ -756,8 +753,6 @@ async function generateAndRenderHistoryList(panel, closePanel) {
       };
     }
   }, 0);
-
-  // 検索ボックスのイベントリスナー
   const searchInput = panel.querySelector('#history-search-input');
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
@@ -765,8 +760,6 @@ async function generateAndRenderHistoryList(panel, closePanel) {
       renderHistoryList(searchValue, currentSortType);
     });
   }
-
-  // 初回リスト描画
   renderHistoryList('', currentSortType);
 }
 
@@ -882,9 +875,13 @@ function handleFavoritesPanelOpen() {
 }
 
 async function generateAndRenderFavoriteList(panel, closePanel) {
-  // お気に入りIDリスト取得
+  const favoriteListData = await createFavoriteListData();
+  renderFavoriteListHtml(panel, closePanel, favoriteListData);
+}
+
+// お気に入りリストの取得・整形
+async function createFavoriteListData() {
   const favorites = window.getSetting('favorites', []);
-  // キャッシュされたカテゴリデータを取得
   const result = await chrome.storage.local.get(['cachedCategoriesData']);
   const cachedData = result.cachedCategoriesData;
   let categories = [];
@@ -894,14 +891,37 @@ async function generateAndRenderFavoriteList(panel, closePanel) {
     categories = await window.getCategoriesData();
   }
   if (!Array.isArray(categories)) categories = [];
-  // ID→カテゴリ名辞書
   const idToName = {};
   categories.forEach(cat => {
     idToName[cat.categoryId] = cat.name;
     idToName[cat.categoryId.toString()] = cat.name;
   });
-  let searchValue = '';
+  function getPinnedFavorites() {
+    try {
+      return window.getSetting('pinnedFavorites', []);
+    } catch (e) {
+      return [];
+    }
+  }
+  const pinnedFavorites = getPinnedFavorites();
+  const favoriteItemsWithParent = await Promise.all(favorites.map(async (id) => {
+    const categoryName = idToName[id];
+    const parentCategoryName = await window.getParentCategoryName(id);
+    const displayName = categoryName || `不明なコース (ID: ${id})`;
+    return {
+      id: id,
+      categoryName: displayName,
+      parentCategoryName: parentCategoryName || 'その他',
+      hasParent: !!parentCategoryName,
+      pinned: pinnedFavorites.includes(id)
+    };
+  }));
+  return { favorites, categories, idToName, favoriteItemsWithParent };
+}
 
+// HTML描画・イベント登録
+function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idToName, favoriteItemsWithParent }) {
+  let searchValue = '';
   function getPinnedFavorites() {
     try {
       return window.getSetting('pinnedFavorites', []);
@@ -912,23 +932,10 @@ async function generateAndRenderFavoriteList(panel, closePanel) {
   function setPinnedFavorites(pinned) {
     window.saveSetting('pinnedFavorites', pinned);
   }
-
   async function renderFavoriteList(filter = '') {
     const pinnedFavorites = getPinnedFavorites();
     let listHtml = '';
     if (favorites.length) {
-      const favoriteItemsWithParent = await Promise.all(favorites.map(async (id) => {
-        const categoryName = idToName[id];
-        const parentCategoryName = await window.getParentCategoryName(id);
-        const displayName = categoryName || `不明なコース (ID: ${id})`;
-        return {
-          id: id,
-          categoryName: displayName,
-          parentCategoryName: parentCategoryName || 'その他',
-          hasParent: !!parentCategoryName,
-          pinned: pinnedFavorites.includes(id)
-        };
-      }));
       const filteredItems = filter.trim() ? favoriteItemsWithParent.filter(item => {
         const keyword = filter.trim().toLowerCase();
         return item.categoryName.toLowerCase().includes(keyword) || item.parentCategoryName.toLowerCase().includes(keyword);
@@ -1010,7 +1017,6 @@ async function generateAndRenderFavoriteList(panel, closePanel) {
     attachFavoriteItemListeners();
     attachPinButtonListeners();
   }
-
   function attachPinButtonListeners() {
     const pinButtons = panel.querySelectorAll('.favorite-pin-btn');
     pinButtons.forEach(button => {
@@ -1028,7 +1034,6 @@ async function generateAndRenderFavoriteList(panel, closePanel) {
       });
     });
   }
-
   function attachFavoriteItemListeners() {
     const favoriteItems = panel.querySelectorAll('.favorite-item');
     favoriteItems.forEach((item, index) => {
@@ -1058,8 +1063,6 @@ async function generateAndRenderFavoriteList(panel, closePanel) {
       });
     });
   }
-
-  // 検索ボックスのイベントリスナー
   const searchInput = panel.querySelector('#favorite-search-input');
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
@@ -1067,8 +1070,6 @@ async function generateAndRenderFavoriteList(panel, closePanel) {
       renderFavoriteList(searchValue);
     });
   }
-
-  // 初回リスト描画
   renderFavoriteList('');
 }
 
@@ -1210,121 +1211,20 @@ function handleRecommendPanelOpen() {
 }
 
 async function generateAndRenderRecommendList(panel, closePanel) {
+  const recommendListData = await createRecommendListData();
+  renderRecommendListHtml(panel, closePanel, recommendListData);
+}
+
+// おすすめリストの取得・整形
+async function createRecommendListData() {
   let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
   let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
-
-  if (!favorites.length && !history.length) {
-    panel.querySelector('.recommend-panel-content').innerHTML = '<li class="recommend-empty">お気に入りコースと履歴がありません</li>';
-    return;
-  }
-
-  // カテゴリリストを取得
   let categories = [];
   try {
     if (typeof window.getCategoriesData === 'function') {
       categories = await window.getCategoriesData();
     }
   } catch (e) { }
-
-  // 類似コース検索関数
-  function findSimilarCourses(targetNames, allCategories, excludeIds, targetSummaries) {
-    const similarCourses = [];
-    const allScores = [];
-    const seenCategoryIds = new Set();
-    for (const category of allCategories) {
-      if (excludeIds.has(category.categoryId)) continue;
-      if (seenCategoryIds.has(category.categoryId)) continue;
-      const categoryName = category.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-      const categorySummary = (category.summary || '').replace(/\s+/g, '');
-      let maxScore = 0;
-      for (const targetName of targetNames) {
-        const score = calculateSimilarity(targetName, categoryName, category, allCategories);
-        maxScore = Math.max(maxScore, score);
-      }
-      if (targetSummaries && categorySummary) {
-        for (const targetSummary of targetSummaries) {
-          const score = calculateSimilarity(targetSummary, categorySummary, category, allCategories);
-          maxScore = Math.max(maxScore, score * 0.8);
-        }
-      }
-      allScores.push({categoryId: category.categoryId, name: categoryName, score: maxScore});
-      if (maxScore > 0.1) {
-        similarCourses.push({ category, score: maxScore });
-        seenCategoryIds.add(category.categoryId);
-      }
-    }
-    const sortedScores = allScores.sort((a, b) => b.score - a.score);
-    const result = similarCourses.sort((a, b) => b.score - a.score).slice(0, 5).map(item => item.category);
-    return result;
-  }
-  function ngrams(str, n) {
-    const s = str.replace(/\s/g, '');
-    const grams = [];
-    for (let i = 0; i < s.length - n + 1; i++) {
-      grams.push(s.slice(i, i + n));
-    }
-    return grams;
-  }
-  function jaccard(a, b) {
-    const setA = new Set(a);
-    const setB = new Set(b);
-    const intersection = new Set([...setA].filter(x => setB.has(x)));
-    const union = new Set([...setA, ...setB]);
-    return union.size === 0 ? 0 : intersection.size / union.size;
-  }
-  function levenshtein(a, b) {
-    const m = a.length, n = b.length;
-    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-    for (let i = 0; i <= m; i++) dp[i][0] = i;
-    for (let j = 0; j <= n; j++) dp[0][j] = j;
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        if (a[i - 1] === b[j - 1]) dp[i][j] = dp[i - 1][j - 1];
-        else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-      }
-    }
-    return dp[m][n];
-  }
-  function calculateSimilarity(str1, str2, category, allCategories) {
-    const s1 = str1.toLowerCase();
-    const s2 = str2.toLowerCase();
-    let catScore = 0;
-    if (category.parentCategoryId && allCategories) {
-      for (const c of allCategories) {
-        if (c.name === str1 && c.parentCategoryId && c.parentCategoryId === category.parentCategoryId) {
-          catScore = 0.3;
-          break;
-        }
-      }
-    }
-    const ngramA = ngrams(s1, 2);
-    const ngramB = ngrams(s2, 2);
-    const ngramScore = jaccard(ngramA, ngramB);
-    const levDist = levenshtein(s1, s2);
-    const maxLen = Math.max(s1.length, s2.length);
-    const levScore = maxLen === 0 ? 0 : 1 - (levDist / maxLen);
-    let baseScore = 0;
-    if (s1 === s2) baseScore = 1.0;
-    else if (s1.includes(s2) || s2.includes(s1)) baseScore = 0.8;
-    else {
-      const words1 = s1.split(/[\s・、]/).filter(w => w.length > 1);
-      const words2 = s2.split(/[\s・、]/).filter(w => w.length > 1);
-      let commonWords = 0;
-      for (const word1 of words1) {
-        for (const word2 of words2) {
-          if (word1 === word2 || word1.includes(word2) || word2.includes(word1)) {
-            commonWords++;
-          }
-        }
-      }
-      if (commonWords > 0) baseScore = commonWords / Math.max(words1.length, words2.length);
-    }
-    return Math.max(
-      baseScore,
-      0.4 * ngramScore + 0.3 * levScore + catScore
-    );
-  }
-
   let recommendList = [];
   let usedCategoryIds = new Set();
   const usedContentIds = new Set();
@@ -1386,7 +1286,6 @@ async function generateAndRenderRecommendList(panel, closePanel) {
       }
     }
   }
-
   if (favorites.length) {
     const historyUsedCategoryIds = new Set();
     for (const item of recommendList) {
@@ -1431,7 +1330,6 @@ async function generateAndRenderRecommendList(panel, closePanel) {
       }
     }
   }
-
   if (categories.length > 0) {
     const targetNames = [];
     const targetSummaries = [];
@@ -1457,6 +1355,103 @@ async function generateAndRenderRecommendList(panel, closePanel) {
         }
         if (cat.summary) targetSummaries.push(cat.summary);
       }
+    }
+    function findSimilarCourses(targetNames, allCategories, excludeIds, targetSummaries) {
+      const similarCourses = [];
+      const allScores = [];
+      const seenCategoryIds = new Set();
+      for (const category of allCategories) {
+        if (excludeIds.has(category.categoryId)) continue;
+        if (seenCategoryIds.has(category.categoryId)) continue;
+        const categoryName = category.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+        const categorySummary = (category.summary || '').replace(/\s+/g, '');
+        let maxScore = 0;
+        for (const targetName of targetNames) {
+          const score = calculateSimilarity(targetName, categoryName, category, allCategories);
+          maxScore = Math.max(maxScore, score);
+        }
+        if (targetSummaries && categorySummary) {
+          for (const targetSummary of targetSummaries) {
+            const score = calculateSimilarity(targetSummary, categorySummary, category, allCategories);
+            maxScore = Math.max(maxScore, score * 0.8);
+          }
+        }
+        allScores.push({categoryId: category.categoryId, name: categoryName, score: maxScore});
+        if (maxScore > 0.1) {
+          similarCourses.push({ category, score: maxScore });
+          seenCategoryIds.add(category.categoryId);
+        }
+      }
+      const sortedScores = allScores.sort((a, b) => b.score - a.score);
+      const result = similarCourses.sort((a, b) => b.score - a.score).slice(0, 5).map(item => item.category);
+      return result;
+    }
+    function ngrams(str, n) {
+      const s = str.replace(/\s/g, '');
+      const grams = [];
+      for (let i = 0; i < s.length - n + 1; i++) {
+        grams.push(s.slice(i, i + n));
+      }
+      return grams;
+    }
+    function jaccard(a, b) {
+      const setA = new Set(a);
+      const setB = new Set(b);
+      const intersection = new Set([...setA].filter(x => setB.has(x)));
+      const union = new Set([...setA, ...setB]);
+      return union.size === 0 ? 0 : intersection.size / union.size;
+    }
+    function levenshtein(a, b) {
+      const m = a.length, n = b.length;
+      const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          if (a[i - 1] === b[j - 1]) dp[i][j] = dp[i - 1][j - 1];
+          else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+        }
+      }
+      return dp[m][n];
+    }
+    function calculateSimilarity(str1, str2, category, allCategories) {
+      const s1 = str1.toLowerCase();
+      const s2 = str2.toLowerCase();
+      let catScore = 0;
+      if (category.parentCategoryId && allCategories) {
+        for (const c of allCategories) {
+          if (c.name === str1 && c.parentCategoryId && c.parentCategoryId === category.parentCategoryId) {
+            catScore = 0.3;
+            break;
+          }
+        }
+      }
+      const ngramA = ngrams(s1, 2);
+      const ngramB = ngrams(s2, 2);
+      const ngramScore = jaccard(ngramA, ngramB);
+      const levDist = levenshtein(s1, s2);
+      const maxLen = Math.max(s1.length, s2.length);
+      const levScore = maxLen === 0 ? 0 : 1 - (levDist / maxLen);
+      let baseScore = 0;
+      if (s1 === s2) baseScore = 1.0;
+      else if (s1.includes(s2) || s2.includes(s1)) baseScore = 0.8;
+      else {
+        const words1 = s1.split(/[\s・、]/).filter(w => w.length > 1);
+        const words2 = s2.split(/[\s・、]/).filter(w => w.length > 1);
+        let commonWords = 0;
+        for (const word1 of words1) {
+          for (const word2 of words2) {
+            if (word1 === word2 || word1.includes(word2) || word2.includes(word1)) {
+              commonWords++;
+            }
+          }
+        }
+        if (commonWords > 0) baseScore = commonWords / Math.max(words1.length, words2.length);
+      }
+      return Math.max(
+        baseScore,
+        0.4 * ngramScore + 0.3 * levScore + catScore
+      );
     }
     const similarCategories = findSimilarCourses(targetNames, categories, usedCategoryIds, targetSummaries);
     const uniqueSimilarCategories = [];
@@ -1567,69 +1562,81 @@ async function generateAndRenderRecommendList(panel, closePanel) {
       }
     }
   }
-  let isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  let listHtml = recommendList.map(item => {
-    let thumb = '';
-    if (item.contentId) {
-      thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail/large2`;
-    }
-    if (!thumb) {
-      thumb = item.thumbnailUrl || item.imageUrl || '';
-    }
-    if (!thumb && item.contentId) {
-      thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail`;
-    }
-    let courseName = '';
-    if (Array.isArray(categories) && item.categoryId) {
-      const cat = categories.find(c => c.categoryId == item.categoryId);
-      courseName = cat ? cat.name : '';
-      courseName = courseName.replace(/^[0-9]+\s*/, '');
-      courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-    }
-    let sourceLabel = '', sourceColor = '';
-    if (item.source === 'history') {
-      sourceLabel = '履歴';
-      sourceColor = isDark ? '#60a5fa' : '#3b82f6';
-    } else if (item.source === 'favorites') {
-      sourceLabel = 'お気に入り';
-      sourceColor = isDark ? '#fbbf24' : '#f59e0b';
-    } else if (item.source === 'similar') {
-      sourceLabel = '類似';
-      sourceColor = isDark ? '#10b981' : '#059669';
-    }
-    const summary = item.summary || '';
-    let progress = item.progress || 0;
-    const dateStr = item.dateStr || '';
-    return renderVideoCard({
+  return recommendList;
+}
+
+function renderRecommendListHtml(panel, closePanel, recommendList) {
+  let categories = [];
+  if (typeof window.getCategoriesData === 'function') {
+    window.getCategoriesData().then(cats => { categories = cats; render(); });
+  } else {
+    render();
+  }
+  function render() {
+    let isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let listHtml = recommendList.map(item => {
+      let thumb = '';
+      if (item.contentId) {
+        thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail/large2`;
+      }
+      if (!thumb) {
+        thumb = item.thumbnailUrl || item.imageUrl || '';
+      }
+      if (!thumb && item.contentId) {
+        thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail`;
+      }
+      let courseName = '';
+      if (Array.isArray(categories) && item.categoryId) {
+        const cat = categories.find(c => c.categoryId == item.categoryId);
+        courseName = cat ? cat.name : '';
+        courseName = courseName.replace(/^[0-9]+\s*/, '');
+        courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+      }
+      let sourceLabel = '', sourceColor = '';
+      if (item.source === 'history') {
+        sourceLabel = '履歴';
+        sourceColor = isDark ? '#60a5fa' : '#3b82f6';
+      } else if (item.source === 'favorites') {
+        sourceLabel = 'お気に入り';
+        sourceColor = isDark ? '#fbbf24' : '#f59e0b';
+      } else if (item.source === 'similar') {
+        sourceLabel = '類似';
+        sourceColor = isDark ? '#10b981' : '#059669';
+      }
+      const summary = item.summary || '';
+      let progress = item.progress || 0;
+      const dateStr = item.dateStr || '';
+      return renderVideoCard({
+        contentId: item.contentId,
+        categoryId: item.categoryId,
+        title: item.title,
+        courseName,
+        summary,
+        progress,
+        dateStr,
+        showDelete: false,
+        cardType: 'recommend',
+        isDark,
+        sourceLabel,
+        sourceColor
+      });
+    }).join('');
+    if (!listHtml) listHtml = `<div class=\"history-empty\" style=\"color:${isDark ? '#fff' : '#222'};padding:16px;text-align:center;\">おすすめ動画はありません（全て再生済み）</div>`;
+    panel.querySelector('.history-panel-content').innerHTML = `<div class=\"history-list\">${listHtml}</div>`;
+    const recommendLinks = panel.querySelectorAll('.recommend-card');
+    recommendLinks.forEach(link => {
+      link.addEventListener('click', () => {
+        closePanel();
+      });
+    });
+    console.log('[おすすめ描画] recommendList:', recommendList.map(item => ({
       contentId: item.contentId,
-      categoryId: item.categoryId,
+      source: item.source,
+      progress: item.progress,
       title: item.title,
-      courseName,
-      summary,
-      progress,
-      dateStr,
-      showDelete: false,
-      cardType: 'recommend',
-      isDark,
-      sourceLabel,
-      sourceColor
-    });
-  }).join('');
-  if (!listHtml) listHtml = `<div class=\"history-empty\" style=\"color:${isDark ? '#fff' : '#222'};padding:16px;text-align:center;\">おすすめ動画はありません（全て再生済み）</div>`;
-  panel.querySelector('.history-panel-content').innerHTML = `<div class=\"history-list\">${listHtml}</div>`;
-  const recommendLinks = panel.querySelectorAll('.recommend-card');
-  recommendLinks.forEach(link => {
-    link.addEventListener('click', () => {
-      closePanel();
-    });
-  });
-  console.log('[おすすめ描画] recommendList:', recommendList.map(item => ({
-    contentId: item.contentId,
-    source: item.source,
-    progress: item.progress,
-    title: item.title,
-    dateStr: item.dateStr
-  })));
+      dateStr: item.dateStr
+    })));
+  }
 }
 
 function addRecommendMenuEventListener() {
