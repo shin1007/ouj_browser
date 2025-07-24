@@ -473,47 +473,7 @@ function handleHistoryPanelOpen() {
     panel.remove();
   }
   // パネル生成
-  panel = document.createElement('div');
-  panel.id = 'history-list-panel';
-  panel.className = 'history-panel';
-  panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-labelledby', 'history-panel-title');
-  panel.setAttribute('aria-modal', 'true');
-  // #mainの幅・スタイルを取得
-  const main = document.getElementById('main');
-  let mainWidth = '800px';
-  let mainFont = '';
-  let mainFontSize = '14px';
-  if (main) {
-    const style = window.getComputedStyle(main);
-    mainWidth = style.width;
-    mainFont = style.fontFamily;
-    mainFontSize = style.fontSize;
-  }
-  Object.assign(panel.style, {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 'min(90vw, 600px)',
-    maxWidth: mainWidth,
-    minHeight: '480px',
-    maxHeight: '480px',
-    height: '480px',
-    background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
-    fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    fontSize: mainFontSize || '14px',
-    border: 'none',
-    borderRadius: '12px 12px 0 0',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    padding: '0',
-    zIndex: '9999',
-    overflow: 'hidden',
-    opacity: '0',
-    transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
-    backdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255, 255, 255, 0.2)'
-  });
+  panel = createPanel({ id: 'history-list-panel', className: 'history-panel', ariaLabelledby: 'history-panel-title' });
   // 検索ボックスのHTML（履歴）
   const searchBoxHtml = createSearchBoxHtml('history');
   // 履歴パネル
@@ -762,47 +722,7 @@ function handleFavoritesPanelOpen() {
     panel.remove();
   }
   // パネル生成
-  panel = document.createElement('div');
-  panel.id = 'favorite-list-panel';
-  panel.className = 'favorite-panel';
-  panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-labelledby', 'favorite-panel-title');
-  panel.setAttribute('aria-modal', 'true');
-  // #mainの幅・スタイルを取得
-  const main = document.getElementById('main');
-  let mainWidth = '800px';
-  let mainFont = '';
-  let mainFontSize = '14px';
-  if (main) {
-    const style = window.getComputedStyle(main);
-    mainWidth = style.width;
-    mainFont = style.fontFamily;
-    mainFontSize = style.fontSize;
-  }
-  Object.assign(panel.style, {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 'min(90vw, 600px)',
-    maxWidth: mainWidth,
-    minHeight: '480px',
-    maxHeight: '480px',
-    height: '480px',
-    background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
-    fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    fontSize: mainFontSize || '14px',
-    border: 'none',
-    borderRadius: '12px 12px 0 0',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    padding: '0',
-    zIndex: '9999',
-    overflow: 'hidden',
-    opacity: '0',
-    transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
-    backdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255, 255, 255, 0.2)'
-  });
+  panel = createPanel({ id: 'favorite-list-panel', className: 'favorite-panel', ariaLabelledby: 'favorite-panel-title' });
   // 検索ボックスのHTML（お気に入り）
   const searchBoxHtml = createSearchBoxHtml('favorite');
   // お気に入りパネル
@@ -1051,48 +971,7 @@ function handleRecommendPanelOpen() {
     panel.remove();
   }
   // パネル生成
-  panel = document.createElement('div');
-  panel.id = 'recommend-list-panel';
-  panel.className = 'recommend-panel';
-  panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-labelledby', 'recommend-panel-title');
-  panel.setAttribute('aria-modal', 'true');
-  // #mainの幅・スタイルを取得
-  const main = document.getElementById('main');
-  let mainWidth = '800px'; // デフォルト
-  let mainFont = '';
-  let mainFontSize = '14px'; // デフォルト
-  if (main) {
-    const style = window.getComputedStyle(main);
-    mainWidth = style.width;
-    mainFont = style.fontFamily;
-    mainFontSize = style.fontSize;
-  }
-  // モダンなスタイルを適用
-  Object.assign(panel.style, {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 'min(90vw, 600px)',
-    maxWidth: mainWidth,
-    minHeight: '480px',
-    maxHeight: '480px',
-    height: '480px',
-    background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
-    fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    fontSize: mainFontSize || '14px',
-    border: 'none',
-    borderRadius: '12px 12px 0 0',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    padding: '0',
-    zIndex: '9999',
-    overflow: 'hidden',
-    opacity: '0',
-    transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
-    backdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255, 255, 255, 0.2)'
-  });
+  panel = createPanel({ id: 'recommend-list-panel', className: 'recommend-panel', ariaLabelledby: 'recommend-panel-title' });
   // ローディング表示（ダミーカード付き）
   const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const cardBg = isDark ? '#232c3a' : '#fff';
@@ -1683,4 +1562,52 @@ function setupPanelCloseEvents(panel, closePanel, closeBtnId) {
     closePanel();
     cleanup();
   };
+}
+
+// パネル生成・スタイル適用の共通関数
+function createPanel({ id, className, ariaLabelledby, ariaModal = 'true', mainId = 'main' }) {
+  let panel = document.getElementById(id);
+  if (panel) panel.remove();
+  panel = document.createElement('div');
+  panel.id = id;
+  panel.className = className;
+  panel.setAttribute('role', 'dialog');
+  if (ariaLabelledby) panel.setAttribute('aria-labelledby', ariaLabelledby);
+  if (ariaModal) panel.setAttribute('aria-modal', ariaModal);
+  // #mainの幅・スタイルを取得
+  const main = document.getElementById(mainId);
+  let mainWidth = '800px';
+  let mainFont = '';
+  let mainFontSize = '14px';
+  if (main) {
+    const style = window.getComputedStyle(main);
+    mainWidth = style.width;
+    mainFont = style.fontFamily;
+    mainFontSize = style.fontSize;
+  }
+  Object.assign(panel.style, {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 'min(90vw, 600px)',
+    maxWidth: mainWidth,
+    minHeight: '480px',
+    maxHeight: '480px',
+    height: '480px',
+    background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
+    fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontSize: mainFontSize || '14px',
+    border: 'none',
+    borderRadius: '12px 12px 0 0',
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    padding: '0',
+    zIndex: '9999',
+    overflow: 'hidden',
+    opacity: '0',
+    transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255, 255, 255, 0.2)'
+  });
+  return panel;
 }
