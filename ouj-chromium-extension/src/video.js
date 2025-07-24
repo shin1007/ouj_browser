@@ -3,7 +3,7 @@ let nextVideoId = null;
 
 // 動画再生画面の初期化関数（最初に呼ばれる）
 async function initializeVideoPlayer() {
-  // console.log('動画再生画面の初期化を開始します');
+  console.log('[動画] initializeVideoPlayer: 初期化開始');
   
   
   // videoタグの出現を監視し、出現した瞬間に設定パネルを挿入
@@ -31,9 +31,9 @@ async function initializeVideoPlayer() {
   
   // 次の動画IDを取得
   await fetchNextVideoId();
-
-  // 動画終了監視を開始
+  console.log('[動画] initializeVideoPlayer: fetchNextVideoId完了, nextVideoId=', nextVideoId);
   startVideoEndMonitoring();
+  console.log('[動画] initializeVideoPlayer: startVideoEndMonitoring呼び出し');
   
   // エンディング検出を開始
   window.startEndingDetection();
@@ -249,26 +249,19 @@ async function fetchNextVideoId() {
   const url = window.location.href;
   const matchCa = url.match(/ca=(\d+)/);
   const matchCo = url.match(/co=(\d+)/);
-  
   if (matchCa && matchCo) {
     const currentCourseId = matchCa[1];
     const currentVideoId = matchCo[1];
-    // console.log('fetchNextVideoId: 現在のコースID:', currentCourseId);
-    // console.log('fetchNextVideoId: 現在の動画ID:', currentVideoId);
-    
-    // 保存された設定を取得
     const setting = window.getSetting('nextVideoSetting', 'same-course');
-    // console.log('fetchNextVideoId: 次の動画設定:', setting);
-    
     if (setting === 'same-course') {
-      // 同じコースの中で次を再生
+      console.log('[動画] fetchNextVideoId: fetchNextVideoFromSameCourse呼び出し', {currentCourseId, currentVideoId});
       await fetchNextVideoFromSameCourse(currentCourseId, currentVideoId);
     } else if (setting === 'favorites-random') {
-      // お気に入りの中からランダムで次を再生
       await fetchNextVideoFromFavorites();
     }
+    console.log('[動画] fetchNextVideoId: nextVideoId=', nextVideoId);
   } else {
-    // console.log('fetchNextVideoId: URLからコースIDまたは動画IDを取得できません');
+    console.warn('[動画] fetchNextVideoId: URLからコースIDまたは動画IDを取得できません', url);
     nextVideoId = null;
   }
 }
@@ -277,31 +270,37 @@ async function fetchNextVideoId() {
 async function fetchNextVideoFromSameCourse(currentCourseId, currentVideoId) {
   try {
     const cacheKey = `cachedVodContents_${currentCourseId}`;
-    const res = await fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${currentCourseId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
-    // console.log('fetchNextVideoFromSameCourse: APIレスポンス:', res);
-    
-    const currentVideoIndex = res.findIndex(item => item.contentId == currentVideoId);
-    // console.log('fetchNextVideoFromSameCourse: 現在の動画インデックス:', currentVideoIndex);
-    
-    if (currentVideoIndex !== -1) {
-      const nextVideoIndex = currentVideoIndex + 1;
-      
-      if (nextVideoIndex < res.length) {
-        nextVideoId = res[nextVideoIndex].contentId;
-        window.nextVideoCategoryId = null; // 同じコースなのでカテゴリIDは変更不要
-        // console.log('fetchNextVideoFromSameCourse: 次の動画IDを設定しました:', nextVideoId);
-        // console.log('fetchNextVideoFromSameCourse: 次の動画タイトル:', res[nextVideoIndex].title);
+    const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${currentCourseId}&offset=0&limit=30&sortType=1&sortOrder=asc`;
+    console.log('[動画] fetchNextVideoFromSameCourse: fetchWithCache呼び出し', {url, cacheKey});
+    const res = await fetchWithCache(url, cacheKey);
+    if (!Array.isArray(res)) {
+      console.error('[動画] fetchNextVideoFromSameCourse: fetchWithCacheの返り値が配列でない', res);
+    }
+    console.log('[動画] fetchNextVideoFromSameCourse: APIレスポンス.length:', Array.isArray(res) ? res.length : 'N/A', '内容:', res);
+    if (Array.isArray(res) && res.length > 0) {
+      const currentVideoIndex = res.findIndex(item => String(item.contentId) === String(currentVideoId));
+      console.log('[動画] fetchNextVideoFromSameCourse: currentVideoId=', currentVideoId, 'currentVideoIndex=', currentVideoIndex, 'res.length=', res.length);
+      if (currentVideoIndex !== -1) {
+        const nextVideoIndex = currentVideoIndex + 1;
+        if (nextVideoIndex < res.length) {
+          nextVideoId = res[nextVideoIndex].contentId;
+          window.nextVideoCategoryId = null;
+          console.log('[動画] fetchNextVideoFromSameCourse: 次の動画IDを設定:', nextVideoId, 'タイトル:', res[nextVideoIndex].title);
+        } else {
+          console.log('[動画] fetchNextVideoFromSameCourse: 最後の動画です');
+          nextVideoId = null;
+          window.nextVideoCategoryId = null;
+        }
       } else {
-        // console.log('fetchNextVideoFromSameCourse: 次の動画がありません（最後の動画です）');
+        console.log('[動画] fetchNextVideoFromSameCourse: 現在の動画が見つかりません', {currentVideoId, res});
         nextVideoId = null;
-        window.nextVideoCategoryId = null;
       }
     } else {
-      // console.log('fetchNextVideoFromSameCourse: 現在の動画が見つかりません');
+      console.warn('[動画] fetchNextVideoFromSameCourse: APIレスポンスが空配列', {url, cacheKey, res});
       nextVideoId = null;
     }
   } catch (error) {
-    console.error('fetchNextVideoFromSameCourse: 次の動画IDの取得に失敗しました:', error);
+    console.error('[動画] fetchNextVideoFromSameCourse: 例外発生', error);
     nextVideoId = null;
   }
 }
@@ -675,51 +674,33 @@ function removeAutoPlayFailedNotification() {
 
 // 動画終了監視機能
 function startVideoEndMonitoring() {
-
-  
-  // 自動次の動画遷移設定をチェック（デフォルトは有効）
+  console.log('[動画] startVideoEndMonitoring: 開始');
   const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
-  
-  
+  console.log('[動画] startVideoEndMonitoring: autoNextVideoEnabled=', autoNextVideoEnabled);
   if (!autoNextVideoEnabled) {
-    // console.log('startVideoEndMonitoring: 自動次の動画遷移が無効化されているため、スキップします');
+    console.log('[動画] startVideoEndMonitoring: 自動次の動画遷移が無効化されているため、スキップします');
     return;
   }
-  
-  // 動画要素を待って終了監視を開始する関数
   if (typeof window.waitForElement !== 'function') {
     setTimeout(startVideoEndMonitoring, 100);
     return;
   }
-  
   window.waitForElement('video', (video) => {
-    
-    
-    // 動画終了イベントリスナーを追加
+    console.log('[動画] startVideoEndMonitoring: video要素取得', video);
     const handleVideoEnded = () => {
-      // console.log('startVideoEndMonitoring: 動画が終了しました');
-      
-      // 次の動画IDが設定されている場合のみ自動遷移
+      console.log('[動画] startVideoEndMonitoring: 動画が終了しました, nextVideoId=', nextVideoId);
       if (nextVideoId) {
-        // console.log('startVideoEndMonitoring: 次の動画に自動遷移します');
-        
-        // 動画終了通知を表示
+        console.log('[動画] startVideoEndMonitoring: 次の動画に自動遷移します');
         showVideoEndNotification();
-        
-        // 少し待ってから遷移（ユーザーが終了を確認できるように）
         setTimeout(() => {
           skipToNextVideo();
-        }, 2000); // 2秒後に自動遷移
+        }, 2000);
       } else {
-        // console.log('startVideoEndMonitoring: 次の動画がないため、自動遷移しません');
+        console.log('[動画] startVideoEndMonitoring: 次の動画がないため、自動遷移しません');
       }
     };
-    
-    // 既存のイベントリスナーを削除してから追加（重複を防ぐ）
     video.removeEventListener('ended', handleVideoEnded);
     video.addEventListener('ended', handleVideoEnded);
-    
-    
   });
 }
 
@@ -764,32 +745,13 @@ function showEndingSkipButton() {
 
 // 次の動画にスキップ
 async function skipToNextVideo() {
-  // console.log('skipToNextVideo: 次の動画にスキップします');
-  
   if (nextVideoId) {
     const url = window.location.href;
     const matchCo = url.match(/co=(\d+)/);
-    
     if (matchCo) {
       let nextVideoUrl = url.replace(matchCo[0], `co=${nextVideoId}`);
-      
-      // お気に入りランダム設定の場合、カテゴリIDも更新
-      const setting = window.getSetting('nextVideoSetting', 'same-course');
-      if (setting === 'favorites-random' && window.nextVideoCategoryId) {
-        const matchCa = url.match(/ca=(\d+)/);
-        if (matchCa) {
-          nextVideoUrl = nextVideoUrl.replace(matchCa[0], `ca=${window.nextVideoCategoryId}`);
-          // console.log('skipToNextVideo: カテゴリIDを更新しました:', window.nextVideoCategoryId);
-        }
-      }
-      
-      // console.log('skipToNextVideo: 次の動画URL:', nextVideoUrl);
       window.location.href = nextVideoUrl;
-    } else {
-      // console.log('skipToNextVideo: URLから動画IDを取得できません');
     }
-  } else {
-    // console.log('skipToNextVideo: 次の動画IDが設定されていません');
   }
 }
 

@@ -56,52 +56,46 @@ const isSameDate = (dateString1, dateString2) => {
  * @returns {Promise<Object|null>} 取得またはキャッシュされたJSONデータ、またはnull
  */
 const fetchWithCache = async (url, cacheKey) => {
-  
-
     // 1. 最初にキャッシュされたデータを確認
     const result = await chrome.storage.local.get([cacheKey]);
     const cachedData = result[cacheKey];
-
-    if (cachedData && cachedData.timestamp) {
-        if (isSameDate(cachedData.timestamp, new Date().toISOString())) {
-    
+    // 1.cachedData.dataが空でなく、かつ、timestampが当日のものであれば、それを返す
+    if (cachedData && cachedData.data && cachedData.timestamp) {
+        if (cachedData.data.length === 0) {
+            console.log(`fetchWithCache: ${cacheKey} のキャッシュは空です。ネットワークからデータ取得を試行中...`);
+        } else if(isSameDate(cachedData.timestamp, new Date().toISOString())) {
             return cachedData.data;
         } else {
-            // console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものではありません。ネットワークからデータ取得を試行中...`);
+            console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものではありません。ネットワークからデータ取得を試行中...`);
         }
-    } else {
-  
     }
-
-    try {
-        // 2. 当日のキャッシュがない場合のみネットワークリクエストを試みる
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            throw new Error(`HTTPエラー: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        // 3. 成功した場合、JSONデータとタイムスタンプをストレージに保存
+    // 2. 当日のキャッシュがない場合のみネットワークリクエストを試みる
+    const fetchResult = await fetchFromNetwork(url);
+    if (fetchResult) {
+        // 2. データをキャッシュに保存
         const cacheData = {
-            data: data,
+            data: fetchResult,
             timestamp: new Date().toISOString()
         };
         await chrome.storage.local.set({ [cacheKey]: cacheData });
-  
-        return data;
-
+        return fetchResult;
+    }
+    console.log(`fetchWithCache: ${cacheKey} のネットワークからのデータ取得に失敗しました。`);
+    // 3. 古いキャッシュがあれば、それを返す
+    if (cachedData && cachedData.data) {
+        // console.log(`fetchWithCache: ${cacheKey} のネットワークエラーのため、古いキャッシュを利用します。`, cachedData.data);
+        return cachedData.data;
+    }
+    // 4. 古いキャッシュもない場合は、nullを返す
+    console.warn(`fetchWithCache: ${cacheKey} のキャッシュされたデータも見つかりませんでした。`);
+    return null;
+};
+const fetchFromNetwork = async (url) => {
+    try {
+        const response = await fetch(url);
+        return response.json();
     } catch (error) {
-        console.warn(`fetchWithCache: ${cacheKey} のネットワークからのデータ取得に失敗しました。エラー: ${error.message}`);
-        
-        // 古いキャッシュがあれば、それを返す
-        if (cachedData && cachedData.data) {
-            // console.log(`fetchWithCache: ${cacheKey} のネットワークエラーのため、古いキャッシュを利用します。`, cachedData.data);
-            return cachedData.data;
-        }
-        
-        console.warn(`fetchWithCache: ${cacheKey} のキャッシュされたデータも見つかりませんでした。`);
+        console.warn(`fetchFromNetwork: ${url} のネットワークからのデータ取得に失敗しました。エラー: ${error.message}`);
         return null;
     }
 };
