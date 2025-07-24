@@ -1611,3 +1611,16 @@ function createPanel({ id, className, ariaLabelledby, ariaModal = 'true', mainId
   });
   return panel;
 }
+
+// 汎用：パネル内リストアイテムのイベント登録
+function setupPanelListItemEvents(panel, selector, { onClick, onKeydown }) {
+  const items = panel.querySelectorAll(selector);
+  items.forEach((item, index) => {
+    if (onClick) {
+      item.addEventListener('click', (event) => onClick(event, item, index));
+    }
+    if (onKeydown) {
+      item.addEventListener('keydown', (event) => onKeydown(event, item, index, items));
+    }
+  });
+}
