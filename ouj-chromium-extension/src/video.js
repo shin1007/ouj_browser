@@ -1,6 +1,10 @@
 // グローバル変数として次の動画IDを保持
 let nextVideoId = null;
 
+// --- 追加: グローバル変数 ---
+window.videoListInCourse = null;
+window.currentVideoIndexInCourse = null;
+
 // 動画再生画面の初期化関数（最初に呼ばれる）
 async function initializeVideoPlayer() {
   console.log('[動画] initializeVideoPlayer: 初期化開始');
@@ -70,6 +74,8 @@ function addVideoSettingsPanel() {
   }
   
   window.waitForElement('#content-detail-area > div.title', (targetElement) => {
+    // --- 追加: 前後動画リンク挿入（パネルより先に） ---
+    insertPrevNextLinks(targetElement);
     // console.log('addVideoSettingsPanel: 対象要素が見つかりました: #content-detail-area > div.title');
     
     // 共通関数の存在をチェック
@@ -223,8 +229,18 @@ function addVideoSettingsPanel() {
         });
       }
       
-      // 対象要素の最後に追加
-      targetElement.appendChild(panel);
+      // 設定パネルは必ず前後リンクの後に来るように挿入
+      if (targetElement.nextSibling && targetElement.nextSibling.id === 'prev-next-links') {
+        // 既に前後リンクがある場合、その後ろにパネルを挿入
+        targetElement.parentNode.insertBefore(panel, targetElement.nextSibling.nextSibling);
+      } else {
+        // 通常はタイトルの直後にパネルを挿入
+        if (targetElement.nextSibling) {
+          targetElement.parentNode.insertBefore(panel, targetElement.nextSibling);
+        } else {
+          targetElement.parentNode.appendChild(panel);
+        }
+      }
       // console.log('addVideoSettingsPanel: 動画設定パネルを追加しました');
 
       // 折りたたみUIのイベントリスナー追加（panelがDOMに追加された直後に必ず実行）
@@ -242,6 +258,46 @@ function addVideoSettingsPanel() {
         });
       }
     });
+}
+
+// --- 追加: 前後動画リンク挿入関数 ---
+function insertPrevNextLinks(titleElement) {
+  // 既存のリンクがあれば一度消す
+  const old = document.getElementById('prev-next-links');
+  if (old) old.remove();
+  // データがなければ何もしない
+  const list = window.videoListInCourse;
+  const idx = window.currentVideoIndexInCourse;
+  if (!Array.isArray(list) || typeof idx !== 'number' || idx < 0) return;
+  const prev = idx > 0 ? list[idx - 1] : null;
+  const next = idx < list.length - 1 ? list[idx + 1] : null;
+  if (!prev && !next) return;
+  // リンク用要素生成
+  const container = document.createElement('div');
+  container.id = 'prev-next-links';
+  container.style.cssText = 'display:flex;justify-content:center;gap:32px;margin:12px 0;';
+  if (prev) {
+    const a = document.createElement('a');
+    a.href = window.location.href.replace(/co=\d+/, 'co=' + prev.contentId);
+    a.textContent = '← '+(prev.title || prev.contentId);
+    a.style.cssText = 'color:#1976d2;text-decoration:underline;cursor:pointer;';
+    a.onclick = function(e){ e.preventDefault(); window.location.href = this.href; };
+    container.appendChild(a);
+  }
+  if (next) {
+    const a = document.createElement('a');
+    a.href = window.location.href.replace(/co=\d+/, 'co=' + next.contentId);
+    a.textContent = (next.title || next.contentId) + ' →';
+    a.style.cssText = 'color:#1976d2;text-decoration:underline;cursor:pointer;';
+    a.onclick = function(e){ e.preventDefault(); window.location.href = this.href; };
+    container.appendChild(a);
+  }
+  // タイトル要素の直後に挿入
+  if (titleElement.nextSibling) {
+    titleElement.parentNode.insertBefore(container, titleElement.nextSibling);
+  } else {
+    titleElement.parentNode.appendChild(container);
+  }
 }
 
 // 次の動画IDを取得する関数
@@ -273,12 +329,16 @@ async function fetchNextVideoFromSameCourse(currentCourseId, currentVideoId) {
     const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${currentCourseId}&offset=0&limit=30&sortType=1&sortOrder=asc`;
     console.log('[動画] fetchNextVideoFromSameCourse: fetchWithCache呼び出し', {url, cacheKey});
     const res = await fetchWithCache(url, cacheKey);
+    // --- 追加: グローバルに動画リストとインデックスを保持 ---
+    window.videoListInCourse = Array.isArray(res) ? res : null;
+    window.currentVideoIndexInCourse = null;
     if (!Array.isArray(res)) {
       console.error('[動画] fetchNextVideoFromSameCourse: fetchWithCacheの返り値が配列でない', res);
     }
     console.log('[動画] fetchNextVideoFromSameCourse: APIレスポンス.length:', Array.isArray(res) ? res.length : 'N/A', '内容:', res);
     if (Array.isArray(res) && res.length > 0) {
       const currentVideoIndex = res.findIndex(item => String(item.contentId) === String(currentVideoId));
+      window.currentVideoIndexInCourse = currentVideoIndex;
       console.log('[動画] fetchNextVideoFromSameCourse: currentVideoId=', currentVideoId, 'currentVideoIndex=', currentVideoIndex, 'res.length=', res.length);
       if (currentVideoIndex !== -1) {
         const nextVideoIndex = currentVideoIndex + 1;
