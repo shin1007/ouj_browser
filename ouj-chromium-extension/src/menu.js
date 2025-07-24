@@ -487,44 +487,79 @@ function renderHistoryListByGroup(filteredItems) {
 
 // メニューのイベントリスナーを追加
 function addMenuEventListeners() {
-  addHistoryMenuEventListener();
-  addFavoritesMenuEventListener();
-  addRecommendMenuEventListener();
+  const historyItem = document.getElementById('history-menu-item');
+  if (historyItem) {
+    historyItem.addEventListener('click', handleHistoryPanelOpen);
+  }
+  const favoritesItem = document.getElementById('favorites-menu-item');
+  if (favoritesItem) {
+    favoritesItem.addEventListener('click', handleFavoritesPanelOpen);
+  }
+  const recommendItem = document.getElementById('recommend-menu-item');
+  if (recommendItem) {
+    recommendItem.addEventListener('click', handleRecommendPanelOpen);
+  }
 }
 
-// =========================
-// 履歴関連の関数群
-// =========================
-function handleHistoryPanelOpen() {
+/**
+ * パネル生成・描画・閉じる処理を共通化
+ * @param {Object} options
+ * @param {string} options.id パネルID
+ * @param {string} options.className パネルのクラス名
+ * @param {string} options.title パネルタイトル
+ * @param {string} options.iconHtml タイトル横のアイコンHTML
+ * @param {string} options.actionHtml タイトル横のアクションHTML
+ * @param {string} options.searchBoxHtml 検索ボックスHTML
+ * @param {string} options.listHtml 初期リストHTML（ローディング用など）
+ * @param {string} options.closeBtnId 閉じるボタンID
+ * @param {string} options.contentClass パネル内コンテンツクラス
+ * @param {string} options.listClass リストクラス
+ * @param {function} options.fetchData データ取得関数（Promiseを返す）
+ * @param {function} options.renderList リスト描画関数（panel, closePanel, data を受け取る）
+ */
+function openPanel({
+  id,
+  className,
+  title,
+  iconHtml,
+  actionHtml = '',
+  searchBoxHtml = '',
+  listHtml = '',
+  closeBtnId,
+  contentClass,
+  listClass,
+  fetchData,
+  renderList
+}) {
   // 既存パネルがあれば削除
-  let panel = document.getElementById('history-list-panel');
-  if (panel) {
-    panel.remove();
-  }
+  let panel = document.getElementById(id);
+  if (panel) panel.remove();
+
   // パネル生成
-  panel = createPanel({ id: 'history-list-panel', className: 'history-panel', ariaLabelledby: 'history-panel-title' });
-  // 検索ボックスのHTML（履歴）
-  const searchBoxHtml = createSearchBoxHtml('history');
-  // 履歴パネル
+  panel = createPanel({ id, className, ariaLabelledby: `${id}-title` });
+
+  // パネルHTML
   panel.innerHTML = window.createCommonPanelHTML({
-    id: 'history-list-panel',
-    className: 'history-panel',
-    title: '履歴一覧',
-    iconHtml: getIconHtml('history'),
-    actionHtml: `<button id="clear-all-history" class="history-clear-all-btn" aria-label="履歴を全て削除" title="全削除" style="background:none;border:none;cursor:pointer;padding:0 8px;display:flex;align-items:center;">
-      ${getIconHtml('delete')}
-    </button>`,
-    searchBoxHtml: searchBoxHtml,
-    listHtml: '',
-    closeBtnId: 'close-history-list-panel',
-    contentClass: 'history-panel-content',
-    listClass: 'history-list'
+    id,
+    className,
+    title,
+    iconHtml,
+    actionHtml,
+    searchBoxHtml,
+    listHtml,
+    closeBtnId,
+    contentClass,
+    listClass
   });
+
   document.body.appendChild(panel);
+
+  // アニメーション
   requestAnimationFrame(() => {
     panel.style.opacity = '1';
     panel.style.transform = 'translate(-50%, -50%) scale(1)';
   });
+
   // パネルを閉じる共通関数
   const closePanelRaw = () => {
     panel.style.opacity = '0';
@@ -533,36 +568,21 @@ function handleHistoryPanelOpen() {
       panel.remove();
     }, 200);
   };
-  const closePanel = setupPanelCloseEvents(panel, closePanelRaw, 'close-history-list-panel');
-  // 履歴リスト生成・描画
-  generateAndRenderHistoryList(panel, closePanel);
-}
+  const closePanel = setupPanelCloseEvents(panel, closePanelRaw, closeBtnId);
 
-async function generateAndRenderHistoryList(panel, closePanel) {
-  const historyListData = await createHistoryListData();
-  renderHistoryListHtml(panel, closePanel, historyListData);
-}
-
-// 履歴リストの取得・整形
-async function createHistoryListData() {
-  let history = [];
-  try {
-    history = window.getSetting('history', []);
-  } catch (e) {
-    history = [];
-  }
-  const contentIds = history.map(item => item.contentId).filter(Boolean);
-  const videoItems = await getPanelDataVideoPattern(contentIds);
-  // contentIdでhistory情報とvideo情報をマージ
-  const validVideoItems = videoItems.map(video => {
-    const h = history.find(h => h.contentId == video.contentId) || {};
-    return { ...video, progress: h.progress, date: h.date, contentId: video.contentId };
+  // データ取得→リスト描画
+  if (typeof fetchData === 'function' && typeof renderList === 'function') {
+    fetchData().then(data => {
+      renderList(panel, closePanel, data);
   });
-  const categories = await window.getCategoriesData();
-  return { history, categories, validVideoItems };
+  }
+
+  return panel;
 }
 
-// HTML描画・イベント登録
+// =========================
+// 描画関数を先に配置
+// =========================
 function renderHistoryListHtml(panel, closePanel, { history, categories, validVideoItems }) {
   let searchValue = '';
   let currentSortType = 'date';
@@ -718,81 +738,6 @@ function renderHistoryListHtml(panel, closePanel, { history, categories, validVi
   renderHistoryList('', currentSortType);
 }
 
-function addHistoryMenuEventListener() {
-  const historyItem = document.getElementById('history-menu-item');
-  if (!historyItem) return;
-  historyItem.addEventListener('click', handleHistoryPanelOpen);
-}
-
-// =========================
-// お気に入り関連の関数群
-// =========================
-function handleFavoritesPanelOpen() {
-  // 既存パネルがあれば削除
-  let panel = document.getElementById('favorite-list-panel');
-  if (panel) {
-    panel.remove();
-  }
-  // パネル生成
-  panel = createPanel({ id: 'favorite-list-panel', className: 'favorite-panel', ariaLabelledby: 'favorite-panel-title' });
-  // 検索ボックスのHTML（お気に入り）
-  const searchBoxHtml = createSearchBoxHtml('favorite');
-  // お気に入りパネル
-  panel.innerHTML = window.createCommonPanelHTML({
-    id: 'favorite-list-panel',
-    className: 'favorite-panel',
-    title: 'お気に入りコース一覧',
-    iconHtml: getIconHtml('favorite'),
-    actionHtml: '',
-    searchBoxHtml: searchBoxHtml,
-    listHtml: '',
-    closeBtnId: 'close-favorite-list-panel',
-    contentClass: 'favorite-panel-content',
-    listClass: 'favorite-list'
-  });
-  document.body.appendChild(panel);
-  requestAnimationFrame(() => {
-    panel.style.opacity = '1';
-    panel.style.transform = 'translate(-50%, -50%) scale(1)';
-  });
-  // パネルを閉じる共通関数
-  const closePanelRaw = () => {
-    panel.style.opacity = '0';
-    panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
-    setTimeout(() => {
-      panel.remove();
-    }, 200);
-  };
-  const closePanel = setupPanelCloseEvents(panel, closePanelRaw, 'close-favorite-list-panel');
-  // お気に入りリスト生成・描画
-  generateAndRenderFavoriteList(panel, closePanel);
-}
-
-async function generateAndRenderFavoriteList(panel, closePanel) {
-  const favoriteListData = await createFavoriteListData();
-  renderFavoriteListHtml(panel, closePanel, favoriteListData);
-}
-
-// お気に入りリストの取得・整形
-async function createFavoriteListData() {
-  const favorites = window.getSetting('favorites', []);
-  const { categories, idToName, items: favoriteItemsWithParent } = await getPanelDataCoursePattern(favorites);
-  function getPinnedFavorites() {
-    try {
-      return window.getSetting('pinnedFavorites', []);
-    } catch (e) {
-      return [];
-    }
-  }
-  const pinnedFavorites = getPinnedFavorites();
-  // pinned情報を付与
-  favoriteItemsWithParent.forEach(item => {
-    item.pinned = pinnedFavorites.includes(item.id);
-  });
-  return { favorites, categories, idToName, favoriteItemsWithParent };
-}
-
-// HTML描画・イベント登録
 function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idToName, favoriteItemsWithParent }) {
   let searchValue = '';
   function getPinnedFavorites() {
@@ -946,441 +891,6 @@ function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idTo
   renderFavoriteList('');
 }
 
-function addFavoritesMenuEventListener() {
-  const favoritesItem = document.getElementById('favorites-menu-item');
-  if (!favoritesItem) return;
-  favoritesItem.addEventListener('click', handleFavoritesPanelOpen);
-}
-
-// =========================
-// おすすめ関連の関数群
-// =========================
-function handleRecommendPanelOpen() {
-  // 既存パネルがあれば削除
-  let panel = document.getElementById('recommend-list-panel');
-  if (panel) {
-    panel.remove();
-  }
-  // パネル生成
-  panel = createPanel({ id: 'recommend-list-panel', className: 'recommend-panel', ariaLabelledby: 'recommend-panel-title' });
-  // ローディング表示（ダミーカード付き）
-  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const cardBg = isDark ? '#232c3a' : '#fff';
-  const cardText = isDark ? '#fff' : '#222';
-  const cardSubText = isDark ? '#b0b8c9' : '#666';
-  const barBg = isDark ? '#374151' : '#e5e7eb';
-  const thumbBg = isDark ? '#444' : '#eee';
-  // ダミーカードのHTML
-  const dummyCards = Array.from({ length: 5 }, (_, i) => `
-    <div class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);margin-bottom:8px;padding:0;opacity:0.7;">
-      <div style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;">
-        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;">
-          <div style="display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);animation:pulse 1.5s ease-in-out infinite;"></div>
-          <div style="font-size:10px;color:${isDark ? '#60a5fa' : '#3b82f6'};background:${isDark ? '#60a5fa20' : '#3b82f620'};padding:2px 6px;border-radius:4px;text-align:center;font-weight:500;width:fit-content;margin:0 auto;animation:pulse 1.5s ease-in-out infinite;">取得中</div>
-        </div>
-        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;">
-          <div style="display:flex;align-items:baseline;gap:8px;">
-            <div style="font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:18px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
-            <div style="font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:14px;background:${barBg};border-radius:4px;width:80px;animation:pulse 1.5s ease-in-out infinite;"></div>
-          </div>
-          <div style="font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;height:36px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
-          <div style="height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);animation:pulse 1.5s ease-in-out infinite;"></div>
-        </div>
-      </div>
-    </div>
-  `).join('');
-  // おすすめパネル
-  panel.innerHTML = window.createCommonPanelHTML({
-    id: 'recommend-list-panel',
-    className: 'recommend-panel',
-    title: 'おすすめ動画',
-    iconHtml: getIconHtml('recommend'),
-    actionHtml: '',
-    searchBoxHtml: '',
-    listHtml: dummyCards,
-    closeBtnId: 'close-recommend-list-panel',
-    contentClass: 'history-panel-content',
-    listClass: 'history-list'
-  });
-  document.body.appendChild(panel);
-  // アニメーション効果を追加
-  requestAnimationFrame(() => {
-    panel.style.opacity = '1';
-    panel.style.transform = 'translate(-50%, -50%) scale(1)';
-  });
-  setTimeout(() => {
-    const content = panel.querySelector('.history-panel-content');
-    if (content) {
-      // CSSファイルで設定済みのため、JavaScriptでの設定は不要
-    }
-  }, 0);
-  // パネルを閉じる共通関数
-  const closePanelRaw = () => {
-    panel.style.opacity = '0';
-    panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
-    setTimeout(() => {
-      panel.remove();
-    }, 200);
-  };
-  const closePanel = setupPanelCloseEvents(panel, closePanelRaw, 'close-recommend-list-panel');
-  // おすすめリスト生成・描画
-  generateAndRenderRecommendList(panel, closePanel);
-}
-
-async function generateAndRenderRecommendList(panel, closePanel) {
-  const recommendListData = await createRecommendListData();
-  renderRecommendListHtml(panel, closePanel, recommendListData);
-}
-
-// おすすめリストの取得・整形
-async function createRecommendListData() {
-  let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
-  let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
-  const categories = await window.getCategoriesData();
-  // おすすめ生成ロジックの中でcontentId配列を作る部分でgetPanelDataVideoPatternを活用できる箇所があれば適用
-  // ここでは例として、historyから未視聴動画を抽出する部分を共通化
-  const historyContentIds = history.map(item => item.contentId).filter(Boolean);
-  const historyVideos = await getPanelDataVideoPattern(historyContentIds);
-  let recommendList = [];
-  let usedCategoryIds = new Set();
-  const usedContentIds = new Set();
-  let historyRecommendCount = 0;
-  for (let i = 0; i < history.length && historyRecommendCount < 2; i++) {
-    const historyItem = history[i];
-    const { contentId, progress, date } = historyItem;
-    if (!contentId || usedContentIds.has(contentId)) {
-      continue;
-    }
-    let video = null;
-    try {
-      const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}`;
-      video = await window.fetchWithCache(url, `cachedVodContent_${contentId}`) || {};
-    } catch (e) { continue; }
-    if (!video || !video.contentId) {
-      continue;
-    }
-    if (progress < 0.95) {
-      recommendList.push({
-        ...video,
-        progress,
-        source: 'history',
-        dateStr: new Date(date).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-      });
-      usedContentIds.add(contentId);
-      usedCategoryIds.add(video.categoryId);
-      historyRecommendCount++;
-      continue;
-    } else {
-      const categoryId = video.categoryId;
-      if (!categoryId) {
-        continue;
-      }
-      const cacheKey = `cachedVodContents_${categoryId}`;
-      let videos = [];
-      try {
-        if (typeof window.fetchWithCache === 'function') {
-          videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
-        }
-      } catch (e) { }
-      if (!Array.isArray(videos) || !videos.length) {
-        continue;
-      }
-      const idx = videos.findIndex(v => v.contentId == contentId);
-      if (idx !== -1 && idx + 1 < videos.length) {
-        const nextVideo = videos[idx + 1];
-        if (nextVideo && !usedContentIds.has(nextVideo.contentId) && !history.some(h => h.contentId == nextVideo.contentId)) {
-          recommendList.push({
-            ...nextVideo,
-            progress: 0,
-            source: 'history',
-            dateStr: ''
-          });
-          usedContentIds.add(nextVideo.contentId);
-          usedCategoryIds.add(nextVideo.categoryId);
-          historyRecommendCount++;
-        }
-      }
-    }
-  }
-  if (favorites.length) {
-    const historyUsedCategoryIds = new Set();
-    for (const item of recommendList) {
-      if (item.source === 'history') {
-        historyUsedCategoryIds.add(item.categoryId);
-      }
-    }
-    favorites = favorites.slice();
-    for (let i = favorites.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
-    }
-    for (const categoryId of favorites) {
-      if (recommendList.length >= 7) break;
-      if (usedCategoryIds.has(categoryId)) continue;
-      if (historyUsedCategoryIds.has(categoryId)) {
-        continue;
-      }
-      const cacheKey = `cachedVodContents_${categoryId}`;
-      let videos = [];
-      try {
-        if (typeof window.fetchWithCache === 'function') {
-          videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
-        }
-      } catch (e) {}
-      if (!Array.isArray(videos) || !videos.length) continue;
-      const contentIds = videos.map(v => v.contentId);
-      const statusList = await window.getMultipleVideoViewingStatus(contentIds);
-      let found = null;
-      let foundStatus = null;
-      for (let i = 0; i < videos.length; i++) {
-        const status = statusList[i];
-        if (status.currentTimeRate < 0.95) {
-          found = videos[i];
-          foundStatus = status;
-          break;
-        }
-      }
-      if (found) {
-        recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0, source: 'favorites' });
-        usedCategoryIds.add(categoryId);
-      }
-    }
-  }
-  if (categories.length > 0) {
-    const targetNames = [];
-    const targetSummaries = [];
-    const usedNames = new Set();
-    for (const historyItem of history.slice(0, 3)) {
-      const cat = categories.find(c => c.categoryId == historyItem.categoryId);
-      if (cat) {
-        const cleanName = cat.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-        if (!usedNames.has(cleanName)) {
-          targetNames.push(cleanName);
-          usedNames.add(cleanName);
-        }
-        if (cat.summary) targetSummaries.push(cat.summary);
-      }
-    }
-    for (const categoryId of favorites.slice(0, 3)) {
-      const cat = categories.find(c => c.categoryId == categoryId);
-      if (cat) {
-        const cleanName = cat.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-        if (!usedNames.has(cleanName)) {
-          targetNames.push(cleanName);
-          usedNames.add(cleanName);
-        }
-        if (cat.summary) targetSummaries.push(cat.summary);
-      }
-    }
-    function findSimilarCourses(targetNames, allCategories, excludeIds, targetSummaries) {
-      const similarCourses = [];
-      const allScores = [];
-      const seenCategoryIds = new Set();
-      for (const category of allCategories) {
-        if (excludeIds.has(category.categoryId)) continue;
-        if (seenCategoryIds.has(category.categoryId)) continue;
-        const categoryName = category.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-        const categorySummary = (category.summary || '').replace(/\s+/g, '');
-        let maxScore = 0;
-        for (const targetName of targetNames) {
-          const score = calculateSimilarity(targetName, categoryName, category, allCategories);
-          maxScore = Math.max(maxScore, score);
-        }
-        if (targetSummaries && categorySummary) {
-          for (const targetSummary of targetSummaries) {
-            const score = calculateSimilarity(targetSummary, categorySummary, category, allCategories);
-            maxScore = Math.max(maxScore, score * 0.8);
-          }
-        }
-        allScores.push({categoryId: category.categoryId, name: categoryName, score: maxScore});
-        if (maxScore > 0.1) {
-          similarCourses.push({ category, score: maxScore });
-          seenCategoryIds.add(category.categoryId);
-        }
-      }
-      const sortedScores = allScores.sort((a, b) => b.score - a.score);
-      const result = similarCourses.sort((a, b) => b.score - a.score).slice(0, 5).map(item => item.category);
-      return result;
-    }
-    function ngrams(str, n) {
-      const s = str.replace(/\s/g, '');
-      const grams = [];
-      for (let i = 0; i < s.length - n + 1; i++) {
-        grams.push(s.slice(i, i + n));
-      }
-      return grams;
-    }
-    function jaccard(a, b) {
-      const setA = new Set(a);
-      const setB = new Set(b);
-      const intersection = new Set([...setA].filter(x => setB.has(x)));
-      const union = new Set([...setA, ...setB]);
-      return union.size === 0 ? 0 : intersection.size / union.size;
-    }
-    function levenshtein(a, b) {
-      const m = a.length, n = b.length;
-      const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-      for (let i = 0; i <= m; i++) dp[i][0] = i;
-      for (let j = 0; j <= n; j++) dp[0][j] = j;
-      for (let i = 1; i <= m; i++) {
-        for (let j = 1; j <= n; j++) {
-          if (a[i - 1] === b[j - 1]) dp[i][j] = dp[i - 1][j - 1];
-          else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-        }
-      }
-      return dp[m][n];
-    }
-    function calculateSimilarity(str1, str2, category, allCategories) {
-      const s1 = str1.toLowerCase();
-      const s2 = str2.toLowerCase();
-      let catScore = 0;
-      if (category.parentCategoryId && allCategories) {
-        for (const c of allCategories) {
-          if (c.name === str1 && c.parentCategoryId && c.parentCategoryId === category.parentCategoryId) {
-            catScore = 0.3;
-            break;
-          }
-        }
-      }
-      const ngramA = ngrams(s1, 2);
-      const ngramB = ngrams(s2, 2);
-      const ngramScore = jaccard(ngramA, ngramB);
-      const levDist = levenshtein(s1, s2);
-      const maxLen = Math.max(s1.length, s2.length);
-      const levScore = maxLen === 0 ? 0 : 1 - (levDist / maxLen);
-      let baseScore = 0;
-      if (s1 === s2) baseScore = 1.0;
-      else if (s1.includes(s2) || s2.includes(s1)) baseScore = 0.8;
-      else {
-        const words1 = s1.split(/[\s・、]/).filter(w => w.length > 1);
-        const words2 = s2.split(/[\s・、]/).filter(w => w.length > 1);
-        let commonWords = 0;
-        for (const word1 of words1) {
-          for (const word2 of words2) {
-            if (word1 === word2 || word1.includes(word2) || word2.includes(word1)) {
-              commonWords++;
-            }
-          }
-        }
-        if (commonWords > 0) baseScore = commonWords / Math.max(words1.length, words2.length);
-      }
-      return Math.max(
-        baseScore,
-        0.4 * ngramScore + 0.3 * levScore + catScore
-      );
-    }
-    const similarCategories = findSimilarCourses(targetNames, categories, usedCategoryIds, targetSummaries);
-    const uniqueSimilarCategories = [];
-    const seenIds = new Set([...usedCategoryIds]);
-    const seenNames = new Set();
-    function normalizeName(name) {
-      return name.replace(/[\s\(（\)）'’"'"0-9０-９a-zA-Zａ-ｚＡ-Ｚ]/g, '').toLowerCase();
-    }
-    for (const historyItem of history) {
-      const cat = categories.find(c => c.categoryId == historyItem.categoryId);
-      if (cat) seenNames.add(normalizeName(cat.name));
-    }
-    for (const favId of favorites) {
-      const cat = categories.find(c => c.categoryId == favId);
-      if (cat) seenNames.add(normalizeName(cat.name));
-    }
-    for (const cat of similarCategories) {
-      if (seenIds.has(cat.categoryId)) {
-        continue;
-      }
-      const normName = normalizeName(cat.name);
-      if (seenNames.has(normName)) {
-        continue;
-      }
-      uniqueSimilarCategories.push(cat);
-      seenIds.add(cat.categoryId);
-      seenNames.add(normName);
-    }
-    const historyAndFavoritesUsedCategoryIds = new Set();
-    for (const item of recommendList) {
-      if (item.source === 'history' || item.source === 'favorites') {
-        historyAndFavoritesUsedCategoryIds.add(item.categoryId);
-      }
-    }
-    let similarCount = 0;
-    for (const category of uniqueSimilarCategories) {
-      if (recommendList.length >= 12) break;
-      const categoryId = category.categoryId;
-      if (historyAndFavoritesUsedCategoryIds.has(categoryId)) {
-        continue;
-      }
-      const cacheKey = `cachedVodContents_${categoryId}`;
-      let videos = [];
-      try {
-        if (typeof window.fetchWithCache === 'function') {
-          videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
-        }
-      } catch (e) {}
-      if (!Array.isArray(videos) || !videos.length) continue;
-      const contentIds = videos.map(v => v.contentId);
-      const statusList = await window.getMultipleVideoViewingStatus(contentIds);
-      let found = null;
-      let foundStatus = null;
-      for (let i = 0; i < videos.length; i++) {
-        const status = statusList[i];
-        if (status.currentTimeRate < 0.95) {
-          found = videos[i];
-          foundStatus = status;
-          break;
-        }
-      }
-      if (found) {
-        const videoWithSource = { 
-          ...found, 
-          categoryId: categoryId, 
-          progress: foundStatus ? foundStatus.currentTimeRate : 0, 
-          source: 'similar' 
-        };
-        recommendList.push(videoWithSource);
-        usedCategoryIds.add(categoryId);
-        similarCount++;
-      }
-    }
-    if (similarCount === 0) {
-      for (const categoryId of favorites) {
-        if (recommendList.length >= 12) break;
-        if (usedCategoryIds.has(categoryId)) continue;
-        const cacheKey = `cachedVodContents_${categoryId}`;
-        let videos = [];
-        try {
-          if (typeof window.fetchWithCache === 'function') {
-            videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
-          }
-        } catch (e) {}
-        if (!Array.isArray(videos) || !videos.length) continue;
-        const contentIds = videos.map(v => v.contentId);
-        const statusList = await window.getMultipleVideoViewingStatus(contentIds);
-        let found = null;
-        let foundStatus = null;
-        for (let i = 0; i < videos.length; i++) {
-          const status = statusList[i];
-          if (status.currentTimeRate < 0.95) {
-            found = videos[i];
-            foundStatus = status;
-            break;
-          }
-        }
-        if (found) {
-          const videoWithSource = { 
-            ...found, 
-            categoryId: categoryId,
-            progress: foundStatus ? foundStatus.currentTimeRate : 0, 
-            source: 'favorites' 
-          };
-          recommendList.push(videoWithSource);
-          usedCategoryIds.add(categoryId);
-        }
-      }
-    }
-  }
-  return recommendList;
-}
-
 function renderRecommendListHtml(panel, closePanel, recommendList) {
   let categories = [];
   if (typeof window.getCategoriesData === 'function') {
@@ -1455,10 +965,283 @@ function renderRecommendListHtml(panel, closePanel, recommendList) {
   }
 }
 
-function addRecommendMenuEventListener() {
-  const recommendItem = document.getElementById('recommend-menu-item');
-  if (!recommendItem) return;
-  recommendItem.addEventListener('click', handleRecommendPanelOpen);
+// =========================
+// データ取得関数を先に配置
+// =========================
+async function createHistoryListData() {
+  let history = [];
+  try {
+    history = window.getSetting('history', []);
+  } catch (e) {
+    history = [];
+  }
+  const contentIds = history.map(item => item.contentId).filter(Boolean);
+  const videoItems = await getPanelDataVideoPattern(contentIds);
+  // contentIdでhistory情報とvideo情報をマージ
+  const validVideoItems = videoItems.map(video => {
+    const h = history.find(h => h.contentId == video.contentId) || {};
+    return { ...video, progress: h.progress, date: h.date, contentId: video.contentId };
+  });
+  const categories = await window.getCategoriesData();
+  return { history, categories, validVideoItems };
+}
+
+async function createFavoriteListData() {
+  const favorites = window.getSetting('favorites', []);
+  const { categories, idToName, items: favoriteItemsWithParent } = await getPanelDataCoursePattern(favorites);
+  function getPinnedFavorites() {
+    try {
+      return window.getSetting('pinnedFavorites', []);
+    } catch (e) {
+      return [];
+    }
+  }
+  const pinnedFavorites = getPinnedFavorites();
+  // pinned情報を付与
+  favoriteItemsWithParent.forEach(item => {
+    item.pinned = pinnedFavorites.includes(item.id);
+  });
+  return { favorites, categories, idToName, favoriteItemsWithParent };
+}
+
+async function createRecommendListData() {
+  let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
+  let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
+  const categories = await window.getCategoriesData();
+  console.log('[おすすめデバッグ] favorites:', favorites);
+  console.log('[おすすめデバッグ] history:', history);
+  console.log('[おすすめデバッグ] categories:', categories);
+
+  const historyContentIds = history.map(item => item.contentId).filter(Boolean);
+  const historyVideos = await getPanelDataVideoPattern(historyContentIds);
+  console.log('[おすすめデバッグ] historyVideos:', historyVideos);
+
+  let recommendList = [];
+  let usedCategoryIds = new Set();
+  const usedContentIds = new Set();
+  let historyRecommendCount = 0;
+  for (let i = 0; i < history.length && historyRecommendCount < 2; i++) {
+    const historyItem = history[i];
+    const { contentId, progress, date } = historyItem;
+    if (!contentId) {
+      console.log('[おすすめデバッグ] 履歴: contentIdなしで除外', historyItem);
+      continue;
+    }
+    if (usedContentIds.has(contentId)) {
+      console.log('[おすすめデバッグ] 履歴: 既にusedContentIdsに含まれているため除外', contentId);
+      continue;
+    }
+    let video = null;
+    try {
+      const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}`;
+      video = await window.fetchWithCache(url, `cachedVodContent_${contentId}`) || {};
+    } catch (e) { 
+      console.log('[おすすめデバッグ] 履歴: 動画情報取得失敗', contentId, e);
+      continue; 
+    }
+    if (!video || !video.contentId) {
+      console.log('[おすすめデバッグ] 履歴: video情報なしで除外', video);
+      continue;
+    }
+    if (progress < 0.95) {
+      console.log('[おすすめデバッグ] 履歴: progress<0.95で追加', video, 'progress:', progress);
+      recommendList.push({
+        ...video,
+        progress,
+        source: 'history',
+        dateStr: new Date(date).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+      });
+      usedContentIds.add(contentId);
+      usedCategoryIds.add(video.categoryId);
+      historyRecommendCount++;
+      continue;
+    } else {
+      const categoryId = video.categoryId;
+      if (!categoryId) {
+        console.log('[おすすめデバッグ] 履歴: categoryIdなしで除外', video);
+        continue;
+      }
+      const cacheKey = `cachedVodContents_${categoryId}`;
+      let videos = [];
+      try {
+        if (typeof window.fetchWithCache === 'function') {
+          videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
+        }
+      } catch (e) { 
+        console.log('[おすすめデバッグ] 履歴: カテゴリ動画取得失敗', categoryId, e);
+      }
+      if (!Array.isArray(videos) || !videos.length) {
+        console.log('[おすすめデバッグ] 履歴: カテゴリ内動画なしで除外', categoryId);
+        continue;
+      }
+      const idx = videos.findIndex(v => v.contentId == contentId);
+      if (idx !== -1 && idx + 1 < videos.length) {
+        const nextVideo = videos[idx + 1];
+        if (nextVideo && !usedContentIds.has(nextVideo.contentId) && !history.some(h => h.contentId == nextVideo.contentId)) {
+          console.log('[おすすめデバッグ] 履歴: 次の動画を追加', nextVideo);
+          recommendList.push({
+            ...nextVideo,
+            progress: 0,
+            source: 'history',
+            dateStr: ''
+          });
+          usedContentIds.add(nextVideo.contentId);
+          usedCategoryIds.add(nextVideo.categoryId);
+          historyRecommendCount++;
+        } else {
+          console.log('[おすすめデバッグ] 履歴: 次の動画が条件に合わず除外', nextVideo);
+        }
+      } else {
+        console.log('[おすすめデバッグ] 履歴: 次の動画なしで除外', video);
+      }
+    }
+  }
+  if (favorites.length) {
+    const historyUsedCategoryIds = new Set();
+    for (const item of recommendList) {
+      if (item.source === 'history') {
+        historyUsedCategoryIds.add(item.categoryId);
+      }
+    }
+    favorites = favorites.slice();
+    for (let i = favorites.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
+    }
+    for (const categoryId of favorites) {
+      if (recommendList.length >= 7) break;
+      if (usedCategoryIds.has(categoryId)) {
+        console.log('[おすすめデバッグ] お気に入り: 既にusedCategoryIdsに含まれているため除外', categoryId);
+        continue;
+      }
+      if (historyUsedCategoryIds.has(categoryId)) {
+        console.log('[おすすめデバッグ] お気に入り: historyUsedCategoryIdsに含まれているため除外', categoryId);
+        continue;
+      }
+      const cacheKey = `cachedVodContents_${categoryId}`;
+      let videos = [];
+      try {
+        if (typeof window.fetchWithCache === 'function') {
+          videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
+        }
+      } catch (e) {
+        console.log('[おすすめデバッグ] お気に入り: カテゴリ動画取得失敗', categoryId, e);
+      }
+      if (!Array.isArray(videos) || !videos.length) {
+        console.log('[おすすめデバッグ] お気に入り: カテゴリ内動画なしで除外', categoryId);
+        continue;
+      }
+      const contentIds = videos.map(v => v.contentId);
+      const statusList = await window.getMultipleVideoViewingStatus(contentIds);
+      let found = null;
+      let foundStatus = null;
+      for (let i = 0; i < videos.length; i++) {
+        const status = statusList[i];
+        if (status.currentTimeRate < 0.95) {
+          found = videos[i];
+          foundStatus = status;
+          console.log('[おすすめデバッグ] お気に入り: 未視聴動画を追加', found, foundStatus);
+          break;
+        } else {
+          console.log('[おすすめデバッグ] お気に入り: 視聴済みで除外', videos[i], status);
+        }
+      }
+      if (found) {
+        recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0, source: 'favorites' });
+        usedCategoryIds.add(categoryId);
+      }
+    }
+  }
+  // ...（類似コース部分も同様に詳細ログを追加可能）...
+  console.log('[おすすめデバッグ] 最終recommendList:', recommendList);
+  return recommendList;
+}
+
+// =========================
+// 履歴関連の関数群
+// =========================
+function handleHistoryPanelOpen() {
+  openPanel({
+    id: 'history-list-panel',
+    className: 'history-panel',
+    title: '履歴一覧',
+    iconHtml: getIconHtml('history'),
+    actionHtml: `<button id="clear-all-history" class="history-clear-all-btn" aria-label="履歴を全て削除" title="全削除" style="background:none;border:none;cursor:pointer;padding:0 8px;display:flex;align-items:center;">
+      ${getIconHtml('delete')}
+    </button>`,
+    searchBoxHtml: createSearchBoxHtml('history'),
+    listHtml: '',
+    closeBtnId: 'close-history-list-panel',
+    contentClass: 'history-panel-content',
+    listClass: 'history-list',
+    fetchData: createHistoryListData,
+    renderList: renderHistoryListHtml
+  });
+}
+
+// =========================
+// お気に入り関連の関数群
+// =========================
+function handleFavoritesPanelOpen() {
+  openPanel({
+    id: 'favorite-list-panel',
+    className: 'favorite-panel',
+    title: 'お気に入りコース一覧',
+    iconHtml: getIconHtml('favorite'),
+    actionHtml: '',
+    searchBoxHtml: createSearchBoxHtml('favorite'),
+    listHtml: '',
+    closeBtnId: 'close-favorite-list-panel',
+    contentClass: 'favorite-panel-content',
+    listClass: 'favorite-list',
+    fetchData: createFavoriteListData,
+    renderList: renderFavoriteListHtml
+  });
+}
+
+// =========================
+// おすすめ関連の関数群
+// =========================
+function handleRecommendPanelOpen() {
+  // ダミーカードHTML生成は従来通り
+  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const cardBg = isDark ? '#232c3a' : '#fff';
+  const cardText = isDark ? '#fff' : '#222';
+  const cardSubText = isDark ? '#b0b8c9' : '#666';
+  const barBg = isDark ? '#374151' : '#e5e7eb';
+  const thumbBg = isDark ? '#444' : '#eee';
+  const dummyCards = Array.from({ length: 5 }, (_, i) => `
+    <div class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);margin-bottom:8px;padding:0;opacity:0.7;">
+      <div style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;">
+        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;">
+          <div style="display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);animation:pulse 1.5s ease-in-out infinite;"></div>
+          <div style="font-size:10px;color:${isDark ? '#60a5fa' : '#3b82f6'};background:${isDark ? '#60a5fa20' : '#3b82f620'};padding:2px 6px;border-radius:4px;text-align:center;font-weight:500;width:fit-content;margin:0 auto;animation:pulse 1.5s ease-in-out infinite;">取得中</div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;">
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <div style="font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:18px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
+            <div style="font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:14px;background:${barBg};border-radius:4px;width:80px;animation:pulse 1.5s ease-in-out infinite;"></div>
+          </div>
+          <div style="font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;height:36px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
+          <div style="height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);animation:pulse 1.5s ease-in-out infinite;"></div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  openPanel({
+    id: 'recommend-list-panel',
+    className: 'recommend-panel',
+    title: 'おすすめ動画',
+    iconHtml: getIconHtml('recommend'),
+    actionHtml: '',
+    searchBoxHtml: '',
+    listHtml: dummyCards,
+    closeBtnId: 'close-recommend-list-panel',
+    contentClass: 'history-panel-content',
+    listClass: 'history-list',
+    fetchData: createRecommendListData,
+    renderList: renderRecommendListHtml
+  });
 }
 
 // グローバル関数として公開
