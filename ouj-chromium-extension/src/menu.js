@@ -8,6 +8,35 @@ const MENU_CONFIG = {
   ]
 };
 
+// 共通カラーパレット・スタイル値
+const COLOR_PALETTE = {
+  lightBg: '#f9fafb',
+  darkBg: '#1a2230',
+  panelBorder: '1px solid rgba(255, 255, 255, 0.2)',
+  panelShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+  blue: '#3b82f6',
+  blueDark: '#60a5fa',
+  yellow: '#ffd600',
+  red: '#dc2626',
+  gray: '#374151',
+  white: '#fff',
+  black: '#222',
+  inputBgLight: '#f9fafb',
+  inputBgDark: '#232c3a',
+  inputBorderLight: '#e5e7eb',
+  inputBorderDark: '#374151',
+};
+const STYLE_VARS = {
+  panelRadius: '12px 12px 0 0',
+  panelMinWidth: 'min(90vw, 600px)',
+  panelMinHeight: '480px',
+  panelMaxHeight: '480px',
+  panelPadding: '0',
+  zIndex: 9999,
+  transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+  backdrop: 'blur(10px)'
+};
+
 // メニューHTMLを生成する関数
 function createMenuHTML() {
   const titleHTML = `
