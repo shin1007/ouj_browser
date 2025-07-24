@@ -1624,3 +1624,13 @@ function setupPanelListItemEvents(panel, selector, { onClick, onKeydown }) {
     }
   });
 }
+
+// 汎用：パネル内検索ボックスのイベント登録
+function setupPanelSearchBox(panel, inputId, onInput) {
+  const searchInput = panel.querySelector(`#${inputId}`);
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      onInput(e.target.value);
+    });
+  }
+}
