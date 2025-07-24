@@ -1658,3 +1658,43 @@ function addRecommendMenuEventListener() {
 // グローバル関数として公開
 window.waitForLogoAndInsertMenu = waitForLogoAndInsertMenu;
 window.addHistoryEntry = addHistoryEntry;
+
+// 履歴をlocalStorageに保存する関数
+async function addHistoryEntry(contentId) {
+  if (!contentId) return;
+  // 最近の履歴追加をチェック（5秒以内の同じcontentIdは無視）
+  const lastHistoryKey = `lastHistory_${contentId}`;
+  const lastHistoryTime = window.getSetting(lastHistoryKey, 0);
+  const now = Date.now();
+  if (now - lastHistoryTime < 5000) {
+    return;
+  }
+  // 進捗取得（おすすめ機能と同じ方式）
+  let progress = 0;
+  try {
+    if (window.getVideoViewingStatus) {
+      const status = await window.getVideoViewingStatus(contentId, { cacheSeconds: 5 });
+      progress = status.currentTimeRate || 0;
+    }
+  } catch (e) {}
+  const entry = {
+    contentId,
+    date: new Date().toISOString(),
+    progress
+  };
+  let history = [];
+  try {
+    history = window.getSetting('history', []);
+  } catch (e) {
+    history = [];
+  }
+  // 既存の同じcontentIdは削除（重複防止）
+  history = history.filter(item => item.contentId !== contentId);
+  // 先頭に追加
+  history.unshift(entry);
+  // 最大30件まで
+  if (history.length > 30) history = history.slice(0, 30);
+  window.saveSetting('history', history);
+  window.saveSetting(lastHistoryKey, now);
+}
+window.addHistoryEntry = addHistoryEntry;
