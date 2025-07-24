@@ -744,30 +744,17 @@ function addHistoryMenuEventListener() {
       }
 
       // パネルHTML
-      panel.innerHTML = `
-        <div class="history-panel-header">
-          <h3 id="history-panel-title" class="history-panel-title">
-            <ion-icon name="time" class="history-panel-icon" aria-hidden="true"></ion-icon>
-            履歴一覧
-          </h3>
-          <div class="history-panel-actions">
-            <button id="clear-all-history" class="history-clear-all-btn" aria-label="履歴を全て削除" title="全削除">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
-              </svg>
-            </button>
-            <button id="close-history-list-panel" class="history-panel-close" aria-label="パネルを閉じる">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 6L6 18M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-        ${searchBoxHtml}
-        <div class="history-panel-content">
-          <ul class="history-list"></ul>
-        </div>
-      `;
+      panel.innerHTML = window.createCommonPanelHTML({
+        id: 'history-list-panel',
+        className: 'history-panel',
+        title: '履歴一覧',
+        iconHtml: '<ion-icon name="time" class="history-panel-icon" aria-hidden="true"></ion-icon>',
+        searchBoxHtml: searchBoxHtml,
+        listHtml: '', // 初回は空、後で描画
+        closeBtnId: 'close-history-list-panel',
+        contentClass: 'history-panel-content',
+        listClass: 'history-list'
+      });
       document.body.appendChild(panel);
 
       // アニメーション効果を追加
@@ -1140,20 +1127,17 @@ function addFavoritesMenuEventListener() {
       }
 
       // パネルHTML
-      panel.innerHTML = `
-        <div class="favorite-panel-header">
-          <h3 id="favorite-panel-title" class="favorite-panel-title">お気に入りコース一覧</h3>
-          <button id="close-favorite-list-panel" class="favorite-panel-close" aria-label="パネルを閉じる">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-        ${searchBoxHtml}
-        <div class="favorite-panel-content">
-          <ul class="favorite-list"></ul>
-        </div>
-      `;
+      panel.innerHTML = window.createCommonPanelHTML({
+        id: 'favorite-list-panel',
+        className: 'favorite-panel',
+        title: 'お気に入りコース一覧',
+        iconHtml: '',
+        searchBoxHtml: searchBoxHtml,
+        listHtml: '', // 初回は空、後で描画
+        closeBtnId: 'close-favorite-list-panel',
+        contentClass: 'favorite-panel-content',
+        listClass: 'favorite-list'
+      });
       document.body.appendChild(panel);
 
       // アニメーション効果を追加
@@ -1253,671 +1237,561 @@ function addFavoritesMenuEventListener() {
 // =========================
 // おすすめ関連の関数群
 // =========================
-function addRecommendMenuEventListener() {
-  const recommendItem = document.getElementById('recommend-menu-item');
-  if (!recommendItem) return;
-  recommendItem.addEventListener('click', async () => {
-    // 既存パネルがあれば削除
-    let panel = document.getElementById('recommend-list-panel');
-    if (panel) {
+function handleRecommendPanelOpen() {
+  // 既存パネルがあれば削除
+  let panel = document.getElementById('recommend-list-panel');
+  if (panel) {
+    panel.remove();
+  }
+  // パネル生成
+  panel = document.createElement('div');
+  panel.id = 'recommend-list-panel';
+  panel.className = 'recommend-panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-labelledby', 'recommend-panel-title');
+  panel.setAttribute('aria-modal', 'true');
+  // #mainの幅・スタイルを取得
+  const main = document.getElementById('main');
+  let mainWidth = '800px'; // デフォルト
+  let mainFont = '';
+  let mainFontSize = '14px'; // デフォルト
+  if (main) {
+    const style = window.getComputedStyle(main);
+    mainWidth = style.width;
+    mainFont = style.fontFamily;
+    mainFontSize = style.fontSize;
+  }
+  // モダンなスタイルを適用
+  Object.assign(panel.style, {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 'min(90vw, 600px)',
+    maxWidth: mainWidth,
+    minHeight: '480px',
+    maxHeight: '480px',
+    height: '480px',
+    background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
+    fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontSize: mainFontSize || '14px',
+    border: 'none',
+    borderRadius: '12px 12px 0 0',
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    padding: '0',
+    zIndex: '9999',
+    overflow: 'hidden',
+    opacity: '0',
+    transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255, 255, 255, 0.2)'
+  });
+  // ローディング表示（ダミーカード付き）
+  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const cardBg = isDark ? '#232c3a' : '#fff';
+  const cardText = isDark ? '#fff' : '#222';
+  const cardSubText = isDark ? '#b0b8c9' : '#666';
+  const barBg = isDark ? '#374151' : '#e5e7eb';
+  const thumbBg = isDark ? '#444' : '#eee';
+  // ダミーカードのHTML
+  const dummyCards = Array.from({ length: 5 }, (_, i) => `
+    <div class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);margin-bottom:8px;padding:0;opacity:0.7;">
+      <div style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;">
+        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;">
+          <div style="display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);animation:pulse 1.5s ease-in-out infinite;"></div>
+          <div style="font-size:10px;color:${isDark ? '#60a5fa' : '#3b82f6'};background:${isDark ? '#60a5fa20' : '#3b82f620'};padding:2px 6px;border-radius:4px;text-align:center;font-weight:500;width:fit-content;margin:0 auto;animation:pulse 1.5s ease-in-out infinite;">取得中</div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;">
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <div style="font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:18px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
+            <div style="font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:14px;background:${barBg};border-radius:4px;width:80px;animation:pulse 1.5s ease-in-out infinite;"></div>
+          </div>
+          <div style="font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;height:36px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
+          <div style="height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);animation:pulse 1.5s ease-in-out infinite;"></div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  panel.innerHTML = window.createCommonPanelHTML({
+    id: 'recommend-list-panel',
+    className: 'recommend-panel',
+    title: 'おすすめ動画',
+    iconHtml: '<ion-icon name="play" class="history-panel-icon" aria-hidden="true"></ion-icon>',
+    searchBoxHtml: '',
+    listHtml: dummyCards, // ローディング時はダミーカード
+    closeBtnId: 'close-recommend-list-panel',
+    contentClass: 'history-panel-content',
+    listClass: 'history-list'
+  });
+  document.body.appendChild(panel);
+  // アニメーション効果を追加
+  requestAnimationFrame(() => {
+    panel.style.opacity = '1';
+    panel.style.transform = 'translate(-50%, -50%) scale(1)';
+  });
+  setTimeout(() => {
+    const content = panel.querySelector('.history-panel-content');
+    if (content) {
+      // CSSファイルで設定済みのため、JavaScriptでの設定は不要
+    }
+  }, 0);
+  // パネルを閉じる共通関数
+  const closePanel = () => {
+    panel.style.opacity = '0';
+    panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
+    setTimeout(() => {
       panel.remove();
-    }
-    // パネル生成
-    panel = document.createElement('div');
-    panel.id = 'recommend-list-panel';
-    panel.className = 'recommend-panel';
-    panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-labelledby', 'recommend-panel-title');
-    panel.setAttribute('aria-modal', 'true');
-    // #mainの幅・スタイルを取得
-    const main = document.getElementById('main');
-    let mainWidth = '800px'; // デフォルト
-    let mainFont = '';
-    let mainFontSize = '14px'; // デフォルト
-    if (main) {
-      const style = window.getComputedStyle(main);
-      mainWidth = style.width;
-      mainFont = style.fontFamily;
-      mainFontSize = style.fontSize;
-    }
-    // モダンなスタイルを適用
-    Object.assign(panel.style, {
-      position: 'fixed',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      width: 'min(90vw, 600px)',
-      maxWidth: mainWidth,
-      minHeight: '480px',
-      maxHeight: '480px',
-      height: '480px',
-      background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
-      fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize: mainFontSize || '14px',
-      border: 'none',
-      borderRadius: '12px 12px 0 0',
-      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-      padding: '0',
-      zIndex: '9999',
-      overflow: 'hidden',
-      opacity: '0',
-      transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.2)'
-    });
-    // ローディング表示（ダミーカード付き）
-    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const cardBg = isDark ? '#232c3a' : '#fff';
-    const cardText = isDark ? '#fff' : '#222';
-    const cardSubText = isDark ? '#b0b8c9' : '#666';
-    const barBg = isDark ? '#374151' : '#e5e7eb';
-    const thumbBg = isDark ? '#444' : '#eee';
-    
-    // ダミーカードのHTML
-    const dummyCards = Array.from({ length: 5 }, (_, i) => `
-      <div class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);margin-bottom:8px;padding:0;opacity:0.7;">
-        <div style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;">
-          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;">
-            <div style="display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);animation:pulse 1.5s ease-in-out infinite;"></div>
-            <div style="font-size:10px;color:${isDark ? '#60a5fa' : '#3b82f6'};background:${isDark ? '#60a5fa20' : '#3b82f620'};padding:2px 6px;border-radius:4px;text-align:center;font-weight:500;width:fit-content;margin:0 auto;animation:pulse 1.5s ease-in-out infinite;">取得中</div>
-          </div>
-          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;">
-            <div style="display:flex;align-items:baseline;gap:8px;">
-              <div style="font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:18px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
-              <div style="font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:14px;background:${barBg};border-radius:4px;width:80px;animation:pulse 1.5s ease-in-out infinite;"></div>
-            </div>
-            <div style="font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;height:36px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
-            <div style="height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);animation:pulse 1.5s ease-in-out infinite;"></div>
-          </div>
-        </div>
-      </div>
-    `).join('');
-    
-    panel.innerHTML = `
-      <div class="history-panel-header">
-        <h3 id="recommend-panel-title" class="history-panel-title">
-          <ion-icon name="play" class="history-panel-icon" aria-hidden="true"></ion-icon>
-          おすすめ動画
-        </h3>
-        <button id="close-recommend-list-panel" class="history-panel-close" aria-label="パネルを閉じる">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 6L6 18M6 6l12 12"/>
-          </svg>
-        </button>
-      </div>
-      <div class="history-panel-content">
-        <div class="history-list">
-          ${dummyCards}
-        </div>
-      </div>
-      <style>
-        @keyframes pulse {
-          0%, 100% { opacity: 0.6; }
-          50% { opacity: 1; }
-        }
-      </style>
-    `;
-    document.body.appendChild(panel);
-    // アニメーション効果を追加
-    requestAnimationFrame(() => {
-      panel.style.opacity = '1';
-      panel.style.transform = 'translate(-50%, -50%) scale(1)';
-    });
-    
-    // リスト部分の高さを調整（履歴パネルと統一）
-    setTimeout(() => {
-      const content = panel.querySelector('.history-panel-content');
-      if (content) {
-        // CSSファイルで設定済みのため、JavaScriptでの設定は不要
-        // max-height: 60vh と overflow-y: auto がCSSで設定されている
-      }
-    }, 0);
-    
-    // パネルを閉じる共通関数
-    const closePanel = () => {
-      panel.style.opacity = '0';
-      panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
-      setTimeout(() => {
-        panel.remove();
-      }, 200);
-    };
-    // パネル外クリックで閉じる機能
-    const closePanelOnOutsideClick = (event) => {
-      if (document.getElementById('confirm-dialog')) return;
-      if (!panel.contains(event.target)) {
-        closePanel();
-      }
-    };
-    // エスケープキーで閉じる機能
-    const closePanelOnEscape = (event) => {
-      if (event.key === 'Escape') {
-        closePanel();
-      }
-    };
-    setTimeout(() => {
-      document.addEventListener('click', closePanelOnOutsideClick);
-      document.addEventListener('keydown', closePanelOnEscape);
-    }, 100);
-    // 閉じるボタンのイベントリスナー
-    document.getElementById('close-recommend-list-panel').onclick = () => {
+    }, 200);
+  };
+  const closePanelOnOutsideClick = (event) => {
+    if (document.getElementById('confirm-dialog')) return;
+    if (!panel.contains(event.target)) {
       closePanel();
-    };
-    // おすすめ動画リスト生成処理
-    (async () => {
-      let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
-      let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
-      
-      if (!favorites.length && !history.length) {
-        panel.querySelector('.recommend-panel-content').innerHTML = '<li class="recommend-empty">お気に入りコースと履歴がありません</li>';
-        return;
+    }
+  };
+  const closePanelOnEscape = (event) => {
+    if (event.key === 'Escape') {
+      closePanel();
+    }
+  };
+  setTimeout(() => {
+    document.addEventListener('click', closePanelOnOutsideClick);
+    document.addEventListener('keydown', closePanelOnEscape);
+  }, 100);
+  document.getElementById('close-recommend-list-panel').onclick = () => {
+    closePanel();
+  };
+  // おすすめリスト生成・描画
+  generateAndRenderRecommendList(panel, closePanel);
+}
+
+async function generateAndRenderRecommendList(panel, closePanel) {
+  let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
+  let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
+
+  if (!favorites.length && !history.length) {
+    panel.querySelector('.recommend-panel-content').innerHTML = '<li class="recommend-empty">お気に入りコースと履歴がありません</li>';
+    return;
+  }
+
+  // カテゴリリストを取得
+  let categories = [];
+  try {
+    if (typeof window.getCategoriesData === 'function') {
+      categories = await window.getCategoriesData();
+    }
+  } catch (e) { }
+
+  // 類似コース検索関数
+  function findSimilarCourses(targetNames, allCategories, excludeIds, targetSummaries) {
+    const similarCourses = [];
+    const allScores = [];
+    const seenCategoryIds = new Set();
+    for (const category of allCategories) {
+      if (excludeIds.has(category.categoryId)) continue;
+      if (seenCategoryIds.has(category.categoryId)) continue;
+      const categoryName = category.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+      const categorySummary = (category.summary || '').replace(/\s+/g, '');
+      let maxScore = 0;
+      for (const targetName of targetNames) {
+        const score = calculateSimilarity(targetName, categoryName, category, allCategories);
+        maxScore = Math.max(maxScore, score);
       }
-      
-      // カテゴリリストを取得
-      let categories = [];
+      if (targetSummaries && categorySummary) {
+        for (const targetSummary of targetSummaries) {
+          const score = calculateSimilarity(targetSummary, categorySummary, category, allCategories);
+          maxScore = Math.max(maxScore, score * 0.8);
+        }
+      }
+      allScores.push({categoryId: category.categoryId, name: categoryName, score: maxScore});
+      if (maxScore > 0.1) {
+        similarCourses.push({ category, score: maxScore });
+        seenCategoryIds.add(category.categoryId);
+      }
+    }
+    const sortedScores = allScores.sort((a, b) => b.score - a.score);
+    const result = similarCourses.sort((a, b) => b.score - a.score).slice(0, 5).map(item => item.category);
+    return result;
+  }
+  function ngrams(str, n) {
+    const s = str.replace(/\s/g, '');
+    const grams = [];
+    for (let i = 0; i < s.length - n + 1; i++) {
+      grams.push(s.slice(i, i + n));
+    }
+    return grams;
+  }
+  function jaccard(a, b) {
+    const setA = new Set(a);
+    const setB = new Set(b);
+    const intersection = new Set([...setA].filter(x => setB.has(x)));
+    const union = new Set([...setA, ...setB]);
+    return union.size === 0 ? 0 : intersection.size / union.size;
+  }
+  function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (a[i - 1] === b[j - 1]) dp[i][j] = dp[i - 1][j - 1];
+        else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+    return dp[m][n];
+  }
+  function calculateSimilarity(str1, str2, category, allCategories) {
+    const s1 = str1.toLowerCase();
+    const s2 = str2.toLowerCase();
+    let catScore = 0;
+    if (category.parentCategoryId && allCategories) {
+      for (const c of allCategories) {
+        if (c.name === str1 && c.parentCategoryId && c.parentCategoryId === category.parentCategoryId) {
+          catScore = 0.3;
+          break;
+        }
+      }
+    }
+    const ngramA = ngrams(s1, 2);
+    const ngramB = ngrams(s2, 2);
+    const ngramScore = jaccard(ngramA, ngramB);
+    const levDist = levenshtein(s1, s2);
+    const maxLen = Math.max(s1.length, s2.length);
+    const levScore = maxLen === 0 ? 0 : 1 - (levDist / maxLen);
+    let baseScore = 0;
+    if (s1 === s2) baseScore = 1.0;
+    else if (s1.includes(s2) || s2.includes(s1)) baseScore = 0.8;
+    else {
+      const words1 = s1.split(/[\s・、]/).filter(w => w.length > 1);
+      const words2 = s2.split(/[\s・、]/).filter(w => w.length > 1);
+      let commonWords = 0;
+      for (const word1 of words1) {
+        for (const word2 of words2) {
+          if (word1 === word2 || word1.includes(word2) || word2.includes(word1)) {
+            commonWords++;
+          }
+        }
+      }
+      if (commonWords > 0) baseScore = commonWords / Math.max(words1.length, words2.length);
+    }
+    return Math.max(
+      baseScore,
+      0.4 * ngramScore + 0.3 * levScore + catScore
+    );
+  }
+
+  let recommendList = [];
+  let usedCategoryIds = new Set();
+  const usedContentIds = new Set();
+  let historyRecommendCount = 0;
+  for (let i = 0; i < history.length && historyRecommendCount < 2; i++) {
+    const historyItem = history[i];
+    const { contentId, progress, date } = historyItem;
+    if (!contentId || usedContentIds.has(contentId)) {
+      continue;
+    }
+    let video = null;
+    try {
+      const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}`;
+      video = await window.fetchWithCache(url, `cachedVodContent_${contentId}`) || {};
+    } catch (e) { continue; }
+    if (!video || !video.contentId) {
+      continue;
+    }
+    if (progress < 0.95) {
+      recommendList.push({
+        ...video,
+        progress,
+        source: 'history',
+        dateStr: new Date(date).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+      });
+      usedContentIds.add(contentId);
+      usedCategoryIds.add(video.categoryId);
+      historyRecommendCount++;
+      continue;
+    } else {
+      const categoryId = video.categoryId;
+      if (!categoryId) {
+        continue;
+      }
+      const cacheKey = `cachedVodContents_${categoryId}`;
+      let videos = [];
       try {
-        if (typeof window.getCategoriesData === 'function') {
-          categories = await window.getCategoriesData();
+        if (typeof window.fetchWithCache === 'function') {
+          videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
         }
       } catch (e) { }
-      
-      // 類似コース検索関数
-      function findSimilarCourses(targetNames, allCategories, excludeIds, targetSummaries) {
-        // --- 改良版: 履歴除外＆概要も比較対象に ---
-        const similarCourses = [];
-        const allScores = [];
-        const seenCategoryIds = new Set();
-        for (const category of allCategories) {
-          if (excludeIds.has(category.categoryId)) continue;
-          if (seenCategoryIds.has(category.categoryId)) continue; // 重複除外
-          const categoryName = category.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-          const categorySummary = (category.summary || '').replace(/\s+/g, '');
-          let maxScore = 0;
-          for (const targetName of targetNames) {
-            const score = calculateSimilarity(targetName, categoryName, category, allCategories);
-            maxScore = Math.max(maxScore, score);
-          }
-          // 概要同士も比較
-          if (targetSummaries && categorySummary) {
-            for (const targetSummary of targetSummaries) {
-              const score = calculateSimilarity(targetSummary, categorySummary, category, allCategories);
-              maxScore = Math.max(maxScore, score * 0.8); // 概要はやや低めの重み
-            }
-          }
-          allScores.push({categoryId: category.categoryId, name: categoryName, score: maxScore});
-          if (maxScore > 0.1) {
-            similarCourses.push({ category, score: maxScore });
-            seenCategoryIds.add(category.categoryId);
-          }
-        }
-        // スコア分布（上位10件）
-        const sortedScores = allScores.sort((a, b) => b.score - a.score);
-        // console.log('【類似コース検索】全カテゴリ数:', allCategories.length);
-        // console.log('【類似コース検索】閾値超え候補数:', similarCourses.length);
-        // console.log('【類似コース検索】スコア上位10件:', sortedScores.slice(0, 10));
-        const result = similarCourses.sort((a, b) => b.score - a.score).slice(0, 5).map(item => item.category);
-        // console.log('【類似コース検索】最終表示件数:', result.length, result);
-        return result;
+      if (!Array.isArray(videos) || !videos.length) {
+        continue;
       }
+      const idx = videos.findIndex(v => v.contentId == contentId);
+      if (idx !== -1 && idx + 1 < videos.length) {
+        const nextVideo = videos[idx + 1];
+        if (nextVideo && !usedContentIds.has(nextVideo.contentId) && !history.some(h => h.contentId == nextVideo.contentId)) {
+          recommendList.push({
+            ...nextVideo,
+            progress: 0,
+            source: 'history',
+            dateStr: ''
+          });
+          usedContentIds.add(nextVideo.contentId);
+          usedCategoryIds.add(nextVideo.categoryId);
+          historyRecommendCount++;
+        }
+      }
+    }
+  }
 
-      // N-gram生成
-      function ngrams(str, n) {
-        const s = str.replace(/\s/g, '');
-        const grams = [];
-        for (let i = 0; i < s.length - n + 1; i++) {
-          grams.push(s.slice(i, i + n));
-        }
-        return grams;
+  if (favorites.length) {
+    const historyUsedCategoryIds = new Set();
+    for (const item of recommendList) {
+      if (item.source === 'history') {
+        historyUsedCategoryIds.add(item.categoryId);
       }
-      // Jaccard係数
-      function jaccard(a, b) {
-        const setA = new Set(a);
-        const setB = new Set(b);
-        const intersection = new Set([...setA].filter(x => setB.has(x)));
-        const union = new Set([...setA, ...setB]);
-        return union.size === 0 ? 0 : intersection.size / union.size;
-      }
-      // Levenshtein距離
-      function levenshtein(a, b) {
-        const m = a.length, n = b.length;
-        const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-        for (let i = 0; i <= m; i++) dp[i][0] = i;
-        for (let j = 0; j <= n; j++) dp[0][j] = j;
-        for (let i = 1; i <= m; i++) {
-          for (let j = 1; j <= n; j++) {
-            if (a[i - 1] === b[j - 1]) dp[i][j] = dp[i - 1][j - 1];
-            else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-          }
-        }
-        return dp[m][n];
-      }
-      // 総合類似度計算
-      function calculateSimilarity(str1, str2, category, allCategories) {
-        const s1 = str1.toLowerCase();
-        const s2 = str2.toLowerCase();
-        // 1. カテゴリ親ID一致で加点
-        let catScore = 0;
-        if (category.parentCategoryId && allCategories) {
-          for (const c of allCategories) {
-            if (c.name === str1 && c.parentCategoryId && c.parentCategoryId === category.parentCategoryId) {
-              catScore = 0.3; // 親カテゴリ一致で加点
-              break;
-            }
-          }
-        }
-        // 2. N-gram Jaccard
-        const ngramA = ngrams(s1, 2);
-        const ngramB = ngrams(s2, 2);
-        const ngramScore = jaccard(ngramA, ngramB); // 0〜1
-        // 3. Levenshtein距離（短いほど高スコア）
-        const levDist = levenshtein(s1, s2);
-        const maxLen = Math.max(s1.length, s2.length);
-        const levScore = maxLen === 0 ? 0 : 1 - (levDist / maxLen); // 0〜1
-        // 4. 既存の部分一致・共通単語スコア
-        let baseScore = 0;
-        if (s1 === s2) baseScore = 1.0;
-        else if (s1.includes(s2) || s2.includes(s1)) baseScore = 0.8;
-        else {
-          const words1 = s1.split(/[\s・、]/).filter(w => w.length > 1);
-          const words2 = s2.split(/[\s・、]/).filter(w => w.length > 1);
-          let commonWords = 0;
-          for (const word1 of words1) {
-            for (const word2 of words2) {
-              if (word1 === word2 || word1.includes(word2) || word2.includes(word1)) {
-                commonWords++;
-              }
-            }
-          }
-          if (commonWords > 0) baseScore = commonWords / Math.max(words1.length, words2.length);
-        }
-        // 5. 総合スコア（重み付けは調整可）
-        return Math.max(
-          baseScore,
-          0.4 * ngramScore + 0.3 * levScore + catScore
-        );
-      }
-      
-      let recommendList = [];
-      let usedCategoryIds = new Set(); // 重複チェック用
-      
-    // 1. 履歴（動画単位）からおすすめを生成
-    const usedContentIds = new Set();
-    let historyRecommendCount = 0;
-    for (let i = 0; i < history.length && historyRecommendCount < 2; i++) {
-        const historyItem = history[i];
-      const { contentId, progress, date } = historyItem;
-      console.log('[おすすめ履歴] i:', i, 'contentId:', contentId, 'progress:', progress, 'date:', date);
-      if (!contentId || usedContentIds.has(contentId)) {
-        console.log('[おすすめ履歴] スキップ: contentIdなし or 既出:', contentId);
+    }
+    favorites = favorites.slice();
+    for (let i = favorites.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
+    }
+    for (const categoryId of favorites) {
+      if (recommendList.length >= 7) break;
+      if (usedCategoryIds.has(categoryId)) continue;
+      if (historyUsedCategoryIds.has(categoryId)) {
         continue;
       }
-      // 動画情報取得
-      let video = null;
+      const cacheKey = `cachedVodContents_${categoryId}`;
+      let videos = [];
       try {
-        const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}`;
-        video = await window.fetchWithCache(url, `cachedVodContent_${contentId}`) || {};
-      } catch (e) { 
-        console.warn('[おすすめ履歴] 動画情報取得失敗:', contentId, e);
-        continue; 
+        if (typeof window.fetchWithCache === 'function') {
+          videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
+        }
+      } catch (e) {}
+      if (!Array.isArray(videos) || !videos.length) continue;
+      const contentIds = videos.map(v => v.contentId);
+      const statusList = await window.getMultipleVideoViewingStatus(contentIds);
+      let found = null;
+      let foundStatus = null;
+      for (let i = 0; i < videos.length; i++) {
+        const status = statusList[i];
+        if (status.currentTimeRate < 0.95) {
+          found = videos[i];
+          foundStatus = status;
+          break;
+        }
       }
-      if (!video || !video.contentId) {
-        console.log('[おすすめ履歴] 動画情報なし:', contentId);
+      if (found) {
+        recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0, source: 'favorites' });
+        usedCategoryIds.add(categoryId);
+      }
+    }
+  }
+
+  if (categories.length > 0) {
+    const targetNames = [];
+    const targetSummaries = [];
+    const usedNames = new Set();
+    for (const historyItem of history.slice(0, 3)) {
+      const cat = categories.find(c => c.categoryId == historyItem.categoryId);
+      if (cat) {
+        const cleanName = cat.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+        if (!usedNames.has(cleanName)) {
+          targetNames.push(cleanName);
+          usedNames.add(cleanName);
+        }
+        if (cat.summary) targetSummaries.push(cat.summary);
+      }
+    }
+    for (const categoryId of favorites.slice(0, 3)) {
+      const cat = categories.find(c => c.categoryId == categoryId);
+      if (cat) {
+        const cleanName = cat.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+        if (!usedNames.has(cleanName)) {
+          targetNames.push(cleanName);
+          usedNames.add(cleanName);
+        }
+        if (cat.summary) targetSummaries.push(cat.summary);
+      }
+    }
+    const similarCategories = findSimilarCourses(targetNames, categories, usedCategoryIds, targetSummaries);
+    const uniqueSimilarCategories = [];
+    const seenIds = new Set([...usedCategoryIds]);
+    const seenNames = new Set();
+    function normalizeName(name) {
+      return name.replace(/[\s\(（\)）'’"'"0-9０-９a-zA-Zａ-ｚＡ-Ｚ]/g, '').toLowerCase();
+    }
+    for (const historyItem of history) {
+      const cat = categories.find(c => c.categoryId == historyItem.categoryId);
+      if (cat) seenNames.add(normalizeName(cat.name));
+    }
+    for (const favId of favorites) {
+      const cat = categories.find(c => c.categoryId == favId);
+      if (cat) seenNames.add(normalizeName(cat.name));
+    }
+    for (const cat of similarCategories) {
+      if (seenIds.has(cat.categoryId)) {
         continue;
       }
-      console.log('[おすすめ履歴] video:', video);
-      // 進捗が0.95未満ならそのまま
-      if (progress < 0.95) {
-        console.log('[おすすめ履歴] 進捗95%未満: 同じ動画を表示 contentId:', contentId, 'progress:', progress);
-        recommendList.push({
-          ...video,
-          progress,
-          source: 'history',
-          dateStr: new Date(date).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-        });
-        usedContentIds.add(contentId);
-        usedCategoryIds.add(video.categoryId);
-        historyRecommendCount++;
-        continue; // ここで次動画処理に進まない
-      } else {
-        // 進捗95%以上なら次の動画を探す
-        console.log('[おすすめ履歴] 進捗95%以上: 次動画を探す contentId:', contentId, 'progress:', progress);
-        // コース内動画リスト取得
-        const categoryId = video.categoryId;
-        if (!categoryId) {
-          console.log('[おすすめ履歴] categoryIdなし: contentId:', contentId);
-          continue;
+      const normName = normalizeName(cat.name);
+      if (seenNames.has(normName)) {
+        continue;
+      }
+      uniqueSimilarCategories.push(cat);
+      seenIds.add(cat.categoryId);
+      seenNames.add(normName);
+    }
+    const historyAndFavoritesUsedCategoryIds = new Set();
+    for (const item of recommendList) {
+      if (item.source === 'history' || item.source === 'favorites') {
+        historyAndFavoritesUsedCategoryIds.add(item.categoryId);
+      }
+    }
+    let similarCount = 0;
+    for (const category of uniqueSimilarCategories) {
+      if (recommendList.length >= 12) break;
+      const categoryId = category.categoryId;
+      if (historyAndFavoritesUsedCategoryIds.has(categoryId)) {
+        continue;
+      }
+      const cacheKey = `cachedVodContents_${categoryId}`;
+      let videos = [];
+      try {
+        if (typeof window.fetchWithCache === 'function') {
+          videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
         }
+      } catch (e) {}
+      if (!Array.isArray(videos) || !videos.length) continue;
+      const contentIds = videos.map(v => v.contentId);
+      const statusList = await window.getMultipleVideoViewingStatus(contentIds);
+      let found = null;
+      let foundStatus = null;
+      for (let i = 0; i < videos.length; i++) {
+        const status = statusList[i];
+        if (status.currentTimeRate < 0.95) {
+          found = videos[i];
+          foundStatus = status;
+          break;
+        }
+      }
+      if (found) {
+        const videoWithSource = { 
+          ...found, 
+          categoryId: categoryId, 
+          progress: foundStatus ? foundStatus.currentTimeRate : 0, 
+          source: 'similar' 
+        };
+        recommendList.push(videoWithSource);
+        usedCategoryIds.add(categoryId);
+        similarCount++;
+      }
+    }
+    if (similarCount === 0) {
+      for (const categoryId of favorites) {
+        if (recommendList.length >= 12) break;
+        if (usedCategoryIds.has(categoryId)) continue;
         const cacheKey = `cachedVodContents_${categoryId}`;
         let videos = [];
         try {
           if (typeof window.fetchWithCache === 'function') {
             videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
           }
-        } catch (e) { console.warn('[おすすめ履歴] コース動画リスト取得失敗:', categoryId, e); }
-        if (!Array.isArray(videos) || !videos.length) {
-          console.log('[おすすめ履歴] コース動画リスト空:', categoryId);
-          continue;
-        }
-        // 現在の動画の次の動画を探す
-        const idx = videos.findIndex(v => v.contentId == contentId);
-        console.log('[おすすめ履歴] コース内idx:', idx, 'videos:', videos.map(v => v.contentId));
-        if (idx !== -1 && idx + 1 < videos.length) {
-          const nextVideo = videos[idx + 1];
-          if (nextVideo && !usedContentIds.has(nextVideo.contentId) && !history.some(h => h.contentId == nextVideo.contentId)) {
-            console.log('[おすすめ履歴] 次動画を追加:', nextVideo.contentId);
-            recommendList.push({
-              ...nextVideo,
-              progress: 0,
-              source: 'history',
-              dateStr: ''
-            });
-            usedContentIds.add(nextVideo.contentId);
-            usedCategoryIds.add(nextVideo.categoryId);
-            historyRecommendCount++;
-          } else {
-            console.log('[おすすめ履歴] 次動画が既に履歴or追加済み:', nextVideo && nextVideo.contentId);
+        } catch (e) {}
+        if (!Array.isArray(videos) || !videos.length) continue;
+        const contentIds = videos.map(v => v.contentId);
+        const statusList = await window.getMultipleVideoViewingStatus(contentIds);
+        let found = null;
+        let foundStatus = null;
+        for (let i = 0; i < videos.length; i++) {
+          const status = statusList[i];
+          if (status.currentTimeRate < 0.95) {
+            found = videos[i];
+            foundStatus = status;
+            break;
           }
-        } else {
-          console.log('[おすすめ履歴] 次動画なし:', contentId);
         }
+        if (found) {
+          const videoWithSource = { 
+            ...found, 
+            categoryId: categoryId,
+            progress: foundStatus ? foundStatus.currentTimeRate : 0, 
+            source: 'favorites' 
+          };
+          recommendList.push(videoWithSource);
+          usedCategoryIds.add(categoryId);
         }
       }
-      
-      // 2. お気に入りから5個を追加（履歴で使用済みのコースは除外）
-      if (favorites.length) {
-        // 履歴で使用済みのコースIDを収集
-        const historyUsedCategoryIds = new Set();
-        for (const item of recommendList) {
-          if (item.source === 'history') {
-            historyUsedCategoryIds.add(item.categoryId);
-          }
-        }
-        
-        // シャッフル
-        favorites = favorites.slice();
-        for (let i = favorites.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
-        }
-        
-        for (const categoryId of favorites) {
-          if (recommendList.length >= 7) break; // 履歴2個 + お気に入り5個まで
-          if (usedCategoryIds.has(categoryId)) continue; // 重複チェック
-          if (historyUsedCategoryIds.has(categoryId)) {
-            // console.log('お気に入りコースが履歴と重複のため除外:', categoryId);
-            continue; // 履歴で使用済みのコースは除外
-          }
-          
-          // コース内動画リスト取得
-          const cacheKey = `cachedVodContents_${categoryId}`;
-          let videos = [];
-          try {
-            if (typeof window.fetchWithCache === 'function') {
-              videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
-            }
-          } catch (e) {}
-          if (!Array.isArray(videos) || !videos.length) continue;
-          
-          // 進捗95%未満の最初の動画を探す（並列取得）
-          const contentIds = videos.map(v => v.contentId);
-          const statusList = await window.getMultipleVideoViewingStatus(contentIds);
-          let found = null;
-          let foundStatus = null;
-          for (let i = 0; i < videos.length; i++) {
-            const status = statusList[i];
-            if (status.currentTimeRate < 0.95) {
-              found = videos[i];
-              foundStatus = status;
-              break;
-            }
-          }
-          if (found) {
-            recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0, source: 'favorites' });
-            usedCategoryIds.add(categoryId);
-          }
-        }
-      }
-      
-      // 3. 類似コースから5個を追加（動画レベルでの重複を避ける）
-      if (categories.length > 0) {
-        // 履歴とお気に入りのコース名・概要を収集
-        const targetNames = [];
-        const targetSummaries = [];
-        const usedNames = new Set();
-        for (const historyItem of history.slice(0, 3)) {
-          const cat = categories.find(c => c.categoryId == historyItem.categoryId);
-          if (cat) {
-            const cleanName = cat.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-            if (!usedNames.has(cleanName)) {
-              targetNames.push(cleanName);
-              usedNames.add(cleanName);
-            }
-            if (cat.summary) targetSummaries.push(cat.summary);
-          }
-        }
-        for (const categoryId of favorites.slice(0, 3)) {
-          const cat = categories.find(c => c.categoryId == categoryId);
-          if (cat) {
-            const cleanName = cat.name.replace(/^[0-9]+\s*/, '').replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-            if (!usedNames.has(cleanName)) {
-              targetNames.push(cleanName);
-              usedNames.add(cleanName);
-            }
-            if (cat.summary) targetSummaries.push(cat.summary);
-          }
-        }
-        // usedCategoryIds（履歴・お気に入り）を除外対象に
-        const similarCategories = findSimilarCourses(targetNames, categories, usedCategoryIds, targetSummaries);
-        // 類似コースの重複・履歴・お気に入りとの重複を徹底除外
-        const uniqueSimilarCategories = [];
-        const seenIds = new Set([...usedCategoryIds]);
-        const seenNames = new Set();
-        let idDupCount = 0, nameDupCount = 0;
-        function normalizeName(name) {
-          return name.replace(/[\s\(（\)）'’'"'"0-9０-９a-zA-Zａ-ｚＡ-Ｚ]/g, '').toLowerCase();
-        }
-        // 履歴・お気に入りのコース名（正規化）も重複除外対象に追加
-        for (const historyItem of history) {
-          const cat = categories.find(c => c.categoryId == historyItem.categoryId);
-          if (cat) seenNames.add(normalizeName(cat.name));
-        }
-        for (const favId of favorites) {
-          const cat = categories.find(c => c.categoryId == favId);
-          if (cat) seenNames.add(normalizeName(cat.name));
-        }
-        for (const cat of similarCategories) {
-          if (seenIds.has(cat.categoryId)) {
-            idDupCount++;
-            // console.log('【類似コース重複除外:ID】categoryId:', cat.categoryId, cat.name);
-            continue;
-          }
-          const normName = normalizeName(cat.name);
-          if (seenNames.has(normName)) {
-            nameDupCount++;
-            // console.log('【類似コース重複除外:コース名】', cat.name);
-            continue;
-          }
-          uniqueSimilarCategories.push(cat);
-          seenIds.add(cat.categoryId);
-          seenNames.add(normName);
-        }
-        // console.log('【類似コース重複除外:ID件数】', idDupCount);
-        // console.log('【類似コース重複除外:コース名件数】', nameDupCount);
-        // console.log('【類似コース最終表示リスト】', uniqueSimilarCategories);
-        
-        // 履歴とお気に入りで使用済みのコースIDを収集
-        const historyAndFavoritesUsedCategoryIds = new Set();
-        for (const item of recommendList) {
-          if (item.source === 'history' || item.source === 'favorites') {
-            historyAndFavoritesUsedCategoryIds.add(item.categoryId);
-          }
-        }
-        
-        let similarCount = 0;
-        for (const category of uniqueSimilarCategories) {
-          if (recommendList.length >= 12) break; // 履歴2個 + お気に入り5個 + 類似5個まで
-          
-          const categoryId = category.categoryId;
-          if (historyAndFavoritesUsedCategoryIds.has(categoryId)) {
-            // console.log('類似コースが履歴・お気に入りと重複のため除外:', categoryId);
-            continue; // 履歴・お気に入りで使用済みのコースは除外
-          }
-          
-          // コース内動画リスト取得
-          const cacheKey = `cachedVodContents_${categoryId}`;
-          let videos = [];
-          try {
-            if (typeof window.fetchWithCache === 'function') {
-              videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
-            }
-          } catch (e) {}
-          if (!Array.isArray(videos) || !videos.length) continue;
-          
-          // 進捗95%未満の最初の動画を探す（並列取得）
-          const contentIds = videos.map(v => v.contentId);
-          const statusList = await window.getMultipleVideoViewingStatus(contentIds);
-          let found = null;
-          let foundStatus = null;
-          for (let i = 0; i < videos.length; i++) {
-            const status = statusList[i];
-            if (status.currentTimeRate < 0.95) {
-              found = videos[i];
-              foundStatus = status;
-              break;
-            }
-          }
-          if (found) {
-            const videoWithSource = { 
-              ...found, 
-              categoryId: categoryId, // 明示的にcategoryIdを設定
-              progress: foundStatus ? foundStatus.currentTimeRate : 0, 
-              source: 'similar' 
-            };
-            // console.log('類似コース動画データ:', videoWithSource);
-            recommendList.push(videoWithSource);
-            usedCategoryIds.add(categoryId); // コースレベルでの重複チェック
-            similarCount++;
-          }
-        }
-        
-        // 類似コースが見つからない場合のフォールバック
-        if (similarCount === 0) {
-          // console.log('類似コースが見つからないため、お気に入りから追加の動画を取得');
-          // お気に入りから追加の動画を取得（重複を避けて）
-          for (const categoryId of favorites) {
-            if (recommendList.length >= 12) break;
-            if (usedCategoryIds.has(categoryId)) continue;
-            
-            const cacheKey = `cachedVodContents_${categoryId}`;
-            let videos = [];
-            try {
-              if (typeof window.fetchWithCache === 'function') {
-                videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
-              }
-            } catch (e) {}
-            if (!Array.isArray(videos) || !videos.length) continue;
-            
-            const contentIds = videos.map(v => v.contentId);
-            const statusList = await window.getMultipleVideoViewingStatus(contentIds);
-            let found = null;
-            let foundStatus = null;
-            for (let i = 0; i < videos.length; i++) {
-              const status = statusList[i];
-              if (status.currentTimeRate < 0.95) {
-                found = videos[i];
-                foundStatus = status;
-                break;
-              }
-            }
-            if (found) {
-              const videoWithSource = { 
-                ...found, 
-                categoryId: categoryId,
-                progress: foundStatus ? foundStatus.currentTimeRate : 0, 
-                source: 'favorites' 
-              };
-              // console.log('フォールバック動画データ:', videoWithSource);
-              recommendList.push(videoWithSource);
-              usedCategoryIds.add(categoryId);
-            }
-          }
-        }
-      }
-    let isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    let listHtml = recommendList.map(item => {
-      // サムネイル画像
-      let thumb = '';
-      if (item.contentId) {
-        thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail/large2`;
-      }
-      if (!thumb) {
-        thumb = item.thumbnailUrl || item.imageUrl || '';
-      }
-      if (!thumb && item.contentId) {
-        thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail`;
-      }
-      // コース名（カテゴリ名）
-      let courseName = '';
-      if (Array.isArray(categories) && item.categoryId) {
-        const cat = categories.find(c => c.categoryId == item.categoryId);
-        courseName = cat ? cat.name : '';
-        courseName = courseName.replace(/^[0-9]+\s*/, '');
-        courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-      }
-      // ソース表示（履歴 or お気に入り or 類似）
-      let sourceLabel = '', sourceColor = '';
-      if (item.source === 'history') {
-        sourceLabel = '履歴';
-        sourceColor = isDark ? '#60a5fa' : '#3b82f6';
-      } else if (item.source === 'favorites') {
-        sourceLabel = 'お気に入り';
-        sourceColor = isDark ? '#fbbf24' : '#f59e0b';
-      } else if (item.source === 'similar') {
-        sourceLabel = '類似';
-        sourceColor = isDark ? '#10b981' : '#059669';
-      }
-      // summary
-      const summary = item.summary || '';
-        // 進捗バー
-        let progress = item.progress || 0;
-      const dateStr = item.dateStr || '';
-      // おすすめカードは削除ボタンなし
-      return renderVideoCard({
-        contentId: item.contentId,
-        categoryId: item.categoryId,
-        title: item.title,
-        courseName,
-        summary,
-        progress,
-        dateStr,
-        showDelete: false,
-        cardType: 'recommend',
-        isDark,
-        sourceLabel,
-        sourceColor
-      });
-    }).join('');
-    if (!listHtml) listHtml = `<div class=\"history-empty\" style=\"color:${isDark ? '#fff' : '#222'};padding:16px;text-align:center;\">おすすめ動画はありません（全て再生済み）</div>`;
-    panel.querySelector('.history-panel-content').innerHTML = `<div class=\"history-list\">${listHtml}</div>`;
-
-    // 追加: リンククリックでパネルを閉じる
-    const recommendLinks = panel.querySelectorAll('.recommend-card');
-    recommendLinks.forEach(link => {
-      link.addEventListener('click', () => {
-        // パネルを閉じる
-        closePanel();
-      });
-    });
-
-    // おすすめカード描画直前で全件出力
-    console.log('[おすすめ描画] recommendList:', recommendList.map(item => ({
+    }
+  }
+  let isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  let listHtml = recommendList.map(item => {
+    let thumb = '';
+    if (item.contentId) {
+      thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail/large2`;
+    }
+    if (!thumb) {
+      thumb = item.thumbnailUrl || item.imageUrl || '';
+    }
+    if (!thumb && item.contentId) {
+      thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail`;
+    }
+    let courseName = '';
+    if (Array.isArray(categories) && item.categoryId) {
+      const cat = categories.find(c => c.categoryId == item.categoryId);
+      courseName = cat ? cat.name : '';
+      courseName = courseName.replace(/^[0-9]+\s*/, '');
+      courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+    }
+    let sourceLabel = '', sourceColor = '';
+    if (item.source === 'history') {
+      sourceLabel = '履歴';
+      sourceColor = isDark ? '#60a5fa' : '#3b82f6';
+    } else if (item.source === 'favorites') {
+      sourceLabel = 'お気に入り';
+      sourceColor = isDark ? '#fbbf24' : '#f59e0b';
+    } else if (item.source === 'similar') {
+      sourceLabel = '類似';
+      sourceColor = isDark ? '#10b981' : '#059669';
+    }
+    const summary = item.summary || '';
+    let progress = item.progress || 0;
+    const dateStr = item.dateStr || '';
+    return renderVideoCard({
       contentId: item.contentId,
-      source: item.source,
-      progress: item.progress,
+      categoryId: item.categoryId,
       title: item.title,
-      dateStr: item.dateStr
-    })));
-    })();
+      courseName,
+      summary,
+      progress,
+      dateStr,
+      showDelete: false,
+      cardType: 'recommend',
+      isDark,
+      sourceLabel,
+      sourceColor
+    });
+  }).join('');
+  if (!listHtml) listHtml = `<div class=\"history-empty\" style=\"color:${isDark ? '#fff' : '#222'};padding:16px;text-align:center;\">おすすめ動画はありません（全て再生済み）</div>`;
+  panel.querySelector('.history-panel-content').innerHTML = `<div class=\"history-list\">${listHtml}</div>`;
+  const recommendLinks = panel.querySelectorAll('.recommend-card');
+  recommendLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      closePanel();
+    });
   });
+  console.log('[おすすめ描画] recommendList:', recommendList.map(item => ({
+    contentId: item.contentId,
+    source: item.source,
+    progress: item.progress,
+    title: item.title,
+    dateStr: item.dateStr
+  })));
+}
+
+function addRecommendMenuEventListener() {
+  const recommendItem = document.getElementById('recommend-menu-item');
+  if (!recommendItem) return;
+  recommendItem.addEventListener('click', handleRecommendPanelOpen);
 }
 
 // グローバル関数として公開

@@ -582,6 +582,40 @@ const closeNotification = (notification) => {
     }, 300);
 };
 
+/**
+ * 共通パネルHTML生成
+ * @param {Object} options
+ *   - id: パネルID
+ *   - className: パネルクラス
+ *   - title: タイトル
+ *   - iconHtml: アイコンHTML（任意）
+ *   - searchBoxHtml: 検索ボックスHTML（任意）
+ *   - listHtml: リストHTML
+ *   - closeBtnId: 閉じるボタンID
+ *   - contentClass: リストラッパークラス
+ *   - listClass: リストul/divのクラス
+ * @returns {string} パネルHTML
+ */
+function createCommonPanelHTML({ id, className, title, iconHtml = '', searchBoxHtml = '', listHtml, closeBtnId, contentClass, listClass }) {
+  return `
+    <div class="${className}-header">
+      <h3 id="${id}-title" class="${className}-title">
+        ${iconHtml ? iconHtml : ''}
+        ${title}
+      </h3>
+      <button id="${closeBtnId}" class="${className}-close" aria-label="パネルを閉じる">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    ${searchBoxHtml}
+    <div class="${contentClass}">
+      <ul class="${listClass}">${listHtml}</ul>
+    </div>
+  `;
+}
+
 // 便利な関数
 const showSuccessNotification = (message, duration = 3000) => {
     return showNotification(message, 'success', duration);
@@ -779,6 +813,7 @@ window.showErrorNotification = showErrorNotification;
 window.showWarningNotification = showWarningNotification;
 window.showInfoNotification = showInfoNotification;
 window.showConfirmDialog = showConfirmDialog;
+window.createCommonPanelHTML = createCommonPanelHTML;
 
 // 初期化完了を通知
 // console.log('helpers.js: 共通関数の初期化が完了しました');
