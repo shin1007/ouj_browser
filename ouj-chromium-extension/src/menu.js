@@ -1687,3 +1687,57 @@ function getIconHtml(type) {
       return '';
   }
 }
+
+// データ取得・整形の共通化
+// 動画パターン（履歴・おすすめ）
+async function getPanelDataVideoPattern(ids, { getStatus = null } = {}) {
+  // ids: contentIdの配列
+  const results = await Promise.all(ids.map(async (contentId) => {
+    let video = null;
+    try {
+      const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}`;
+      video = await window.fetchWithCache(url, `cachedVodContent_${contentId}`) || {};
+      if (!video.title) throw new Error('動画情報取得失敗');
+    } catch (e) {
+      return null;
+    }
+    let status = null;
+    if (getStatus) {
+      try {
+        status = await getStatus(contentId);
+      } catch (e) {}
+    }
+    return { ...video, status };
+  }));
+  return results.filter(Boolean);
+}
+// コースパターン（お気に入り）
+async function getPanelDataCoursePattern(ids) {
+  // ids: categoryIdの配列
+  const result = await chrome.storage.local.get(['cachedCategoriesData']);
+  const cachedData = result.cachedCategoriesData;
+  let categories = [];
+  if (cachedData && cachedData.data) {
+    categories = cachedData.data;
+  } else {
+    categories = await window.getCategoriesData();
+  }
+  if (!Array.isArray(categories)) categories = [];
+  const idToName = {};
+  categories.forEach(cat => {
+    idToName[cat.categoryId] = cat.name;
+    idToName[cat.categoryId.toString()] = cat.name;
+  });
+  const items = await Promise.all(ids.map(async (id) => {
+    const categoryName = idToName[id];
+    const parentCategoryName = await window.getParentCategoryName(id);
+    const displayName = categoryName || `不明なコース (ID: ${id})`;
+    return {
+      id: id,
+      categoryName: displayName,
+      parentCategoryName: parentCategoryName || 'その他',
+      hasParent: !!parentCategoryName
+    };
+  }));
+  return { categories, idToName, items };
+}
