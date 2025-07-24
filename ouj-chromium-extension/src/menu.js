@@ -551,28 +551,14 @@ async function createHistoryListData() {
   } catch (e) {
     history = [];
   }
+  const contentIds = history.map(item => item.contentId).filter(Boolean);
+  const videoItems = await getPanelDataVideoPattern(contentIds);
+  // contentIdでhistory情報とvideo情報をマージ
+  const validVideoItems = videoItems.map(video => {
+    const h = history.find(h => h.contentId == video.contentId) || {};
+    return { ...video, progress: h.progress, date: h.date, contentId: video.contentId };
+  });
   const categories = await window.getCategoriesData();
-  const videoItems = await Promise.all(history.map(async (item) => {
-    if (!item.contentId) return null;
-    let video = null;
-    try {
-      const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}`;
-      video = await window.fetchWithCache(url, `cachedVodContent_${item.contentId}`) || {};
-      if (!video.title) throw new Error('動画情報取得失敗');
-    } catch (e) {
-      let history = [];
-      try {
-        history = window.getSetting('history', []);
-      } catch (e) {
-        history = [];
-      }
-      history = history.filter(h => h.contentId !== item.contentId);
-      window.saveSetting('history', history);
-      return null;
-    }
-    return { ...item, video };
-  }));
-  const validVideoItems = videoItems.filter(Boolean);
   return { history, categories, validVideoItems };
 }
 
@@ -585,27 +571,26 @@ function renderHistoryListHtml(panel, closePanel, { history, categories, validVi
     if (history.length) {
       const filteredItems = filter.trim() ? validVideoItems.filter(item => {
         const keyword = filter.trim().toLowerCase();
-        return (item.video.title || '').toLowerCase().includes(keyword) || (item.video.categoryId && Array.isArray(categories) && categories.find(c => c.categoryId == item.video.categoryId)?.name?.toLowerCase().includes(keyword));
+        return (item.title || '').toLowerCase().includes(keyword) || (item.categoryId && Array.isArray(categories) && categories.find(c => c.categoryId == item.categoryId)?.name?.toLowerCase().includes(keyword));
       }) : validVideoItems;
       const sortedItems = filteredItems.sort((a, b) => new Date(b.date) - new Date(a.date));
       listHtml = sortedItems.map(item => {
-        const video = item.video;
-        const title = video.title || `動画 (ID: ${item.contentId})`;
+        const title = item.title || `動画 (ID: ${item.contentId})`;
         let courseName = '';
-        if (video.categoryId && Array.isArray(categories)) {
-          const cat = categories.find(c => c.categoryId == video.categoryId);
+        if (item.categoryId && Array.isArray(categories)) {
+          const cat = categories.find(c => c.categoryId == item.categoryId);
           courseName = cat ? cat.name : '';
           courseName = courseName.replace(/^[0-9]+\s*/, '');
           courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
         }
-        const summary = video.summary || '';
+        const summary = item.summary || '';
         const progress = item.progress || 0;
         const date = new Date(item.date);
         const dateStr = date.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
         const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         return renderVideoCard({
           contentId: item.contentId,
-          categoryId: video.categoryId,
+          categoryId: item.categoryId,
           title,
           courseName,
           summary,
@@ -791,20 +776,7 @@ async function generateAndRenderFavoriteList(panel, closePanel) {
 // お気に入りリストの取得・整形
 async function createFavoriteListData() {
   const favorites = window.getSetting('favorites', []);
-  const result = await chrome.storage.local.get(['cachedCategoriesData']);
-  const cachedData = result.cachedCategoriesData;
-  let categories = [];
-  if (cachedData && cachedData.data) {
-    categories = cachedData.data;
-  } else {
-    categories = await window.getCategoriesData();
-  }
-  if (!Array.isArray(categories)) categories = [];
-  const idToName = {};
-  categories.forEach(cat => {
-    idToName[cat.categoryId] = cat.name;
-    idToName[cat.categoryId.toString()] = cat.name;
-  });
+  const { categories, idToName, items: favoriteItemsWithParent } = await getPanelDataCoursePattern(favorites);
   function getPinnedFavorites() {
     try {
       return window.getSetting('pinnedFavorites', []);
@@ -813,18 +785,10 @@ async function createFavoriteListData() {
     }
   }
   const pinnedFavorites = getPinnedFavorites();
-  const favoriteItemsWithParent = await Promise.all(favorites.map(async (id) => {
-    const categoryName = idToName[id];
-    const parentCategoryName = await window.getParentCategoryName(id);
-    const displayName = categoryName || `不明なコース (ID: ${id})`;
-    return {
-      id: id,
-      categoryName: displayName,
-      parentCategoryName: parentCategoryName || 'その他',
-      hasParent: !!parentCategoryName,
-      pinned: pinnedFavorites.includes(id)
-    };
-  }));
+  // pinned情報を付与
+  favoriteItemsWithParent.forEach(item => {
+    item.pinned = pinnedFavorites.includes(item.id);
+  });
   return { favorites, categories, idToName, favoriteItemsWithParent };
 }
 
@@ -1072,12 +1036,11 @@ async function generateAndRenderRecommendList(panel, closePanel) {
 async function createRecommendListData() {
   let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
   let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
-  let categories = [];
-  try {
-    if (typeof window.getCategoriesData === 'function') {
-      categories = await window.getCategoriesData();
-    }
-  } catch (e) { }
+  const categories = await window.getCategoriesData();
+  // おすすめ生成ロジックの中でcontentId配列を作る部分でgetPanelDataVideoPatternを活用できる箇所があれば適用
+  // ここでは例として、historyから未視聴動画を抽出する部分を共通化
+  const historyContentIds = history.map(item => item.contentId).filter(Boolean);
+  const historyVideos = await getPanelDataVideoPattern(historyContentIds);
   let recommendList = [];
   let usedCategoryIds = new Set();
   const usedContentIds = new Set();
