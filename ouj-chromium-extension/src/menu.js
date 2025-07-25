@@ -686,6 +686,8 @@ function renderHistoryListHtml(panel, closePanel, { history, categories, validVi
         }
         history = history.filter(item => item.contentId !== contentId);
         window.saveSetting('history', history);
+        // 履歴削除後におすすめリストをプリフェッチ
+        prefetchRecommendListData();
         const card = btn.closest('.recommend-card');
         if (card) {
           card.remove();
@@ -1020,58 +1022,32 @@ async function createFavoriteListData() {
   return { favorites, categories, idToName, favoriteItemsWithParent };
 }
 
-async function createRecommendListData() {
-  // =============================
-  // おすすめ動画リスト選定ロジック
-  // =============================
-  // 1. おすすめリスト・使用済みIDセットを初期化
+// =========================
+// おすすめ動画リスト分割取得関数
+// =========================
+
+/**
+ * 履歴から最大2件（2コース）を選定
+ * @param {Array} history
+ * @returns {Array} recommendList, usedCategoryIds, usedContentIds
+ */
+async function getRecommendFromHistory(history) {
   let recommendList = [];
   let usedCategoryIds = new Set();
-  const usedContentIds = new Set();
-  
-  // 2. お気に入り・履歴・カテゴリ情報を取得
-  let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
-  let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
-  const categories = await window.getCategoriesData();
-  // console.log('[おすすめデバッグ] favorites:', favorites);
-  // console.log('[おすすめデバッグ] history:', history);
-  // console.log('[おすすめデバッグ] categories:', categories);
-
-  // 3. 履歴のcontentIdから動画情報を取得
-  const historyContentIds = history.map(item => item.contentId).filter(Boolean);
-  const historyVideos = await getPanelDataVideoPattern(historyContentIds);
-  // console.log('[おすすめデバッグ] historyVideos:', historyVideos);
-
-  // 4. 履歴からのおすすめ（最大2件）
-  //   - 進捗0.95未満の未視聴動画はそのまま追加
-  //   - 進捗0.95以上（見終わった動画）は、同カテゴリ内の次動画（未視聴）を探して追加
-
-  let historyRecommendCount = 0;
-  for (let i = 0; i < history.length && historyRecommendCount < 2; i++) {
+  let usedContentIds = new Set();
+  let count = 0;
+  for (let i = 0; i < history.length && count < 2; i++) {
     const historyItem = history[i];
     const { contentId, progress, date } = historyItem;
-    if (!contentId) {
-      // console.log('[おすすめデバッグ] 履歴: contentIdなしで除外', historyItem);
-      continue;
-    }
-    if (usedContentIds.has(contentId)) {
-      // console.log('[おすすめデバッグ] 履歴: 既にusedContentIdsに含まれているため除外', contentId);
-      continue;
-    }
+    if (!contentId) continue;
+    if (usedContentIds.has(contentId)) continue;
     let video = null;
     try {
       const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}`;
       video = await window.fetchWithCache(url, `cachedVodContent_${contentId}`) || {};
-    } catch (e) { 
-      // console.log('[おすすめデバッグ] 履歴: 動画情報取得失敗', contentId, e);
-      continue; 
-    }
-    if (!video || !video.contentId) {
-      // console.log('[おすすめデバッグ] 履歴: video情報なしで除外', video);
-      continue;
-    }
+    } catch (e) { continue; }
+    if (!video || !video.contentId) continue;
     if (progress < 0.95) {
-      // console.log('[おすすめデバッグ] 履歴: progress<0.95で追加', video, 'progress:', progress);
       recommendList.push({
         ...video,
         progress,
@@ -1080,32 +1056,23 @@ async function createRecommendListData() {
       });
       usedContentIds.add(contentId);
       usedCategoryIds.add(video.categoryId);
-      historyRecommendCount++;
+      count++;
       continue;
     } else {
       const categoryId = video.categoryId;
-      if (!categoryId) {
-        // console.log('[おすすめデバッグ] 履歴: categoryIdなしで除外', video);
-        continue;
-      }
+      if (!categoryId) continue;
       const cacheKey = `cachedVodContents_${categoryId}`;
       let videos = [];
       try {
         if (typeof window.fetchWithCache === 'function') {
           videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
         }
-      } catch (e) { 
-        // console.log('[おすすめデバッグ] 履歴: カテゴリ動画取得失敗', categoryId, e);
-      }
-      if (!Array.isArray(videos) || !videos.length) {
-        // console.log('[おすすめデバッグ] 履歴: カテゴリ内動画なしで除外', categoryId);
-        continue;
-      }
+      } catch (e) {}
+      if (!Array.isArray(videos) || !videos.length) continue;
       const idx = videos.findIndex(v => v.contentId == contentId);
       if (idx !== -1 && idx + 1 < videos.length) {
         const nextVideo = videos[idx + 1];
         if (nextVideo && !usedContentIds.has(nextVideo.contentId) && !history.some(h => h.contentId == nextVideo.contentId)) {
-          // console.log('[おすすめデバッグ] 履歴: 次の動画を追加', nextVideo);
           recommendList.push({
             ...nextVideo,
             progress: 0,
@@ -1114,82 +1081,122 @@ async function createRecommendListData() {
           });
           usedContentIds.add(nextVideo.contentId);
           usedCategoryIds.add(nextVideo.categoryId);
-          historyRecommendCount++;
-        } else {
-          // console.log('[おすすめデバッグ] 履歴: 次の動画が条件に合わず除外', nextVideo);
+          count++;
         }
-      } else {
-        // console.log('[おすすめデバッグ] 履歴: 次の動画なしで除外', video);
       }
     }
   }
-  // 5. お気に入りからのおすすめ
-  //   - お気に入りカテゴリをランダムにシャッフル
-  //   - すでにおすすめに入っているカテゴリや履歴で使われたカテゴリは除外
-  //   - そのカテゴリ内で未視聴（進捗0.95未満）の動画を探して追加
-  if (favorites.length) {
-    const historyUsedCategoryIds = new Set();
-    for (const item of recommendList) {
-      if (item.source === 'history') {
-        historyUsedCategoryIds.add(item.categoryId);
+  return { recommendList, usedCategoryIds, usedContentIds };
+}
+
+/**
+ * お気に入りから最大5件（履歴で選ばれた2コースと重複しない5コース）
+ * @param {Array} favorites
+ * @param {Set} excludeCategoryIds
+ * @returns {Array} recommendList, usedCategoryIds
+ */
+async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
+  let recommendList = [];
+  let usedCategoryIds = new Set(excludeCategoryIds);
+  if (!favorites.length) return { recommendList, usedCategoryIds };
+  favorites = favorites.slice();
+  for (let i = favorites.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
+  }
+  for (const categoryId of favorites) {
+    if (recommendList.length >= 5) break;
+    if (usedCategoryIds.has(categoryId)) continue;
+    const cacheKey = `cachedVodContents_${categoryId}`;
+    let videos = [];
+    try {
+      if (typeof window.fetchWithCache === 'function') {
+        videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
+      }
+    } catch (e) {}
+    if (!Array.isArray(videos) || !videos.length) continue;
+    const contentIds = videos.map(v => v.contentId);
+    const statusList = await window.getMultipleVideoViewingStatus(contentIds);
+    let found = null;
+    let foundStatus = null;
+    for (let i = 0; i < videos.length; i++) {
+      const status = statusList[i];
+      if (status.currentTimeRate < 0.95) {
+        found = videos[i];
+        foundStatus = status;
+        break;
       }
     }
-    favorites = favorites.slice();
-    for (let i = favorites.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
-    }
-    for (const categoryId of favorites) {
-      if (recommendList.length >= 7) break;
-      if (usedCategoryIds.has(categoryId)) {
-        // console.log('[おすすめデバッグ] お気に入り: 既にusedCategoryIdsに含まれているため除外', categoryId);
-        continue;
-      }
-      if (historyUsedCategoryIds.has(categoryId)) {
-        // console.log('[おすすめデバッグ] お気に入り: historyUsedCategoryIdsに含まれているため除外', categoryId);
-        continue;
-      }
-      const cacheKey = `cachedVodContents_${categoryId}`;
-      let videos = [];
-      try {
-        if (typeof window.fetchWithCache === 'function') {
-          videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
-        }
-      } catch (e) {
-        // console.log('[おすすめデバッグ] お気に入り: カテゴリ動画取得失敗', categoryId, e);
-      }
-      if (!Array.isArray(videos) || !videos.length) {
-        // console.log('[おすすめデバッグ] お気に入り: カテゴリ内動画なしで除外', categoryId);
-        continue;
-      }
-      const contentIds = videos.map(v => v.contentId);
-      const statusList = await window.getMultipleVideoViewingStatus(contentIds);
-      let found = null;
-      let foundStatus = null;
-      for (let i = 0; i < videos.length; i++) {
-        const status = statusList[i];
-        if (status.currentTimeRate < 0.95) {
-          found = videos[i];
-          foundStatus = status;
-          // console.log('[おすすめデバッグ] お気に入り: 未視聴動画を追加', found, foundStatus);
-          break;
-        } else {
-          // console.log('[おすすめデバッグ] お気に入り: 視聴済みで除外', videos[i], status);
-        }
-      }
-      if (found) {
-        recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0, source: 'favorites' });
-        usedCategoryIds.add(categoryId);
-      }
+    if (found) {
+      recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0, source: 'favorites' });
+      usedCategoryIds.add(categoryId);
     }
   }
-  // 6. 類似コースからのおすすめ（未実装）
-  // ...（類似コース部分も同様に詳細ログを追加可能）...
-  // console.log('[おすすめデバッグ] 最終recommendList:', recommendList);
+  return { recommendList, usedCategoryIds };
+}
 
-  // 7. おすすめリストを返却
-
+/**
+ * 類似している3件（履歴・お気に入りの合計7コースと重複がない3コース）
+ * 仮実装：カテゴリ一覧から重複しないものを3件選ぶ
+ * @param {Array} categories
+ * @param {Set} excludeCategoryIds
+ * @returns {Array} recommendList
+ */
+async function getRecommendFromSimilar(categories, excludeCategoryIds) {
+  let recommendList = [];
+  let count = 0;
+  for (const cat of categories) {
+    if (count >= 3) break;
+    if (excludeCategoryIds.has(cat.categoryId)) continue;
+    // ここではカテゴリ内の最初の未視聴動画を取得
+    const cacheKey = `cachedVodContents_${cat.categoryId}`;
+    let videos = [];
+    try {
+      if (typeof window.fetchWithCache === 'function') {
+        videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${cat.categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
+      }
+    } catch (e) {}
+    if (!Array.isArray(videos) || !videos.length) continue;
+    const contentIds = videos.map(v => v.contentId);
+    const statusList = await window.getMultipleVideoViewingStatus(contentIds);
+    let found = null;
+    let foundStatus = null;
+    for (let i = 0; i < videos.length; i++) {
+      const status = statusList[i];
+      if (status.currentTimeRate < 0.95) {
+        found = videos[i];
+        foundStatus = status;
+        break;
+      }
+    }
+    if (found) {
+      recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0, source: 'similar' });
+      excludeCategoryIds.add(cat.categoryId);
+      count++;
+    }
+  }
   return recommendList;
+}
+
+// =========================
+// おすすめ動画リスト生成関数
+// =========================
+async function createRecommendListData() {
+  // お気に入り・履歴・カテゴリ情報を取得
+  let favorites = (typeof window.getFavorites === 'function') ? window.getFavorites() : [];
+  let history = (typeof window.getSetting === 'function') ? window.getSetting('history', []) : [];
+  const categories = await window.getCategoriesData();
+
+  // 1. 履歴から2件
+  const { recommendList: historyList, usedCategoryIds: usedFromHistory, usedContentIds } = await getRecommendFromHistory(history);
+  // 2. お気に入りから5件（履歴と重複しない）
+  const { recommendList: favoriteList, usedCategoryIds: usedFromFavorites } = await getRecommendFromFavorites(favorites, usedFromHistory);
+  // 3. 類似から3件（履歴・お気に入りと重複しない）
+  const excludeCategoryIds = new Set([...usedFromFavorites]);
+  const similarList = await getRecommendFromSimilar(categories, excludeCategoryIds);
+
+  // 合成して返却
+  return [...historyList, ...favoriteList, ...similarList];
 }
 
 // =========================
@@ -1237,6 +1244,40 @@ function handleFavoritesPanelOpen() {
 // =========================
 // おすすめ関連の関数群
 // =========================
+// =========================
+// おすすめ動画キャッシュ・プリフェッチ
+// =========================
+window.oujRecommendCache = {
+  data: null,
+  lastFetched: 0
+};
+
+async function prefetchRecommendListData() {
+  window.oujRecommendCache.data = await createRecommendListData();
+  window.oujRecommendCache.lastFetched = Date.now();
+}
+
+// =========================
+// saveSettingラッパーでキャッシュ更新
+// =========================
+(function() {
+  const originalSaveSetting = window.saveSetting;
+  window.saveSetting = function(key, value) {
+    originalSaveSetting.apply(this, arguments);
+    if (key === 'history' || key === 'favorites' || key === 'pinnedFavorites') {
+      prefetchRecommendListData();
+    }
+  };
+})();
+
+// =========================
+// 初期化時にプリフェッチ
+// =========================
+prefetchRecommendListData();
+
+// =========================
+// おすすめ関連の関数群
+// =========================
 function handleRecommendPanelOpen() {
   // ダミーカードHTML生成は従来通り
   const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -1274,7 +1315,18 @@ function handleRecommendPanelOpen() {
     closeBtnId: 'close-recommend-list-panel',
     contentClass: 'history-panel-content',
     listClass: 'history-list',
-    fetchData: createRecommendListData,
+    fetchData: async () => {
+      // キャッシュがあれば即返す。なければ取得
+      if (window.oujRecommendCache && window.oujRecommendCache.data) {
+        // 裏で再取得も走らせておく
+        prefetchRecommendListData();
+        return window.oujRecommendCache.data;
+      } else {
+        const data = await createRecommendListData();
+        window.oujRecommendCache = { data, lastFetched: Date.now() };
+        return data;
+      }
+    },
     renderList: renderRecommendListHtml
   });
 }
@@ -1318,10 +1370,96 @@ async function addHistoryEntry(contentId) {
   history.unshift(entry);
   // 最大30件まで
   if (history.length > 30) history = history.slice(0, 30);
-  window.saveSetting('history', history);
+  let saveResult = window.saveSetting('history', history);
   window.saveSetting(lastHistoryKey, now);
+  // ★履歴追加時におすすめリストをプリフェッチ
+  // TODO: 反映タイミングをより早くする改善の余地あり
+  if (saveResult && typeof saveResult.then === 'function') {
+    saveResult.then(() => {
+      prefetchRecommendListData();
+    });
+  } else {
+    prefetchRecommendListData();
+  }
 }
 window.addHistoryEntry = addHistoryEntry;
+
+// お気に入り追加・削除時にもプリフェッチ
+  // TODO: 反映タイミングをより早くする改善の余地あり
+function addFavorite(categoryId) {
+  let favorites = window.getSetting('favorites', []);
+  if (favorites.includes(categoryId)) {return}
+
+  favorites.push(categoryId);
+  window.saveSetting('favorites', favorites);
+  // ★お気に入り追加時におすすめリストをプリフェッチ
+  let saveResult = window.saveSetting('favorites', favorites);
+  // ★お気に入り追加時におすすめリストをプリフェッチ
+  if (saveResult && typeof saveResult.then === 'function') {
+    saveResult.then(() => {
+      prefetchRecommendListData();
+    });
+  } else {
+    prefetchRecommendListData();
+  }
+}
+
+window.addFavorite = addFavorite;
+// TODO: 反映タイミングをより早くする改善の余地あり
+function removeFavorite(categoryId) {
+  let favorites = window.getSetting('favorites', []);
+  favorites = favorites.filter(id => id !== categoryId);
+  window.saveSetting('favorites', favorites);
+  // ★お気に入り削除時におすすめリストをプリフェッチ
+  let saveResult = window.saveSetting('favorites', favorites);
+  // ★お気に入り削除時におすすめリストをプリフェッチ
+  if (saveResult && typeof saveResult.then === 'function') {
+    saveResult.then(() => {
+      prefetchRecommendListData();
+    });
+  } else {
+    prefetchRecommendListData();
+  }
+}
+window.removeFavorite = removeFavorite;
+
+// TODO: 反映タイミングをより早くする改善の余地あり
+function addPinnedFavorite(categoryId) {
+  let pinned = window.getSetting('pinnedFavorites', []);
+  if (pinned.includes(categoryId)) {return}
+
+  pinned.push(categoryId);
+  window.saveSetting('pinnedFavorites', pinned);
+  // ★ピン追加時におすすめリストをプリフェッチ
+  let saveResult = window.saveSetting('pinnedFavorites', pinned);
+  // ★ピン追加時におすすめリストをプリフェッチ
+  if (saveResult && typeof saveResult.then === 'function') {
+    saveResult.then(() => {
+      prefetchRecommendListData();
+    });
+  } else {
+    prefetchRecommendListData();
+  }
+  
+}
+window.addPinnedFavorite = addPinnedFavorite;
+
+function removePinnedFavorite(categoryId) {
+  let pinned = window.getSetting('pinnedFavorites', []);
+  pinned = pinned.filter(id => id !== categoryId);
+  window.saveSetting('pinnedFavorites', pinned);
+  // ★ピン削除時におすすめリストをプリフェッチ
+  let saveResult = window.saveSetting('pinnedFavorites', pinned);
+  // ★ピン削除時におすすめリストをプリフェッチ
+  if (saveResult && typeof saveResult.then === 'function') {
+    saveResult.then(() => {
+      prefetchRecommendListData();
+    });
+  } else {
+    prefetchRecommendListData();
+  }
+}
+window.removePinnedFavorite = removePinnedFavorite;
 
 // 検索ボックスHTML生成の共通関数
 function createSearchBoxHtml(type) {

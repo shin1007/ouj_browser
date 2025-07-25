@@ -99,6 +99,19 @@ async function getParentCategoryName(categoryId) {
     return null;
   }
 }
+async function getVideoListInCategory(categoryId) {
+  const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
+  const cachedData = result[CATEGORIES_STORAGE_KEY];
+  const data = cachedData && cachedData.data ? cachedData.data : cachedData;
+  if (!Array.isArray(data)) return []; 
+  const category = data.find(item => item.categoryId === parseInt(categoryId, 10));
+  if (!category) return [];
+  const cacheKey = `cachedVodContents_${categoryId}`;
+  const list = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
+  if (!Array.isArray(list)) return [];
+  return list;
+
+}
 
 /**
  * categoriesデータの中でparentIdとして使われているcategoryIdを重複なく列挙して返す
@@ -125,3 +138,4 @@ window.getChildIds = getChildIds;
 window.getCurrentCategoryId = getCurrentCategoryId;
 window.getParentCategoryName = getParentCategoryName;
 window.parentCategories = parentCategories;
+window.getVideoListInCategory = getVideoListInCategory;

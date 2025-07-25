@@ -247,13 +247,15 @@ function addVideoSettingsPanel() {
 }
 
 // --- 追加: 前後動画リンク挿入関数 ---
-function insertPrevNextLinks(titleElement) {
+async function insertPrevNextLinks(titleElement) {
   // 既存のリンクがあれば一度消す
   const old = document.getElementById('prev-next-links');
   if (old) old.remove();
   // データがなければ何もしない
-  const list = window.videoListInCourse;
-  const idx = window.currentVideoIndexInCourse;
+  const categoryId = window.getCurrentCategoryId();
+  const list = await window.getVideoListInCategory(categoryId);
+  // const list = window.videoListInCourse;
+  const idx = list.findIndex(item => String(item.contentId) === String(window.getCurrentVideoId()));
   if (!Array.isArray(list) || typeof idx !== 'number' || idx < 0) return;
   const prev = idx > 0 ? list[idx - 1] : null;
   const next = idx < list.length - 1 ? list[idx + 1] : null;
