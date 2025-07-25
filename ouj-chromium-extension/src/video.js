@@ -1060,7 +1060,7 @@ function startVolumeNormalization() {
       }
       microphone = audioContext.createMediaStreamSource(stream);
     } catch (error) {
-      console.error('startVolumeNormalization: 音声ストリームの取得に失敗しました:', error);
+      // console.error('startVolumeNormalization: 音声ストリームの取得に失敗しました:', error);
       // console.log('startVolumeNormalization: 従来の音量監視にフォールバックします');
       startLegacyVolumeNormalization();
       return;
