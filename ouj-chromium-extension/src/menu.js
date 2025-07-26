@@ -1144,6 +1144,7 @@ async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
  */
 async function getRecommendFromSimilar(categories, excludeCategoryIds) {
   let recommendList = [];
+  return recommendList;
   let count = 0;
   for (const cat of categories) {
     if (count >= 3) break;

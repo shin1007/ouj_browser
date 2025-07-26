@@ -7,7 +7,6 @@
   "permissions": [
     "storage",
     "scripting",
-    "tabs",
     "webNavigation"
   ],
   "host_permissions": [
