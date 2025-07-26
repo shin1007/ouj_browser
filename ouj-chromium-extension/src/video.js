@@ -294,7 +294,7 @@ async function insertPrevNextLinks(titleElement) {
     prevLink.href = window.location.href.replace(/co=\d+/, 'co=' + prev.contentId);
     prevLink.style.cssText = `
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       gap: 12px;
       color: #1976d2;
       text-decoration: none;
@@ -361,7 +361,7 @@ async function insertPrevNextLinks(titleElement) {
     nextLink.href = window.location.href.replace(/co=\d+/, 'co=' + next.contentId);
     nextLink.style.cssText = `
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       gap: 12px;
       color: #1976d2;
       text-decoration: none;
