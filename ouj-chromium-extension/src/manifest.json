@@ -28,13 +28,19 @@
       "js": [
         "utils/helpers.js",
         "utils/viewingStatus.js",
+        "utils/video-player-core.js",
+        "utils/video-settings.js",
+        "utils/video-navigation.js",
+        "utils/video-playback-controls.js",
+        "utils/video-auto-features.js",
+        "utils/video-radio-detection.js",
         "categories.js",
         "menu.js",
         "thumbnail-progress.js",
         "page-login.js",
         "page-course-select.js",
         "page-video-select.js",
-        "page-video.js",
+        "page-video-new.js",
         "content.js"
       ]
     }
