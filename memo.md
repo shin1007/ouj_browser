@@ -95,17 +95,3 @@ content
 812: 089 生物の進化と多様化の科学（’１７） 1562851p
 817: 068 舞台芸術の魅力（’１７） 1554891p
 832: 037 乳幼児・児童の心理臨床（’１７） 1529218p
-
-<div class="vjs-current-time vjs-time-control vjs-control">
-    <div class="vjs-current-time-display" aria-live="off">
-        <span class="vjs-control-text">現在時間</span>
-            00:24
-    </div>
-</div>
-
-<div class="vjs-duration vjs-time-control vjs-control">
-    <div class="vjs-duration-display" aria-live="off">
-        <span class="vjs-control-text">再生時間</span>
-            45:00
-    </div>
-</div>
