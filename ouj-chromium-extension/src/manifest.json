@@ -27,20 +27,20 @@
       ],
       "js": [
         "utils/helpers.js",
-        "utils/viewingStatus.js",
-        "utils/video-player-core.js",
-        "utils/video-settings.js",
+        "utils/video-auto-features.js",
         "utils/video-navigation.js",
         "utils/video-playback-controls.js",
-        "utils/video-auto-features.js",
+        "utils/video-player-core.js",
         "utils/video-radio-detection.js",
+        "utils/video-settings.js",
+        "utils/video-show-playhint.js",
+        "utils/viewingStatus.js",
         "categories.js",
         "menu.js",
-        "thumbnail-progress.js",
-        "page-login.js",
         "page-course-select.js",
+        "page-login.js",
         "page-video-select.js",
-        "page-video-new.js",
+        "thumbnail-progress.js",
         "content.js"
       ]
     }
