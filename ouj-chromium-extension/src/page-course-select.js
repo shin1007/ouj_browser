@@ -3,25 +3,8 @@
 async function addFavoriteButtonsToCategoryList() {
   // 追加前に既存の.favorite-btnを全て削除
   document.querySelectorAll('.favorite-btn').forEach(btn => btn.remove());
-  // 現在のURLのcaパラメータを取得をcategoryNumとして、子のcategoryIdを取得
-  // hash以降のcaを取得（https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=10ではca=10）
-  // ハッシュのhashParams.get('ca')でcaを取得できないので、手動でcaを取得
-  // ハッシュのcaを取得
 
-  const hash = window.location.hash;
-  // hashからcaパラメータを安全にパース
-  let ca = null;
-  if (hash.includes('?')) {
-    const params = hash.split('?')[1];
-    const paramPairs = params.split('&');
-    for (const pair of paramPairs) {
-      const [key, value] = pair.split('=');
-      if (key === 'ca') {
-        ca = value;
-        break;
-      }
-    }
-  }
+  const ca = window.getCurrentCategoryId();
   if (!ca) {
     return;
   }
