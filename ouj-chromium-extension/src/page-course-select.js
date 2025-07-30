@@ -8,8 +8,7 @@ async function addFavoriteButtonsToCategoryList() {
   if (!ca) {
     return;
   }
-  const currentCategoryNum = parseInt(ca, 10);
-  const childCategories = await window.getChildIds(currentCategoryNum);
+  const childCategories = await window.getChildIds(ca);
   const favorites = window.getFavorites ? window.getFavorites() : [];
 
   // ion-list#common-list-content内のion-itemを全て取得
@@ -83,28 +82,13 @@ async function waitThenAddFavBtnToCategoryList() {
     setTimeout(waitThenAddFavBtnToCategoryList, 100);
     return;
   }
-  // 現在のページのカテゴリIDを取得
-  const hash = window.location.hash;
-  // hashからcaパラメータを安全にパース
-  let ca = null;
-  if (hash.includes('?')) {
-    const params = hash.split('?')[1];
-    const paramPairs = params.split('&');
-    for (const pair of paramPairs) {
-      const [key, value] = pair.split('=');
-      if (key === 'ca') {
-        ca = value;
-        break;
-      }
-    }
-  }
+  const ca = window.getCurrentCategoryId();
   if (!ca) {
     return;
   }
-  const currentCategoryNum = parseInt(ca, 10);
   // categoryIdからsummaryを取得、なければ何もしない
   const categories = await window.getCategoriesData();
-  const childCategories = await window.getChildIds(currentCategoryNum);
+  const childCategories = await window.getChildIds(ca);
   // 子カテゴリのsummaryが1つでも存在するかチェック
   const hasSummaryInChildren = childCategories.some(child => {
     const cat = categories.find(c => c.categoryId === child.categoryId);

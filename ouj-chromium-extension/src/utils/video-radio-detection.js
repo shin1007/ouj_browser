@@ -4,7 +4,7 @@ async function checkIfRadioProgram() {
   
   try {
     // 現在の動画IDを取得
-    const currentVideoId = getCurrentVideoId();
+    const currentVideoId = window.getCurrentContentId();
     if (!currentVideoId) {
       // console.log('checkIfRadioProgram: 動画IDを取得できませんでした');
       return;
@@ -61,32 +61,30 @@ async function checkIfRadioProgram() {
       currentCategory.summary.startsWith('(ラジオ')
     );
     
-    if (isRadio) {
-      // 字幕付きラジオ番組かどうかを判定
-      const hasSubtitles = currentCategory.summary.includes('・字幕');
-      
-      // console.log('🎵 checkIfRadioProgram: 【ラジオ番組】を検出しました！');
-      // console.log('checkIfRadioProgram: カテゴリ名:', currentCategory.name);
-      // console.log('checkIfRadioProgram: サマリー:', currentCategory.summary);
-      // console.log('checkIfRadioProgram: 字幕付き:', hasSubtitles ? 'はい' : 'いいえ');
-      
-      // ラジオ番組であることをグローバル変数に保存
-      window.isRadioProgram = true;
-      window.isRadioWithSubtitles = hasSubtitles;
-      
-      // 字幕付きでない場合のみUI表示
-      if (!hasSubtitles) {
-        // console.log('checkIfRadioProgram: 字幕なしラジオ番組のため、専用UIを表示します');
-        showRadioProgramUI();
-      } else {
-        // console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
-      }
-    } else {
-      // console.log('📺 checkIfRadioProgram: 【通常の動画】です');
+    if (!isRadio) {
       window.isRadioProgram = false;
       window.isRadioWithSubtitles = false;
+      return;
     }
+    // 字幕付きラジオ番組かどうかを判定
+    const hasSubtitles = currentCategory.summary.includes('・字幕');
     
+    // console.log('🎵 checkIfRadioProgram: 【ラジオ番組】を検出しました！');
+    // console.log('checkIfRadioProgram: カテゴリ名:', currentCategory.name);
+    // console.log('checkIfRadioProgram: サマリー:', currentCategory.summary);
+    // console.log('checkIfRadioProgram: 字幕付き:', hasSubtitles ? 'はい' : 'いいえ');
+    
+    // ラジオ番組であることをグローバル変数に保存
+    window.isRadioProgram = true;
+    window.isRadioWithSubtitles = hasSubtitles;
+    
+    // 字幕付きでない場合のみUI表示
+    if (hasSubtitles) {
+      // console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
+    } else {
+      // console.log('checkIfRadioProgram: 字幕なしラジオ番組のため、専用UIを表示します');
+      showRadioProgramUI();
+    }
   } catch (error) {
     console.error('checkIfRadioProgram: ラジオ番組判定でエラーが発生しました:', error);
   }
@@ -95,7 +93,6 @@ async function checkIfRadioProgram() {
 // 動画データを取得する関数
 async function getVideoData(contentId) {
   // console.log('getVideoData: 動画データを取得します。contentId:', contentId);
-  
   try {
     // 動画の詳細情報を取得するAPI
     const response = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}`);
@@ -114,7 +111,7 @@ async function getVideoData(contentId) {
     console.error('getVideoData: 動画データ取得でエラーが発生しました:', error);
     return null;
   }
-}
+} 
 
 // ラジオ番組用のUI表示関数
 function showRadioProgramUI() {

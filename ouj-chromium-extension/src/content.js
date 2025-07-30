@@ -30,15 +30,13 @@ function detectOujPageType() {
       return;
     }
     
-    // ca=の後ろの値を抽出
-    const match = url.match(/vod\?ca=(\d+)/);
-    if (!match) {
+    const categoryId = window.getCurrentCategoryId();
+    if (!categoryId) {
       resolve('vod-select');
       return;
     }
     
-    const caNum = parseInt(match[1], 10);
-    if (isNaN(caNum)) {
+    if (isNaN(categoryId)) {
       resolve('vod-select');
       return;
     }
@@ -48,12 +46,12 @@ function detectOujPageType() {
       try {
         const parentIds = await window.parentCategories();
         
-        if (parentIds.includes(caNum)) {
+        if (parentIds.includes(categoryId)) {
           resolve('course-select');
           return;
         }
         
-        const pageType = determinePageTypeByCategoryId(caNum);
+        const pageType = determinePageTypeByCategoryId(categoryId);
         resolve(pageType);
         return;
         
@@ -64,18 +62,18 @@ function detectOujPageType() {
     }
     
     // parentCategoriesが未定義の場合は従来通り
-    const pageType = determinePageTypeByCategoryId(caNum);
+    const pageType = determinePageTypeByCategoryId(categoryId);
     resolve(pageType);
   });
 }
 
 // カテゴリIDからページ種別を判定する関数
-function determinePageTypeByCategoryId(caNum) {
-  if (caNum < 100) {
+function determinePageTypeByCategoryId(categoryId) {
+  if (categoryId < 100) {
     return 'course-select';
   }
   
-  if (480 < caNum && caNum < 500) {
+  if (480 < categoryId && categoryId < 500) {
     return 'course-select';
   }
   

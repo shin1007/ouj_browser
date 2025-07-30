@@ -6,23 +6,16 @@ async function insertPrevNextLinks(titleElement) {
   if (old) old.remove();
   // データがなければ何もしない
   const categoryId = window.getCurrentCategoryId();
-  console.log('insertPrevNextLinks: categoryId =', categoryId);
   const list = await window.getVideoListInCategory(categoryId);
-  console.log('insertPrevNextLinks: list =', list);
   // const list = window.videoListInCourse;
   const currentVideoId = window.getCurrentVideoId();
-  console.log('insertPrevNextLinks: currentVideoId =', currentVideoId);
   const idx = list.findIndex(item => String(item.contentId) === String(currentVideoId));
-  console.log('insertPrevNextLinks: idx =', idx);
   if (!Array.isArray(list) || typeof idx !== 'number' || idx < 0) {
-    console.log('insertPrevNextLinks: データが不正または見つかりません');
     return;
   }
   const prev = idx > 0 ? list[idx - 1] : null;
   const next = idx < list.length - 1 ? list[idx + 1] : null;
-  console.log('insertPrevNextLinks: prev =', prev, 'next =', next);
   if (!prev && !next) {
-    console.log('insertPrevNextLinks: 前後の動画がありません');
     return;
   }
   

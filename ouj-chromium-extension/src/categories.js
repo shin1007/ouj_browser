@@ -52,18 +52,34 @@ function getCurrentCategoryId() {
   // hashのcaを取得
   const params = hash.split('?')[1];
   if (!params) {
-    return null;
+    return 0;
   }
   
   const caMatch = params.match(/ca=(\d+)/);
   if (!caMatch) {
-    return null;
+    return 0;
   }
   
   const categoryId = caMatch[1];
-  return categoryId;
+  return parseInt(categoryId, 10);
 }
-
+function getCurrentContentId() {
+  const hash = window.location.hash;
+  
+  // hashのcaを取得
+  const params = hash.split('?')[1];
+  if (!params) {
+    return 0;
+  }
+  
+  const caMatch = params.match(/co=(\d+)/);
+  if (!caMatch) {
+    return 0;
+  }
+  
+  const categoryId = caMatch[1];
+  return parseInt(categoryId, 10);
+}
 /**
  * 指定されたカテゴリIDの親カテゴリ名を取得する
  * @param {number|string} categoryId - カテゴリID
