@@ -58,12 +58,18 @@ const isSameDate = (dateString1, dateString2) => {
 const fetchWithCache = async (url, cacheKey) => {
     // 1. 最初にキャッシュされたデータを確認
     const result = await chrome.storage.local.get([cacheKey]);
+    // console.log(`fetchWithCache: ${cacheKey} のキャッシュは${result[cacheKey] ? '存在します' : '存在しません'}`);
     const cachedData = result[cacheKey];
+
     // 1.cachedData.dataが空でなく、かつ、timestampが当日のものであれば、それを返す
     if (cachedData && cachedData.data && cachedData.timestamp) {
-        if (cachedData.data.length === 0) {
+        // cachedDataが空の場合はネットワークから取得
+        if (cachedData.data.error || cachedData.data === null) {
+            // console.warn(`fetchWithCache: ${cacheKey} のキャッシュはエラーまたはnullです。ネットワークからデータ取得を試行中...`);
+        } else if (cachedData.data.length === 0) {
             // console.log(`fetchWithCache: ${cacheKey} のキャッシュは空です。ネットワークからデータ取得を試行中...`);
         } else if(isSameDate(cachedData.timestamp, new Date().toISOString())) {
+            // console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものです。キャッシュを返します。${cachedData.data}`);
             return cachedData.data;
         } else {
             // console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものではありません。ネットワークからデータ取得を試行中...`);
@@ -95,7 +101,7 @@ const fetchFromNetwork = async (url) => {
         const response = await fetch(url);
         return response.json();
     } catch (error) {
-        // console.warn(`fetchFromNetwork: ${url} のネットワークからのデータ取得に失敗しました。エラー: ${error.message}`);
+        console.warn(`fetchFromNetwork: ${url} のネットワークからのデータ取得に失敗しました。エラー: ${error.message}`);
         return null;
     }
 };
