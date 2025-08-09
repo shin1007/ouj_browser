@@ -164,7 +164,7 @@ function addVideoSettingsPanel() {
           // console.log('addVideoSettingsPanel: 再生速度設定を保存しました:', speed);
           
           // 現在再生中の動画に即座に適用
-          applyPlaybackSpeed(parseFloat(speed));
+          // applyPlaybackSpeed(parseFloat(speed));
         });
       }
       

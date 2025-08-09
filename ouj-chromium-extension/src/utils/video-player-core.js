@@ -28,11 +28,7 @@ async function initializeVideoPlayer() {
   // 音量自動調整機能を開始
   // startVolumeNormalization();
 
-  // 保存された再生速度を適用
-  applySavedPlaybackSpeed();
-  
-  // キーボードショートカットを設定
-  setupPlaybackSpeedShortcuts();
+
   
   // 次の動画IDを取得
   await fetchNextVideoId();
