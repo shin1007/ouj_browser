@@ -1,0 +1,63 @@
+【放送大学授業ブラウザ】
+放送大学（The Open University of Japan）の動画視聴や学習を、もっと便利に / 快適にするChrome拡張機能です。
+
+
+## 現在の機能
+【動画再生ページ】
+・再生速度変更、記憶
+・前の動画、次の動画へのリンク
+・キーボードショートカット（ほかの拡張機能と重複しやすい）
+・ラジオの時にラジオの旨を表示
+・次の動画へ自動でスキップ
+
+【動画、コース選択ページ】
+・動画の再生進捗を表示（YouTubeみたいに）
+・お気に入りボタン（コースを登録）
+
+【メニュー項目】
+・お気に入り（コースごと）
+・履歴（動画ごと）
+・おすすめ動画（履歴、お気に入りから）
+
+
+## 今後、変更したいこと
+【バグ修正】
+・ラジオ番組の字幕付加実験で「音声のみの番組です」と出てしまう問題
+・キーボードショートカットが不安定な問題
+
+【機能追加】
+・おすすめ機能に履歴やお気に入り以外の項目を追加したい。
+・動画ページにお気に入りボタン（コースを登録）
+・テレビ番組の字幕のオンオフ設定(setting-menu-item-subtitle)
+・ラジオ番組の字幕のオンオフ設定(setting-menu-item-subtitle)
+
+
+## 実装しようとしてあきらめたこと
+【DRM（著作権）の問題で無理そう】
+・オープニングとエンディングを自動検知してスキップ
+・音声の急激な変化を検知して調整
+
+【ほかの拡張機能と被るので破棄】
+・再生速度調整
+・キーボードショートカット
+[こういったものを代わりに利用してください](https://chromewebstore.google.com/detail/video-speed-controller/nffaoalbilbmmfgbnbgppjihopabppdk)
+
+## 注意事項
+・本拡張機能は個人が開発したものであり、放送大学公式のものではありません。
+・ご利用は自己責任でお願いします。
+
+video
+
+https://v-st.ouj.ac.jp/drm/classtream/1/36034/1-0/mpd/media-video-avc1.mp4?stTicket=b081099c84cc4b37bab8899801b5bc64&fileHash=1688461616&userNo=-2
+GET
+206 Partial Content
+
+
+https://v-st.ouj.ac.jp/drm/classtream/1/36520/1-0/mpd/media-audio-und-mp4a.mp4?stTicket=b2eac81391ff44febbdcb1644411c3df&fileHash=1710465021&userNo=-2
+GET
+206 Partial Content
+
+    // TODO: 
+    // 1.ネットワークを監視して、以下のものを含む場合にwindow.hasVideoRequest=Trueにする
+    // ・`https://v-st.ouj.ac.jp/drm/classtream/`
+    // ・`mpd/media-video-avc1.mp4`
