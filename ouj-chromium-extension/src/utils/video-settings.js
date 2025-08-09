@@ -36,28 +36,14 @@ function addVideoSettingsPanel() {
     `;
     
     // 保存された設定を取得
-    const savedSetting = window.getSetting('nextVideoSetting', 'same-course');
-    const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
-    const playbackSpeed = window.getSetting('playbackSpeed', '1');
-    const volumeNormalizationEnabled = window.getBooleanSetting('volumeNormalizationEnabled', true);
+  const savedSetting = window.getSetting('nextVideoSetting', 'same-course');
+  const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
+  const volumeNormalizationEnabled = window.getBooleanSetting('volumeNormalizationEnabled', true);
       
       panel.innerHTML = `
         <div style="display: flex; flex-direction: row; gap: 24px; align-items: flex-start;">
           <!-- 左カラム: 設定項目 -->
           <div style="flex: 1 1 0; min-width: 260px;">
-            <div style='margin-bottom: 8px;'>
-              <label for="playback-speed" style="display: block; margin-bottom: 5px; color: #333;">再生速度:</label>
-              <select id="playback-speed" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
-                <option value="0.25" ${playbackSpeed === '0.25' ? 'selected' : ''}>0.25x (4倍遅い)</option>
-                <option value="0.5" ${playbackSpeed === '0.5' ? 'selected' : ''}>0.5x (2倍遅い)</option>
-                <option value="0.75" ${playbackSpeed === '0.75' ? 'selected' : ''}>0.75x (1.33倍遅い)</option>
-                <option value="1" ${playbackSpeed === '1' ? 'selected' : ''}>1x (通常)</option>
-                <option value="1.25" ${playbackSpeed === '1.25' ? 'selected' : ''}>1.25x (1.25倍速)</option>
-                <option value="1.5" ${playbackSpeed === '1.5' ? 'selected' : ''}>1.5x (1.5倍速)</option>
-                <option value="2" ${playbackSpeed === '2' ? 'selected' : ''}>2x (2倍速)</option>
-                <option value="3" ${playbackSpeed === '3' ? 'selected' : ''}>3x (3倍速)</option>
-              </select>
-            </div>
             <div style='margin-bottom: 8px;'>
               <input type="checkbox" id="auto-next-video" ${autoNextVideoEnabled ? 'checked' : ''}>
               <label for="auto-next-video" style="margin-left: 5px; cursor: pointer; color: #333;">動画終了時に自動で次の動画に進む</label>
@@ -78,47 +64,7 @@ function addVideoSettingsPanel() {
           </div>
           <!-- 分割バー -->
           <div style="width: 1px; background: #ccc; height: 100%; min-height: 320px; margin: 0 8px; align-self: stretch;"></div>
-          <!-- 右カラム: キーボードショートカット説明 -->
-          <div style="flex: 1 1 0; min-width: 260px; max-width: 400px;">
-            <div style="margin-bottom: 10px; font-weight: bold; color: #1976d2; font-size: 17px; background: #e3f2fd; border-radius: 6px; padding: 8px 0; text-align: center;">
-              ▶️ <b>Enter</b> または <b>Space</b> キーで再生できます
-            </div>
-            <div id="shortcut-help-panel" style="display:block; margin-bottom: 10px;">
-              <div style="font-weight: bold; color: #333; text-decoration: underline; margin-bottom:10px;">キーボードショートカット</div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; font-size: 12px; color: #555;">
-                <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
-                  <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">基本操作</div>
-                  <div style="line-height: 1.3;">
-                    <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Space</span> 再生/一時停止</div>
-                    <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">M</span> ミュート切り替え</div>
-                    <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">F</span> フルスクリーン</div>
-                  </div>
-                </div>
-                <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
-                  <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">シーク操作</div>
-                  <div style="line-height: 1.3;">
-                    <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">←→</span> 10秒前後</div>
-                    <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Shift+←→</span> 30秒前後</div>
-                    <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">0</span> 最初に戻る</div>
-                    <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">End</span> 最後に進む</div>
-                  </div>
-                </div>
-                <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
-                  <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">音量調整</div>
-                  <div style="line-height: 1.3;">
-                    <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">↑↓</span> 音量±5%</div>
-                    <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Shift+↑↓</span> 音量±10%</div>
-                  </div>
-                </div>
-                <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0;">
-                  <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">再生速度</div>
-                  <div style="line-height: 1.3;">
-                    <div style="margin-bottom: 2px;"><span style="background: #f0f0f0; padding: 1px 4px; border-radius: 2px; font-family: monospace; font-size: 10px;">Ctrl+1-8</span> 0.25x〜3x</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <!-- 右カラム: キーボードショートカット説明（削除済み） -->
         </div>
       `;
             // <div style='margin-bottom: 8px;'>
@@ -146,27 +92,7 @@ function addVideoSettingsPanel() {
         });
       }
       
-      // const volumeNormalizationCheckbox = panel.querySelector('#volume-normalization');
-      // if (volumeNormalizationCheckbox) {
-      //   volumeNormalizationCheckbox.addEventListener('change', (event) => {
-      //     const enabled = event.target.checked;
-      //     window.saveSetting('volumeNormalizationEnabled', enabled);
-      //     // console.log('addVideoSettingsPanel: 音量自動調整設定を保存しました:', enabled);
-      //   });
-      // }
-      
-      // 再生速度設定のイベントリスナーを追加
-      const playbackSpeedSelect = panel.querySelector('#playback-speed');
-      if (playbackSpeedSelect) {
-        playbackSpeedSelect.addEventListener('change', (event) => {
-          const speed = event.target.value;
-          window.saveSetting('playbackSpeed', speed);
-          // console.log('addVideoSettingsPanel: 再生速度設定を保存しました:', speed);
-          
-          // 現在再生中の動画に即座に適用
-          // applyPlaybackSpeed(parseFloat(speed));
-        });
-      }
+  // ...再生速度関連のイベントリスナー削除...
       
       // 設定パネルは必ず前後リンクの後に来るように挿入
       if (targetElement.nextSibling && targetElement.nextSibling.id === 'prev-next-links') {
