@@ -5,25 +5,10 @@ async function checkIfRadioProgram() {
   try {
     // 現在の動画IDを取得
     const currentVideoId = window.getCurrentContentId();
-    if (!currentVideoId) {return;}
+    if (!currentVideoId) return;
     
-    // console.log('checkIfRadioProgram: 現在の動画ID:', currentVideoId);
-    
-    // 動画の詳細情報を取得
-    const videoData = await window.getVideoData(currentVideoId);
-    if (!videoData) {return;}
-    
-    // 動画データからカテゴリIDを取得
-    const categoryId = videoData.categoryId;
-    if (!categoryId) {return;}
-    
-    // 動画のカテゴリデータを取得
-    const categories = await window.getCategoriesData();
-    if (!(categories && Array.isArray(categories))) {return;}
-    
-    // カテゴリIDに対応するカテゴリを検索
-    const currentCategory = categories.find(cat => cat.categoryId === categoryId);
-    if (!currentCategory) {return;}
+    const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
+    if (!currentCategory) return;
     
     // summary欄でラジオ番組かどうかを判定
     const isRadio = currentCategory.summary && (

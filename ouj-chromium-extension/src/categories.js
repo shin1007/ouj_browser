@@ -1,4 +1,17 @@
 /**
+ * 指定したcontentIdからカテゴリデータを取得する
+ * @param {string|number} contentId
+ * @returns {Promise<Object|null>} カテゴリデータ or null
+ */
+async function getCategoryDataFromContentId(contentId) {
+  const videoData = await getVideoData(contentId);
+  if (!videoData || !videoData.categoryId) return null;
+  const categories = await getCategoriesData();
+  if (!(categories && Array.isArray(categories))) return null;
+  const category = categories.find(cat => cat.categoryId === videoData.categoryId);
+  return category || null;
+}
+/**
  * 指定したcontentIdの動画データをAPIから取得する
  * @param {string|number} contentId
  * @returns {Promise<Object|null>}
@@ -175,3 +188,4 @@ window.getParentCategoryName = getParentCategoryName;
 window.parentCategories = parentCategories;
 window.getVideoListInCategory = getVideoListInCategory;
 window.getVideoData = getVideoData;
+window.getCategoryDataFromContentId = getCategoryDataFromContentId;
