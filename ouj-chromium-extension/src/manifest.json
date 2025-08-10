@@ -28,7 +28,6 @@
       "js": [
         "utils/helpers.js",
         "utils/video-auto-features.js",
-        "utils/video-playback-controls.js",
         "utils/video-player-core.js",
         "utils/video-prev-next.js",
         "utils/video-radio-detection.js",

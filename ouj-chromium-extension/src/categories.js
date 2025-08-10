@@ -1,3 +1,22 @@
+/**
+ * 指定したcontentIdの動画データをAPIから取得する
+ * @param {string|number} contentId
+ * @returns {Promise<Object|null>}
+ */
+async function getVideoData(contentId) {
+  try {
+    const response = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}`);
+    if (!response.ok) {
+      console.error('getVideoData: APIレスポンスエラー:', response.status, response.statusText);
+      return null;
+    }
+    const videoData = await response.json();
+    return videoData;
+  } catch (error) {
+    console.error('getVideoData: 動画データ取得でエラーが発生しました:', error);
+    return null;
+  }
+}
 // categories.js
 // カテゴリ関連の関数
 const CATEGORIES_API_URL = 'https://v.ouj.ac.jp/v1/tenants/1/categories';
@@ -155,3 +174,4 @@ window.getCurrentCategoryId = getCurrentCategoryId;
 window.getParentCategoryName = getParentCategoryName;
 window.parentCategories = parentCategories;
 window.getVideoListInCategory = getVideoListInCategory;
+window.getVideoData = getVideoData;
