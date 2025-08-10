@@ -5,74 +5,41 @@ async function checkIfRadioProgram() {
   try {
     // 現在の動画IDを取得
     const currentVideoId = window.getCurrentContentId();
-    if (!currentVideoId) {
-      // console.log('checkIfRadioProgram: 動画IDを取得できませんでした');
-      return;
-    }
+    if (!currentVideoId) {return;}
     
     // console.log('checkIfRadioProgram: 現在の動画ID:', currentVideoId);
     
     // 動画の詳細情報を取得
     const videoData = await getVideoData(currentVideoId);
-    if (!videoData) {
-      // console.log('checkIfRadioProgram: 動画データを取得できませんでした');
-      return;
-    }
-    
-    // console.log('checkIfRadioProgram: 取得した動画データ:', {
-      // contentId: videoData.contentId,
-      // categoryId: videoData.categoryId,
-      // title: videoData.title,
-      // summary: videoData.summary
-    // });
+    if (!videoData) {return;}
     
     // 動画データからカテゴリIDを取得
     const categoryId = videoData.categoryId;
-    if (!categoryId) {
-      // console.log('checkIfRadioProgram: 動画データからカテゴリIDを取得できませんでした');
-      return;
-    }
+    if (!categoryId) {return;}
     
-    // console.log('checkIfRadioProgram: 動画のカテゴリID:', categoryId);
-    
-    // カテゴリデータを取得
+    // 動画のカテゴリデータを取得
     const categories = await window.getCategoriesData();
-    if (!categories || !Array.isArray(categories)) {
-      // console.log('checkIfRadioProgram: カテゴリデータを取得できませんでした');
-      return;
-    }
+    if (!(categories && Array.isArray(categories))) {return;}
     
     // カテゴリIDに対応するカテゴリを検索
     const currentCategory = categories.find(cat => cat.categoryId === categoryId);
-    
-    if (!currentCategory) {
-      // console.log('checkIfRadioProgram: カテゴリIDに対応するカテゴリが見つかりませんでした');
-      return;
-    }
-    
-    // console.log('checkIfRadioProgram: 見つかったカテゴリ:', {
-      // categoryId: currentCategory.categoryId,
-      // name: currentCategory.name,
-      // summary: currentCategory.summary
-    // });
+    if (!currentCategory) {return;}
     
     // summary欄でラジオ番組かどうかを判定
     const isRadio = currentCategory.summary && (
       currentCategory.summary.startsWith('(ラジオ')
     );
-    
+  
+    // ラジオ番組でない場合は何もしない
     if (!isRadio) {
+      console.log('checkIfRadioProgram: テレビ番組です（ラジオ番組ではありません。）');
       window.isRadioProgram = false;
       window.isRadioWithSubtitles = false;
       return;
     }
+
     // 字幕付きラジオ番組かどうかを判定
-    const hasSubtitles = currentCategory.summary.includes('・字幕');
-    
-    // console.log('🎵 checkIfRadioProgram: 【ラジオ番組】を検出しました！');
-    // console.log('checkIfRadioProgram: カテゴリ名:', currentCategory.name);
-    // console.log('checkIfRadioProgram: サマリー:', currentCategory.summary);
-    // console.log('checkIfRadioProgram: 字幕付き:', hasSubtitles ? 'はい' : 'いいえ');
+    const hasSubtitles = currentCategory.summary.includes('ラジオ・字幕');
     
     // ラジオ番組であることをグローバル変数に保存
     window.isRadioProgram = true;
@@ -80,8 +47,12 @@ async function checkIfRadioProgram() {
     
     // 字幕付きでない場合のみUI表示
     if (hasSubtitles) {
-      // console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
-    } else {
+      console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
+      return
+    } 
+    
+    // 動画があるラジオ番組（summaryに字幕と書かれていないケースで、「音声のみだよ」という画像が映像として読み込まれるケース）
+    else {
       // console.log('checkIfRadioProgram: 字幕なしラジオ番組のため、専用UIを表示します');
       showRadioProgramUI();
     }
