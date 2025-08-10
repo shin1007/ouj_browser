@@ -590,17 +590,7 @@ function adjustVolumeGradually(video, fromVolume, toVolume) {
 }
 
 // グローバル関数として公開
-window.calculatePlaybackPercentage = calculatePlaybackPercentage;
-window.startPlaybackProgressMonitoring = startPlaybackProgressMonitoring;
-window.isEndingMusic = isEndingMusic;
 window.startEndingDetection = startEndingDetection;
-window.handleEndingDetected = handleEndingDetected;
-window.showEndingSkipButton = showEndingSkipButton;
 window.startAutoPlay = startAutoPlay;
-window.showAutoPlayFailedNotification = showAutoPlayFailedNotification;
 window.startVideoEndMonitoring = startVideoEndMonitoring;
-window.showVideoEndNotification = showVideoEndNotification;
 window.startVolumeNormalization = startVolumeNormalization;
-window.startLegacyVolumeNormalization = startLegacyVolumeNormalization;
-window.normalizeVolume = normalizeVolume;
-window.adjustVolumeGradually = adjustVolumeGradually; 
