@@ -7,6 +7,7 @@ async function checkIfRadioProgram() {
     const currentVideoId = window.getCurrentContentId();
     if (!currentVideoId) return;
     
+    // 動画IDから現在のカテゴリデータを取得
     const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
     if (!currentCategory) return;
     
@@ -17,30 +18,20 @@ async function checkIfRadioProgram() {
   
     // ラジオ番組でない場合は何もしない
     if (!isRadio) {
-      console.log('checkIfRadioProgram: テレビ番組です（ラジオ番組ではありません。）');
       window.isRadioProgram = false;
       window.isRadioWithSubtitles = false;
-      return;
-    }
-
-    // 字幕付きラジオ番組かどうかを判定
-    const hasSubtitles = currentCategory.summary.includes('ラジオ・字幕');
-    
-    // ラジオ番組であることをグローバル変数に保存
-    window.isRadioProgram = true;
-    window.isRadioWithSubtitles = hasSubtitles;
-    
-    // 字幕付きでない場合のみUI表示
-    if (hasSubtitles) {
+      console.log('checkIfRadioProgram: テレビ番組です（ラジオ番組ではありません。）');
+    // 字幕付きラジオ番組も何もしない
+    } else if (currentCategory.summary.includes('ラジオ・字幕')){
+      window.isRadioProgram = true;
+      window.isRadioWithSubtitles = true;
       console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
-      return
-    } 
-    
-    // 動画があるラジオ番組（summaryに字幕と書かれていないケースで、「音声のみだよ」という画像が映像として読み込まれるケース）
-    else {
-      // console.log('checkIfRadioProgram: 字幕なしラジオ番組のため、専用UIを表示します');
+    // 字幕なしラジオ番組
+    } else{
+      window.isRadioProgram = true;
+      window.isRadioWithSubtitles = false;
       showRadioProgramUI();
-    }
+    }    
   } catch (error) {
     console.error('checkIfRadioProgram: ラジオ番組判定でエラーが発生しました:', error);
   }
