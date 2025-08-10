@@ -26,7 +26,6 @@ async function initializeVideoPlayer() {
   await checkIfRadioProgram();
     
   // 音量自動調整機能を開始
-  // startVolumeNormalization();
 
 
   
