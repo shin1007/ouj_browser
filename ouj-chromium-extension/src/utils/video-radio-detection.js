@@ -26,8 +26,8 @@ async function checkIfRadioProgram() {
       window.isRadioProgram = true;
       window.isRadioWithSubtitles = true;
       console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
-    // 字幕なしラジオ番組
-    } else{
+    // 字幕なしラジオ番組はUIを表示
+    } else {
       window.isRadioProgram = true;
       window.isRadioWithSubtitles = false;
       showRadioProgramUI();
