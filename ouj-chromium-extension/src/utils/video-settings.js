@@ -36,6 +36,8 @@ function addVideoSettingsPanel() {
     `;
     
     // 保存された設定を取得
+    // TODO 字幕の自動表示（テレビ番組）
+    // TODO 字幕の自動表示（ラジオ番組）
   const savedSetting = window.getSetting('nextVideoSetting', 'same-course');
   const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
   const volumeNormalizationEnabled = window.getBooleanSetting('volumeNormalizationEnabled', true);
@@ -44,6 +46,15 @@ function addVideoSettingsPanel() {
         <div style="display: flex; flex-direction: row; gap: 24px; align-items: flex-start;">
           <!-- 左カラム: 設定項目 -->
           <div style="flex: 1 1 0; min-width: 260px;">
+            <div style='margin-bottom: 8px;'>
+              <input type="checkbox" id="auto-caption-tv" ${window.getSetting('autoCaptionEnabledTV', 'true') === 'true' ? 'checked' : ''}>
+              <label for="auto-caption-tv" style="margin-left: 5px; cursor: pointer; color: #333;">字幕を自動で表示する（テレビ番組）</label>
+            </div>
+            <div style='margin-bottom: 8px;'>
+              <input type="checkbox" id="auto-caption-radio" ${window.getSetting('autoCaptionEnabledRadio', 'true') === 'true' ? 'checked' : ''}>
+              <label for="auto-caption-radio" style="margin-left: 5px; cursor: pointer; color: #333;">字幕を自動で表示する（ラジオ番組）</label>
+            </div>
+            <hr style="margin: 15px 0; border: none; border-top: 2px solid #bbb;"> <!-- ここで区切る -->
             <div style='margin-bottom: 8px;'>
               <input type="checkbox" id="auto-next-video" ${autoNextVideoEnabled ? 'checked' : ''}>
               <label for="auto-next-video" style="margin-left: 5px; cursor: pointer; color: #333;">動画終了時に自動で次の動画に進む</label>
@@ -67,11 +78,23 @@ function addVideoSettingsPanel() {
           <!-- 右カラム: キーボードショートカット説明（削除済み） -->
         </div>
       `;
-            // <div style='margin-bottom: 8px;'>
-            //   <input type="checkbox" id="volume-normalization" ${volumeNormalizationEnabled ? 'checked' : ''}>
-            //   <label for="volume-normalization" style="margin-left: 5px; cursor: pointer; color: #333;">音量の自動調整<span style="font-size: 11px; color: #666;">（実際の音声レベルを測定してOPEDや場面転換時の音量急上昇を緩やかにする）</span></label>
-            // </div>
-      
+      // 字幕自動表示チェックボックスのイベントリスナー（テレビ番組）
+      const autoCaptionCheckboxTV = panel.querySelector('#auto-caption-tv');
+      if (autoCaptionCheckboxTV) {
+        autoCaptionCheckboxTV.addEventListener('change', (event) => {
+          const enabled = event.target.checked;
+          window.saveSetting('autoCaptionEnabledTV', enabled);
+        });
+      }
+      // 字幕自動表示チェックボックスのイベントリスナー（ラジオ番組）
+      const autoCaptionCheckboxRadio = panel.querySelector('#auto-caption-radio');
+      if (autoCaptionCheckboxRadio) {
+        autoCaptionCheckboxRadio.addEventListener('change', (event) => {
+          const enabled = event.target.checked;
+          window.saveSetting('autoCaptionEnabledRadio', enabled);
+        });
+      }
+
       // ラジオボタンのイベントリスナーを追加
       const radioButtons = panel.querySelectorAll('input[type="radio"]');
       radioButtons.forEach(radio => {
