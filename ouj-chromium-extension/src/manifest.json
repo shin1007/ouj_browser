@@ -32,7 +32,6 @@
         "utils/video-prev-next.js",
         "utils/video-radio-detection.js",
         "utils/video-settings.js",
-        "utils/video-show-playhint.js",
         "utils/viewingStatus.js",
         "categories.js",
         "menu.js",
