@@ -6,33 +6,48 @@
 // <span class="slider"></span>
 // </div></li>
 
-function toggleSubtitle() {
-  // console.log('toggleSubtitle: 字幕の表示/非表示を切り替えます');
-  // id="setting-menu-item-subtitle"うちのtoggle-switchを切り替える
-    const subtitleMenuItem = document.getElementById('setting-menu-item-subtitle');
-    if (!subtitleMenuItem) {
-        console.warn('toggleSubtitle: subtitleMenuItemが見つかりません');
-        return;
-    }
-    const toggleSwitch = subtitleMenuItem.querySelector('.toggle-switch');
-    if (!toggleSwitch) {
-        console.warn('toggleSubtitle: toggleSwitchが見つかりません');
-        return;
-    }
-    const slider = toggleSwitch.querySelector('.slider');
-    if (!slider) {
-        console.warn('toggleSubtitle: sliderが見つかりません');
-        return;
-        }
-    // スライダーのクラスを切り替え
-    // クリックイベントで切り替える
-    slider.click();
 
-    if (slider.classList.contains('active')) {
-        console.log('toggleSubtitle: 字幕を「表示」として保存しました');
-    } else {
-        console.log('toggleSubtitle: 字幕を「非表示」として保存しました');
+// <div class="cls-text-track-sami-cue cls-watermark-display-canvas-padding-bottom" style="height: 38%;"><div start="1403003" style="null">
+// <p class="JAJPCC" style="null"><span style="color: #FFFF00;">成熟優位説は 1930年代から50年代にかけて</span><br style="display: none"></p>
+// <p class="JAJPCC" style="null"><span style="color: #FFFF00;">発達心理学の有力な学説の１つとなり</span><br style="display: none"></p>
+// <p class="JAJPCC" style="null"><span style="color: #FFFF00;">ジョン･ワトソンの提唱した行動主義に</span><br style="display: none"></p>
+// <p class="JAJPCC" style="null"><span style="color: #FFFF00;">対立する見方を提示しました。</span>
+// </p></div></div>
+//
+
+
+function isCaptionHidden() {
+    let captionDiv = document.querySelector('.cls-sami-display');
+    // captionDivにvjsHiddenクラスがあるかどうかを確認
+
+    if (!captionDiv) return;
+    console.log('classList:', captionDiv.classList);
+    // vjsHiddenクラスがある場合は削除、ない場合は追加
+    return captionDiv.classList.contains('vjs-hidden');
+
+}
+function getCaptionSlider() {
+    // 設定メニューに字幕のトグルスイッチがあるか
+    const subtitleMenuItem = document.getElementById('setting-menu-item-subtitle');
+    if (!subtitleMenuItem) return;
+    const toggleSwitch = subtitleMenuItem.querySelector('.toggle-switch');
+    if (!toggleSwitch) return;
+    const slider = toggleSwitch.querySelector('.slider');
+    return slider;
+}
+function toggleSubtitle(on=true) {
+    // トグルスイッチがあればクリックする
+    // console.log('toggleSubtitle: 字幕の表示/非表示を切り替えます');
+    let slider = getCaptionSlider();
+    if (!slider) {
+        console.warn('toggleSubtitle: 字幕のトグルスイッチが見つかりません。');
+        return;
     }
+    const isAlreadyOn = !isCaptionHidden();
+
+    if (on && isAlreadyOn) return;
+    if (!on && !isAlreadyOn) return;
+    slider.click();
 }
 
 // グローバル関数として公開

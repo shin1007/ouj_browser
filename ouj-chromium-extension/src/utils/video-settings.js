@@ -120,7 +120,7 @@ function addVideoSettingsPanel() {
         radioCaptionCheckbox.addEventListener('change', (event) => {
           const enabled = event.target.checked;
           window.saveSetting('autoCaptionEnabledRadio', enabled);
-          window.toggleSubtitle();
+          window.toggleSubtitle(enabled);
           console.log('addVideoSettingsPanel: ラジオ番組の字幕自動表示設定を保存しました:', enabled);
         });
       }
