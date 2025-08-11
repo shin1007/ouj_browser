@@ -48,11 +48,11 @@ function addVideoSettingsPanel() {
           <div style="flex: 1 1 0; min-width: 260px;">
             <div style='margin-bottom: 8px;'>
               <input type="checkbox" id="auto-caption-tv" ${window.getSetting('autoCaptionEnabledTV', 'true') === 'true' ? 'checked' : ''}>
-              <label for="auto-caption-tv" style="margin-left: 5px; cursor: pointer; color: #333;">字幕を自動で表示する（テレビ番組）</label>
+              <label for="auto-caption-tv" style="margin-left: 5px; cursor: pointer; color: #333;">字幕を表示する（テレビ番組）</label>
             </div>
             <div style='margin-bottom: 8px;'>
               <input type="checkbox" id="auto-caption-radio" ${window.getSetting('autoCaptionEnabledRadio', 'true') === 'true' ? 'checked' : ''}>
-              <label for="auto-caption-radio" style="margin-left: 5px; cursor: pointer; color: #333;">字幕を自動で表示する（ラジオ番組）</label>
+              <label for="auto-caption-radio" style="margin-left: 5px; cursor: pointer; color: #333;">字幕を表示する（ラジオ番組）</label>
             </div>
             <hr style="margin: 15px 0; border: none; border-top: 2px solid #bbb;"> <!-- ここで区切る -->
             <div style='margin-bottom: 8px;'>
