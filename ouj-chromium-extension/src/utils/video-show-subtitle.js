@@ -45,6 +45,7 @@ function toggleSubtitle(on=true) {
     }
     const isAlreadyOn = !isCaptionHidden();
 
+    // 現在の状態と合わせるためのリターン
     if (on && isAlreadyOn) return;
     if (!on && !isAlreadyOn) return;
     slider.click();

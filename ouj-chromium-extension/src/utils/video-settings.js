@@ -38,20 +38,21 @@ function addVideoSettingsPanel() {
     // 保存された設定を取得
     // TODO 字幕の自動表示（テレビ番組）
     // TODO 字幕の自動表示（ラジオ番組）
-  const savedSetting = window.getSetting('nextVideoSetting', 'same-course');
+  const autoCaptionEnabledTV = window.getSetting('autoCaptionEnabledTV', true);
+  const autoCaptionEnabledRadio = window.getSetting('autoCaptionEnabledRadio', true);
+  const nextVideoMode = window.getSetting('nextVideoSetting', 'same-course');
   const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
-  const volumeNormalizationEnabled = window.getBooleanSetting('volumeNormalizationEnabled', true);
       
       panel.innerHTML = `
         <div style="display: flex; flex-direction: row; gap: 24px; align-items: flex-start;">
           <!-- 左カラム: 設定項目 -->
           <div style="flex: 1 1 0; min-width: 260px;">
             <div style='margin-bottom: 8px;'>
-              <input type="checkbox" id="auto-caption-tv" ${window.getSetting('autoCaptionEnabledTV', 'true') === 'true' ? 'checked' : ''}>
+              <input type="checkbox" id="auto-caption-tv" ${autoCaptionEnabledTV ? 'checked' : ''}>
               <label for="auto-caption-tv" style="margin-left: 5px; cursor: pointer; color: #333;">字幕を表示する（テレビ番組）</label>
             </div>
             <div style='margin-bottom: 8px;'>
-              <input type="checkbox" id="auto-caption-radio" ${window.getSetting('autoCaptionEnabledRadio', 'true') === 'true' ? 'checked' : ''}>
+              <input type="checkbox" id="auto-caption-radio" ${autoCaptionEnabledRadio ? 'checked' : ''}>
               <label for="auto-caption-radio" style="margin-left: 5px; cursor: pointer; color: #333;">字幕を表示する（ラジオ番組）</label>
             </div>
             <hr style="margin: 15px 0; border: none; border-top: 2px solid #bbb;"> <!-- ここで区切る -->
@@ -61,11 +62,11 @@ function addVideoSettingsPanel() {
             </div>
             <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
             <div style="margin-bottom: 8px;">
-              <input type="radio" id="same-course" name="next-video" value="same-course" ${savedSetting === 'same-course' ? 'checked' : ''}>
+              <input type="radio" id="same-course" name="next-video" value="same-course" ${nextVideoMode === 'same-course' ? 'checked' : ''}>
               <label for="same-course" style="margin-left: 5px; cursor: pointer; color: #333;">同じコースの中で次を再生</label>
             </div>
             <div style="margin-bottom: 8px;">
-              <input type="radio" id="favorites-random" name="next-video" value="favorites-random" ${savedSetting === 'favorites-random' ? 'checked' : ''}>
+              <input type="radio" id="favorites-random" name="next-video" value="favorites-random" ${nextVideoMode === 'favorites-random' ? 'checked' : ''}>
               <label for="favorites-random" style="margin-left: 5px; cursor: pointer; color: #333;">お気に入りの中からランダムで次を再生</label>
             </div>
             <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
@@ -124,9 +125,7 @@ function addVideoSettingsPanel() {
           console.log('addVideoSettingsPanel: ラジオ番組の字幕自動表示設定を保存しました:', enabled);
         });
       }
-  // ...再生速度関連のイベントリスナー削除...
-      
-      // 設定パネルは必ず前後リンクの後に来るように挿入
+      // 設定パネルは前後リンクの後に来るように挿入
       if (targetElement.nextSibling && targetElement.nextSibling.id === 'prev-next-links') {
         // 既に前後リンクがある場合、その後ろにパネルを挿入
         targetElement.parentNode.insertBefore(panel, targetElement.nextSibling.nextSibling);
