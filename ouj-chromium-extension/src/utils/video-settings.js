@@ -115,6 +115,15 @@ function addVideoSettingsPanel() {
         });
       }
       
+      const radioCaptionCheckbox = panel.querySelector('#auto-caption-radio');
+      if (radioCaptionCheckbox) {
+        radioCaptionCheckbox.addEventListener('change', (event) => {
+          const enabled = event.target.checked;
+          window.saveSetting('autoCaptionEnabledRadio', enabled);
+          window.toggleSubtitle();
+          console.log('addVideoSettingsPanel: ラジオ番組の字幕自動表示設定を保存しました:', enabled);
+        });
+      }
   // ...再生速度関連のイベントリスナー削除...
       
       // 設定パネルは必ず前後リンクの後に来るように挿入
