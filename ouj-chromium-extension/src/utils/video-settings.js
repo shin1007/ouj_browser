@@ -115,16 +115,28 @@ function addVideoSettingsPanel() {
           // console.log('addVideoSettingsPanel: 自動次の動画遷移設定を保存しました:', enabled);
         });
       }
+
+      const tvCaptionCheckbox = panel.querySelector('#auto-caption-tv');
+      if (tvCaptionCheckbox) {
+        tvCaptionCheckbox.addEventListener('change', (event) => {
+          const enabled = event.target.checked;
+          window.saveSetting('autoCaptionEnabledTV', enabled);
+          window.toggleCaptionTv(enabled);
+          // console.log('addVideoSettingsPanel: テレビ番組の字幕自動表示設定を保存しました:', enabled);
+          });
+      }
       
       const radioCaptionCheckbox = panel.querySelector('#auto-caption-radio');
       if (radioCaptionCheckbox) {
         radioCaptionCheckbox.addEventListener('change', (event) => {
           const enabled = event.target.checked;
           window.saveSetting('autoCaptionEnabledRadio', enabled);
-          window.toggleSubtitle(enabled);
+          window.toggleCaptionRadio(enabled);
           console.log('addVideoSettingsPanel: ラジオ番組の字幕自動表示設定を保存しました:', enabled);
         });
       }
+      window.showCaptionAccordingToSetting();
+      
       // 設定パネルは前後リンクの後に来るように挿入
       if (targetElement.nextSibling && targetElement.nextSibling.id === 'prev-next-links') {
         // 既に前後リンクがある場合、その後ろにパネルを挿入

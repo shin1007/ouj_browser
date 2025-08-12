@@ -1,3 +1,19 @@
+async function isRadioProgram() {
+    // 現在の動画IDを取得
+    const currentVideoId = window.getCurrentContentId();
+    if (!currentVideoId) return False;
+    
+    // 動画IDから現在のカテゴリデータを取得
+    const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
+    if (!currentCategory) return False;
+    
+    // summary欄でラジオ番組かどうかを判定
+    const isRadio = currentCategory.summary && (
+      currentCategory.summary.startsWith('(ラジオ')
+    );
+    return isRadio;
+
+}
 // ラジオ番組判定関数
 async function checkIfRadioProgram() {
   // console.log('checkIfRadioProgram: ラジオ番組判定を開始します');
@@ -5,30 +21,22 @@ async function checkIfRadioProgram() {
   try {
     // 現在の動画IDを取得
     const currentVideoId = window.getCurrentContentId();
-    if (!currentVideoId) return;
+    if (!currentVideoId) return False;
     
     // 動画IDから現在のカテゴリデータを取得
     const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
-    if (!currentCategory) return;
-    
-    // summary欄でラジオ番組かどうかを判定
-    const isRadio = currentCategory.summary && (
-      currentCategory.summary.startsWith('(ラジオ')
-    );
+    if (!currentCategory) return False;
   
     // ラジオ番組でない場合は何もしない
-    if (!isRadio) {
-      window.isRadioProgram = false;
+    if (isRadioProgram()) {
       window.isRadioWithSubtitles = false;
       console.log('checkIfRadioProgram: テレビ番組です（ラジオ番組ではありません。）');
     // 字幕付きラジオ番組も何もしない
     } else if (currentCategory.summary.includes('ラジオ・字幕')){
-      window.isRadioProgram = true;
       window.isRadioWithSubtitles = true;
       console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
     // 字幕なしラジオ番組はUIを表示
     } else {
-      window.isRadioProgram = true;
       window.isRadioWithSubtitles = false;
       showRadioProgramUI();
     }    
@@ -96,3 +104,4 @@ function showRadioProgramUI() {
 // グローバル関数として公開
 window.checkIfRadioProgram = checkIfRadioProgram;
 window.showRadioProgramUI = showRadioProgramUI;
+window.isRadioProgram = isRadioProgram;
