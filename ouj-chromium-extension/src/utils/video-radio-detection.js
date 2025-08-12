@@ -27,14 +27,14 @@ async function checkIfRadioProgram() {
     const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
     if (!currentCategory) return False;
   
-    // ラジオ番組でない場合は何もしない
-    if (isRadioProgram()) {
+    // テレビ番組の場合は何もしない
+    if (!isRadioProgram()) {
       window.isRadioWithSubtitles = false;
       console.log('checkIfRadioProgram: テレビ番組です（ラジオ番組ではありません。）');
     // 字幕付きラジオ番組も何もしない
-    } else if (currentCategory.summary.includes('ラジオ・字幕')){
-      window.isRadioWithSubtitles = true;
-      console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
+    // } else if (currentCategory.summary.includes('ラジオ・字幕')){
+    //   window.isRadioWithSubtitles = true;
+    //   console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
     // 字幕なしラジオ番組はUIを表示
     } else {
       window.isRadioWithSubtitles = false;
@@ -69,7 +69,7 @@ function showRadioProgramUI() {
     radioUI.id = 'radio-program-ui';
     radioUI.style.cssText = `
       position: absolute;
-      top: 50%;
+      top: 37%;
       left: 50%;
       transform: translate(-50%, -50%);
       background: rgba(0, 0, 0, 0.8);
@@ -85,7 +85,6 @@ function showRadioProgramUI() {
     radioUI.innerHTML = `
       <div style="font-size: 24px; margin-bottom: 10px;">🎵</div>
       <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">ラジオ番組</div>
-      <div style="font-size: 14px; opacity: 0.8;">音声のみの番組です</div>
     `;
     
     // 動画要素の親要素に挿入
