@@ -1,6 +1,6 @@
 // --- 追加: 前後動画リンク挿入関数 ---
 async function insertPrevNextLinks(titleElement) {
-  console.log('insertPrevNextLinks: 開始');
+  // console.log('insertPrevNextLinks: 開始');
   // 既存のリンクがあれば一度消す
   const old = document.getElementById('prev-next-links');
   if (old) old.remove();
@@ -163,7 +163,7 @@ async function insertPrevNextLinks(titleElement) {
   } else {
     titleElement.parentNode.appendChild(container);
   }
-  console.log('insertPrevNextLinks: 前後動画リンクを挿入しました');
+  // console.log('insertPrevNextLinks: 前後動画リンクを挿入しました');
 }
 
 // ツールチップを表示する関数

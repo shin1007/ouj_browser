@@ -17,31 +17,17 @@ async function isRadioProgram() {
 // ラジオ番組判定関数
 async function checkIfRadioProgram() {
   // console.log('checkIfRadioProgram: ラジオ番組判定を開始します');
-  
   try {
-    // 現在の動画IDを取得
-    const currentVideoId = window.getCurrentContentId();
-    if (!currentVideoId) return False;
-    
-    // 動画IDから現在のカテゴリデータを取得
-    const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
-    if (!currentCategory) return False;
-  
-    // テレビ番組の場合は何もしない
-    if (!isRadioProgram()) {
-      window.isRadioWithSubtitles = false;
-      console.log('checkIfRadioProgram: テレビ番組です（ラジオ番組ではありません。）');
-    // 字幕付きラジオ番組も何もしない
-    // } else if (currentCategory.summary.includes('ラジオ・字幕')){
-    //   window.isRadioWithSubtitles = true;
-    //   console.log('checkIfRadioProgram: 字幕付きラジオ番組のため、専用UIは表示しません（字幕が表示されるため）');
-    // 字幕なしラジオ番組はUIを表示
-    } else {
-      window.isRadioWithSubtitles = false;
+    // ラジオ番組はUIを表示
+    if (await isRadioProgram()) {
+      // console.log('checkIfRadioProgram: ラジオ番組です');
       showRadioProgramUI();
+    // テレビ番組の場合は何もしない
+    } else {
+      // console.log('checkIfRadioProgram: テレビ番組です（ラジオ番組ではありません。）');
     }    
   } catch (error) {
-    console.error('checkIfRadioProgram: ラジオ番組判定でエラーが発生しました:', error);
+    // console.error('checkIfRadioProgram: ラジオ番組判定でエラーが発生しました:', error);
   }
 }
 
