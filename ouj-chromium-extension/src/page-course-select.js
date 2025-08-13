@@ -28,23 +28,27 @@ async function addFavoriteButtonsToCategoryList() {
     
     // お気に入りボタン作成
     const favBtn = document.createElement('button');
-    favBtn.className = 'favorite-btn';
-    favBtn.title = 'お気に入り';
-    favBtn.style.background = 'none';
-    favBtn.style.border = 'none';
-    favBtn.style.cursor = 'pointer';
-    favBtn.style.marginLeft = '8px';
-    favBtn.style.display = 'inline-flex';
-    favBtn.style.alignItems = 'center';
-    favBtn.style.verticalAlign = 'top';
-    favBtn.style.height = item.offsetHeight*0.9 + 'px';
+  favBtn.className = 'favorite-btn';
+  favBtn.title = 'お気に入り';
+  favBtn.style.display = 'inline-flex';
+  favBtn.style.alignItems = 'center';
+  favBtn.style.justifyContent = 'center';
+  favBtn.style.padding = '2px 16px'; // クリック領域拡大
+  favBtn.style.border = 'none';
+  favBtn.style.background = 'transparent';
+  favBtn.style.cursor = 'pointer';
+  favBtn.style.borderRadius = '8px';
+  favBtn.style.transition = 'background 0.2s';
+  favBtn.style.marginLeft = '8px';
+  favBtn.onmouseover = () => favBtn.style.background = 'rgba(0,0,0,0.07)';
+  favBtn.onmouseout = () => favBtn.style.background = 'transparent';
     
     // お気に入り状態に応じてアイコンを決定
     const isFavorite = favorites.includes(category.categoryId.toString());
     const iconName = isFavorite ? 'star' : 'star-outline';
     const iconClass = isFavorite ? 'ion-md-star' : 'ion-md-star-outline';
     
-    favBtn.innerHTML = `<ion-icon name="${iconName}" class="icon icon-md ${iconClass} item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>`;
+  favBtn.innerHTML = `<ion-icon name="${iconName}" class="icon icon-md ${iconClass} item-icon" aria-label="お気に入り" style="font-size:24px;"></ion-icon>`;
     
     // クリックイベントを追加
     favBtn.addEventListener('click', (event) => {
@@ -62,12 +66,12 @@ async function addFavoriteButtonsToCategoryList() {
         // お気に入りから削除
         const updatedFavorites = currentFavorites.filter(id => id !== categoryId);
         window.saveSetting('favorites', updatedFavorites);
-        favBtn.innerHTML = '<ion-icon name="star-outline" class="icon icon-md ion-md-star-outline item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
+  favBtn.innerHTML = '<ion-icon name="star-outline" class="icon icon-md ion-md-star-outline item-icon" aria-label="お気に入り" style="font-size:24px;"></ion-icon>';
       } else {
         // お気に入りに追加
         const updatedFavorites = [...currentFavorites, categoryId];
         window.saveSetting('favorites', updatedFavorites);
-        favBtn.innerHTML = '<ion-icon name="star" class="icon icon-md ion-md-star item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
+  favBtn.innerHTML = '<ion-icon name="star" class="icon icon-md ion-md-star item-icon" aria-label="お気に入り" style="font-size:24px;"></ion-icon>';
       }
     });
     
@@ -108,17 +112,6 @@ async function waitThenAddFavBtnToCategoryList() {
     return;
   }
   await addFavoriteButtonsToCategoryList();
-  // // 現在のページ（親カテゴリ）を履歴に追加
-  // if (window.addHistoryEntry) {
-  //   try {
-  //     const category = categories.find(cat => cat.categoryId === currentCategoryNum);
-  //     const title = category ? category.name : `コース (ID: ${currentCategoryNum})`;
-  //     window.addHistoryEntry(currentCategoryNum.toString(), title);
-  //     console.log("[お気に入り] 履歴追加:", currentCategoryNum, title);
-  //   } catch (error) {
-  //     console.error('[お気に入り] waitThenAddFavBtnToCategoryList: 履歴追加でエラーが発生しました:', error);
-  //   }
-  // }
-  // console.log("[お気に入り] waitThenAddFavBtnToCategoryList 終了");
+
 }
 window.waitThenAddFavBtnToCategoryList = waitThenAddFavBtnToCategoryList;
