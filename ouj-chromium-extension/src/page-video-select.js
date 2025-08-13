@@ -21,8 +21,7 @@ async function addFavoriteButtonToBreadCrumbs() {
     // お気に入りボタンを作成
     const favBtn = document.createElement('button');
     favBtn.id = 'favorite-button';
-    favBtn.className = 'favorite-button';
-    favBtn.innerHTML = '<ion-icon name="star-outline" class="icon icon-md ion-md-star-outline item-icon" aria-label="お気に入り" style="font-size:20px;"></ion-icon>';
+    favBtn.className = 'favorite-button';    
     favBtn.style.background = 'transparent';
     favBtn.style.transition = 'background 0.2s';
     favBtn.onmouseover = () => { favBtn.style.background = '#e0e0e0'; };
@@ -33,11 +32,8 @@ async function addFavoriteButtonToBreadCrumbs() {
     
     // お気に入りに含まれているかチェック
     const isFavorite = favorites.includes(categoryId);
-    
-    if (isFavorite) {
-        favBtn.innerHTML = '<ion-icon name="star" class="icon icon-md ion-md-star item-icon" aria-label="お気に入り" style="font-size:20px;"></ion-icon>';
-    } else {
-    }
+    const iconName = isFavorite ? 'star' : 'star-outline';
+    favBtn.innerHTML = `<ion-icon name="${iconName}" class="icon icon-md ion-md-${iconName} item-icon" aria-label="お気に入り" style="font-size:20px;"></ion-icon>`;
     // クリックイベントを追加
     favBtn.addEventListener('click', (event) => {
         // ほかのイベントが発火しないようにする
