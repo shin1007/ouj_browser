@@ -23,6 +23,10 @@ async function addFavoriteButtonToBreadCrumbs() {
     favBtn.id = 'favorite-button';
     favBtn.className = 'favorite-button';
     favBtn.innerHTML = '<ion-icon name="star-outline" class="icon icon-md ion-md-star-outline item-icon" aria-label="お気に入り" style="font-size:20px;"></ion-icon>';
+    favBtn.style.background = 'transparent';
+    favBtn.style.transition = 'background 0.2s';
+    favBtn.onmouseover = () => { favBtn.style.background = '#e0e0e0'; };
+    favBtn.onmouseout = () => { favBtn.style.background = 'transparent'; };
     
     // お気に入りの状態を取得
     const favorites = window.getFavorites();
