@@ -37,7 +37,7 @@ function toggleCaption(isTurnOn=true) {
     // console.log('toggleSubtitle: 字幕の表示/非表示を切り替えます');
     let slider = getCaptionSlider();
     if (!slider) {
-        console.warn('toggleSubtitle: 字幕のトグルスイッチが見つかりません。');
+        // console.warn('toggleSubtitle: 字幕のトグルスイッチが見つかりません。');
         return;
     }
     const isAlreadyOn = !isCaptionHidden();

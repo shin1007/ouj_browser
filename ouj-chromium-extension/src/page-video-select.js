@@ -1,34 +1,13 @@
-// course-select.jsと同様の方法でお気に入りに追加されているか調べる。
-// 現在のカテゴリIDがお気に入りに含まれているかをチェック
-// 現在のカテゴリIDもcourse-select.jsと同様の方法で文字列として取得。
-// お気に入りボタンは#main > main-vod-list > ion-content > div.scroll-content > divの前に入れる
 async function addFavoriteButtonToCategoryTop() {
     // 挿入位置の存在確認
-    const mainVodList = document.querySelector('#main > main-vod-list > ion-content > div.scroll-content > div');
-    if (!mainVodList) {
-    
+    const aside = document.querySelector('#main > main-vod-list > ion-content > div.scroll-content > vod-list-navigator > aside');
+    if (!aside) {
         setTimeout(addFavoriteButtonToCategoryTop, 100);
         return;
     }
     
     // 現在のカテゴリIDを取得
     const categoryId = window.getCurrentCategoryId();
-    
-    // 履歴に追加（お気に入りボタンの存在に関係なく実行）
-    // 動画ページ以外では履歴を追加しないように修正
-    // if (window.addHistoryEntry && categoryId) {
-    //   // カテゴリ名を取得して履歴に保存
-    //   try {
-    //     const categories = await window.getCategoriesData();
-    //     const category = categories.find(cat => cat.categoryId.toString() === categoryId);
-    //     const title = category ? category.name : `コース (ID: ${categoryId})`;
-    //     window.addHistoryEntry(categoryId, title);
-    //   } catch (error) {
-    //     console.error('addFavoriteButtonToCategoryTop: 履歴追加でエラーが発生しました:', error);
-    //     // エラーが発生した場合はタイトルなしで履歴に追加
-    //     window.addHistoryEntry(categoryId);
-    //   }
-    // }
     
     // 既にお気に入りボタンがある場合は何もしない
     if (document.getElementById('favorite-button')) {
@@ -74,7 +53,7 @@ async function addFavoriteButtonToCategoryTop() {
         }
     }
     );
-    // mainVodListの前に挿入
-    mainVodList.parentNode.insertBefore(favBtn, mainVodList);
+    // asideの子要素として追加
+    aside.appendChild(favBtn);
 }
 window.addFavoriteButtonToCategoryTop = addFavoriteButtonToCategoryTop;

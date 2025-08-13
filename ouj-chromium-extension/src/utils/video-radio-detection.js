@@ -1,3 +1,7 @@
+const captionUi = "字幕が利用可能です"
+const noCaptionUi = "字幕なし"
+
+
 async function isRadioProgram() {
     // 現在の動画IDを取得
     const currentVideoId = window.getCurrentContentId();
@@ -12,7 +16,21 @@ async function isRadioProgram() {
       currentCategory.summary.startsWith('(ラジオ')
     );
     return isRadio;
-
+}
+async function isCaptionAvailable() {
+    // 現在の動画IDを取得
+    const currentVideoId = window.getCurrentContentId();
+    if (!currentVideoId) return False;
+    
+    // 動画IDから現在のカテゴリデータを取得
+    const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
+    if (!currentCategory) return False;
+    
+    // summary欄でラジオ番組かどうかを判定
+    const isCaptionAvailable = currentCategory.summary && (
+      currentCategory.summary.startsWith('(ラジオ・字幕')
+    );
+    return isCaptionAvailable;
 }
 // ラジオ番組判定関数
 async function checkIfRadioProgram() {
@@ -68,10 +86,14 @@ function showRadioProgramUI() {
       min-width: 300px;
     `;
     
-    radioUI.innerHTML = `
-      <div style="font-size: 24px; margin-bottom: 10px;">🎵</div>
-      <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">ラジオ番組</div>
-    `;
+    (async () => {
+      const captionAvailable = await isCaptionAvailable();
+      radioUI.innerHTML = `
+        <div style="font-size: 24px; margin-bottom: 10px;">🎵</div>
+        <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">ラジオ番組</div>
+        <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">${await captionAvailable ? captionUi : noCaptionUi}</div>
+      `;
+    })();
     
     // 動画要素の親要素に挿入
     const videoContainer = video.parentElement;
