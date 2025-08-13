@@ -51,7 +51,7 @@ function detectOujPageType() {
           return;
         }
         
-        const pageType = determinePageTypeByCategoryId(categoryId);
+        const pageType = determinePageTypeFallback(categoryId);
         resolve(pageType);
         return;
         
@@ -62,13 +62,13 @@ function detectOujPageType() {
     }
     
     // parentCategoriesが未定義の場合は従来通り
-    const pageType = determinePageTypeByCategoryId(categoryId);
+    const pageType = determinePageTypeFallback(categoryId);
     resolve(pageType);
   });
 }
 
 // カテゴリIDからページ種別を判定する関数
-function determinePageTypeByCategoryId(categoryId) {
+function determinePageTypeFallback(categoryId) {
   if (categoryId < 100) {
     return 'course-select';
   }
