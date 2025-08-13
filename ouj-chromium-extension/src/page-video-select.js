@@ -1,3 +1,7 @@
+function iconHtml(iconName) {
+  return `<ion-icon name="${iconName}" class="icon icon-md ion-md-${iconName} item-icon" aria-label="お気に入り" style="font-size:20px;"></ion-icon>`;
+}
+
 async function addFavoriteButtonToBreadCrumbs() {
     // 挿入位置の存在確認
     const videoListSelector = '#main > main-vod-list > ion-content > div.scroll-content > vod-list-navigator > aside > div > ul > li:last-child ';
@@ -32,8 +36,7 @@ async function addFavoriteButtonToBreadCrumbs() {
     
     // お気に入りに含まれているかチェック
     const isFavorite = favorites.includes(categoryId);
-    const iconName = isFavorite ? 'star' : 'star-outline';
-    favBtn.innerHTML = `<ion-icon name="${iconName}" class="icon icon-md ion-md-${iconName} item-icon" aria-label="お気に入り" style="font-size:20px;"></ion-icon>`;
+    favBtn.innerHTML = iconHtml(isFavorite ? 'star' : 'star-outline');
     // クリックイベントを追加
     favBtn.addEventListener('click', (event) => {
         // ほかのイベントが発火しないようにする
@@ -48,12 +51,12 @@ async function addFavoriteButtonToBreadCrumbs() {
             // お気に入りから削除
             const updatedFavorites = currentFavorites.filter(id => id !== categoryId);
             window.saveSetting('favorites', updatedFavorites);
-            favBtn.innerHTML = '<ion-icon name="star-outline" class="icon icon-md ion-md-star-outline item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
+            favBtn.innerHTML = iconHtml("star-outline");
         } else {
             // お気に入りに追加
             const updatedFavorites = [...currentFavorites, categoryId];
             window.saveSetting('favorites', updatedFavorites);
-            favBtn.innerHTML = '<ion-icon name="star" class="icon icon-md ion-md-star item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
+            favBtn.innerHTML = iconHtml("star");
         }
     }
     );
