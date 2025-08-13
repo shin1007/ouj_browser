@@ -3,9 +3,7 @@
 // 注入するスクリプトの設定
 const SCRIPT_TO_INJECT = {
     files: ["content.js"],
-    // content.js がESMの場合、ここで type: 'module' を明示的に指定できます。
-    // manifest.json で content_scripts に type: 'module' を設定している場合は不要です。
-    // type: 'module'
+
 };
 
 // 拡張機能の初期化ログ

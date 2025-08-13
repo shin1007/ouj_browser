@@ -88,40 +88,41 @@ async function main() {
   if (pageType === 'login') {
     // ログイン画面の処理
     window.waitForPasswordAndLogin();
+    // ログイン成功している場合はホームページに遷移
+    // HTML内に「ログインしました」があれば成功しているとして扱う
+    if (document.body.innerHTML.includes('ログインしました')) {
+      window.location.href = 'https://v.ouj.ac.jp/view/ouj/#/navi/home';
+    }
     return;
   }
+  window.waitForLogoAndInsertMenu();
 
   if (pageType === 'home') {
     // ホームページの処理
-    
-    // メニュー挿入処理を開始（ホームページでもメニューを表示）
-    window.waitForLogoAndInsertMenu();
-    
     // 自動ログイン設定を確認
     chrome.storage.sync.get(['autoLogin'], function(result) {
-      if (result.autoLogin) {
-      } else {
-      }
+      if (!result.autoLogin) return;
+      // `#theme-color > span`を取得できるまで中の文字列が「ログイン」ならば自動でログインページに遷移
+      // pythonのwaitfor_elementのような処理
+      const interval = setInterval(() => {
+        const themeColorButton = document.querySelector('button#theme-color');
+        if (themeColorButton && themeColorButton.textContent.includes('ログイン')) {
+          window.location.href = 'https://sso.ouj.ac.jp/cas/login?service=https%3A%2F%2Fv.ouj.ac.jp%2Fv1%2Ftenants%2F1%2Flogin%2Fcas%3FredirectUrl%3Dhttps%253A%252F%252Fv.ouj.ac.jp%252Fview%252Fouj%252F%2523%252Fnavi%252Fhome';
+          clearInterval(interval);
+        }
+      }, 1000);
     });
     return;
-  }
-  
-  window.waitForLogoAndInsertMenu();
-
-  // ログイン画面ではない場合
-  window.getCategoriesData().then(categories => {
-    
-    if (pageType === 'player') {
-      window.addFavoriteButtonToBreadCrumbs();
-      window.initializeVideoPlayer();      
-    } else if (pageType === 'course-select') {
-      window.waitThenAddFavBtnToCategoryList();
-    } else if (pageType === 'video-select') {
-      window.addFavoriteButtonToBreadCrumbs();
-    } else {
-      // その他の処理
-    }
-  });
+  } else if (pageType === 'player') {
+    window.addFavoriteButtonToBreadCrumbs();
+    window.initializeVideoPlayer();      
+  } else if (pageType === 'course-select') {
+    window.waitThenAddFavBtnToCategoryList();
+  } else if (pageType === 'video-select') {
+    window.addFavoriteButtonToBreadCrumbs();
+  } else {
+    // その他の処理
+  };
 }
 
 function safeMain() {
@@ -146,79 +147,47 @@ function safeMain() {
   main();
 }
 
+
+// safeMain()を一度だけ呼ぶ仕組み
+window.oujMainCalled = false;
+function callSafeMainOnce() {
+  if (!window.oujMainCalled) {
+    window.oujMainCalled = true;
+    safeMain();
+  }
+}
+
 if (document.readyState === "complete" || document.readyState === "interactive") {
-  safeMain();
+  callSafeMainOnce();
 } else {
-  document.addEventListener("DOMContentLoaded", safeMain);
+  document.addEventListener("DOMContentLoaded", callSafeMainOnce);
 }
 
-// SPA対応: URL変化を監視してmain()を再実行
-(function() {
-  let lastUrl = location.href;
-  let urlChangeDetected = false;
+// SPA対応: URL変化を監視してsafeMain()を再実行
 
-  // history.pushState/replaceStateのフック
-  function patchHistoryMethod(type) {
-    const orig = history[type];
-    history[type] = function() {
-      const result = orig.apply(this, arguments);
-      const event = new Event('ouj-urlchange');
-      window.dispatchEvent(event);
-      return result;
-    };
-  }
-  patchHistoryMethod('pushState');
-  patchHistoryMethod('replaceState');
-
-  // popstateイベント
-  window.addEventListener('popstate', () => {
-    window.dispatchEvent(new Event('ouj-urlchange'));
-  });
-
-  // 独自イベントでmain()再実行
-  window.addEventListener('ouj-urlchange', () => {
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      urlChangeDetected = true;
-      safeMain();
-    }
-  });
-
-  // フォールバック: どうしても検知できない場合のためのsetInterval
-  // （一部のSPA実装ではhistory APIを直接使わずlocation.hashや独自管理の場合があるため）
-  setInterval(() => {
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      if (!urlChangeDetected) {
-        // history APIフックやpopstateで検知できなかった場合のみログ
+if (!window.__ouj_url_listener_added) {
+  window.__ouj_url_listener_added = true;
+  (function() {
+    let lastUrl = location.href;
+    // history.pushState/replaceStateのフック
+    ["pushState", "replaceState"].forEach(type => {
+      const orig = history[type];
+      history[type] = function() {
+        const result = orig.apply(this, arguments);
+        window.dispatchEvent(new Event("ouj-urlchange"));
+        return result;
+      };
+    });
+    window.addEventListener("popstate", () => {
+      window.dispatchEvent(new Event("ouj-urlchange"));
+    });
+    window.addEventListener("ouj-urlchange", () => {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        window.oujMainCalled = false;
+        console.log('[OUJ拡張] URLが変化しました:', lastUrl);
+        callSafeMainOnce();
       }
-      urlChangeDetected = false;
-      safeMain();
-    }
-  }, 1000); // 1秒間隔で十分
-
-  /*
-    【うまくいかない場合の主な原因】
-    - サイト側がhistory.pushState/replaceStateをラップしている、または独自のルーティング管理をしている
-    - location.hashのみで遷移管理している場合（hashchangeイベントも必要な場合あり）
-    - そもそもURLが変わらずDOMだけ書き換えるSPAの場合（この場合は要素監視が必要）
-    - 拡張機能のcontent scriptが早すぎてhistory APIパッチが間に合わない場合
-    その場合はsetIntervalのフォールバックで最低限の検知を担保
-  */
-})();
-
-// 同じ関数を同じURLで二度呼ばない共通ラッパー
-window.__alreadyCalledOnUrl = window.__alreadyCalledOnUrl || {};
-function callOncePerUrl(fn, fnName) {
-  const url = location.href;
-  const key = fnName + '::' + url;
-  if (window.__alreadyCalledOnUrl[key]) {
-    console.log(`[callOncePerUrl] ${fnName} はこのURLで既に呼ばれています`);
-    return;
-  }
-  window.__alreadyCalledOnUrl[key] = true;
-  fn();
+    });
+  })();
 }
-
-// 既存の呼び出しをラップ
-callOncePerUrl(window.waitThenAddFavBtnToCategoryList, 'waitThenAddFavBtnToCategoryList');
