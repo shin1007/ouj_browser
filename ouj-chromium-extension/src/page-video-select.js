@@ -1,8 +1,12 @@
-async function addFavoriteButtonToCategoryTop() {
+async function addFavoriteButtonToBreadCrumbs() {
     // 挿入位置の存在確認
-    const aside = document.querySelector('#main > main-vod-list > ion-content > div.scroll-content > vod-list-navigator > aside');
+    const videoListSelector = '#main > main-vod-list > ion-content > div.scroll-content > vod-list-navigator > aside > div > ul > li:last-child ';
+    const videoSelector =     '#main > main-player   > ion-content > div.scroll-content > player > vod-list-navigator > aside > div > ul > li:last-child';
+    // #main > main-player > ion-content > div.scroll-content > player > vod-list-navigator > aside > div > ul > li:nth-child(3)
+    // const selctor = document.querySelector(videoSelector) || document.querySelector(videoListSelector);
+    const aside = document.querySelector(videoSelector) || document.querySelector(videoListSelector);
     if (!aside) {
-        setTimeout(addFavoriteButtonToCategoryTop, 100);
+        setTimeout(addFavoriteButtonToBreadCrumbs, 100);
         return;
     }
     
@@ -18,7 +22,7 @@ async function addFavoriteButtonToCategoryTop() {
     const favBtn = document.createElement('button');
     favBtn.id = 'favorite-button';
     favBtn.className = 'favorite-button';
-    favBtn.innerHTML = '<ion-icon name="star-outline" class="icon icon-md ion-md-star-outline item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
+    favBtn.innerHTML = '<ion-icon name="star-outline" class="icon icon-md ion-md-star-outline item-icon" aria-label="お気に入り" style="font-size:20px;"></ion-icon>';
     
     // お気に入りの状態を取得
     const favorites = window.getFavorites();
@@ -27,7 +31,7 @@ async function addFavoriteButtonToCategoryTop() {
     const isFavorite = favorites.includes(categoryId);
     
     if (isFavorite) {
-        favBtn.innerHTML = '<ion-icon name="star" class="icon icon-md ion-md-star item-icon" aria-label="お気に入り" style="font-size:22px;"></ion-icon>';
+        favBtn.innerHTML = '<ion-icon name="star" class="icon icon-md ion-md-star item-icon" aria-label="お気に入り" style="font-size:20px;"></ion-icon>';
     } else {
     }
     // クリックイベントを追加
@@ -56,4 +60,4 @@ async function addFavoriteButtonToCategoryTop() {
     // asideの子要素として追加
     aside.appendChild(favBtn);
 }
-window.addFavoriteButtonToCategoryTop = addFavoriteButtonToCategoryTop;
+window.addFavoriteButtonToBreadCrumbs = addFavoriteButtonToBreadCrumbs;

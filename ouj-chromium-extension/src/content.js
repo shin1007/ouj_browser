@@ -112,11 +112,12 @@ async function main() {
   window.getCategoriesData().then(categories => {
     
     if (pageType === 'player') {
+      window.addFavoriteButtonToBreadCrumbs();
       window.initializeVideoPlayer();      
     } else if (pageType === 'course-select') {
       window.waitThenAddFavBtnToCategoryList();
     } else if (pageType === 'video-select') {
-      window.addFavoriteButtonToCategoryTop();
+      window.addFavoriteButtonToBreadCrumbs();
     } else {
       // その他の処理
     }
@@ -129,7 +130,7 @@ function safeMain() {
   if (typeof window.waitForLogoAndInsertMenu !== 'function') missing.push('waitForLogoAndInsertMenu');
   if (typeof window.getCategoriesData !== 'function') missing.push('getCategoriesData');
   if (typeof window.waitThenAddFavBtnToCategoryList !== 'function') missing.push('waitThenAddFavToCategoryList');
-  if (typeof window.addFavoriteButtonToCategoryTop !== 'function') missing.push('addFavoriteButtonToCategoryTop');
+  if (typeof window.addFavoriteButtonToBreadCrumbs !== 'function') missing.push('addFavoriteButtonToBreadCrumbs');
   if (typeof window.getCurrentCategoryId !== 'function') missing.push('getCurrentCategoryId');
   if (typeof window.getFavorites !== 'function') missing.push('getFavorites');
   
