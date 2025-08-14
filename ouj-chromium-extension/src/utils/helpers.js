@@ -55,7 +55,7 @@ const isSameDate = (dateString1, dateString2) => {
  * @param {string} cacheKey - キャッシュのキー
  * @returns {Promise<Object|null>} 取得またはキャッシュされたJSONデータ、またはnull
  */
-const fetchWithCache = async (url, cacheKey) => {
+const fetchWithCache = async (url, cacheKey, minute=720) => {
     // 1. 最初にキャッシュされたデータを確認
     const result = await chrome.storage.local.get([cacheKey]);
     // console.log(`fetchWithCache: ${cacheKey} のキャッシュは${result[cacheKey] ? '存在します' : '存在しません'}`);
@@ -68,9 +68,12 @@ const fetchWithCache = async (url, cacheKey) => {
             // console.warn(`fetchWithCache: ${cacheKey} のキャッシュはエラーまたはnullです。ネットワークからデータ取得を試行中...`);
         } else if (cachedData.data.length === 0) {
             // console.log(`fetchWithCache: ${cacheKey} のキャッシュは空です。ネットワークからデータ取得を試行中...`);
-        } else if(isSameDate(cachedData.timestamp, new Date().toISOString())) {
-            // console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものです。キャッシュを返します。${cachedData.data}`);
+        }else if(cachedData.timestamp && (new Date().getTime() - new Date(cachedData.timestamp).getTime()) < minute * 60 * 1000) {
+            console.log(`fetchWithCache: ${cacheKey} のキャッシュは${minute}分以内です。`, cachedData.data);
             return cachedData.data;
+        // } else if(isSameDate(cachedData.timestamp, new Date().toISOString())) {
+        //     // console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものです。キャッシュを返します。${cachedData.data}`);
+        //     return cachedData.data;
         } else {
             // console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものではありません。ネットワークからデータ取得を試行中...`);
         }

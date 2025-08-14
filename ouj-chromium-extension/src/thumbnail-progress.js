@@ -7,12 +7,14 @@
  */
 async function getVideoProgress(contentId) {
   try {
-    const response = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.currentTimeRate || 0;
+    // const response = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`);
+    // if (!response.ok) {
+    //   throw new Error(`HTTP error! status: ${response.status}`);
+    // }
+    // const data = await response.json();
+    const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`;
+    const cachedData = await fetchWithCache(url, `video-progress-${contentId}`, 40);
+    return cachedData.currentTimeRate || 0;
   } catch (error) {
     // console.log(`getVideoProgress: 動画 ${contentId} の再生進捗取得に失敗:`, error);
     return 0;
@@ -143,8 +145,8 @@ function initializeThumbnailProgress() {
   // 初期表示
   showThumbnailProgress();
   
-  // 定期的に更新（5分ごと）
-  setInterval(updateThumbnailProgress, 5 * 60 * 1000);
+  // 定期的に更新（30分ごと）
+  setInterval(updateThumbnailProgress, 30 * 60 * 1000);
   
   // DOM変更を監視して新しいサムネイルが追加されたときに進捗を表示
   const observer = new MutationObserver((mutations) => {
