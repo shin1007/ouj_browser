@@ -69,7 +69,7 @@ const fetchWithCache = async (url, cacheKey, minute=720) => {
         } else if (cachedData.data.length === 0) {
             // console.log(`fetchWithCache: ${cacheKey} のキャッシュは空です。ネットワークからデータ取得を試行中...`);
         }else if(cachedData.timestamp && (new Date().getTime() - new Date(cachedData.timestamp).getTime()) < minute * 60 * 1000) {
-            console.log(`fetchWithCache: ${cacheKey} のキャッシュは${minute}分以内です。`, cachedData.data);
+            // console.log(`fetchWithCache: ${cacheKey} のキャッシュは${minute}分以内です。`, cachedData.data);
             return cachedData.data;
         // } else if(isSameDate(cachedData.timestamp, new Date().toISOString())) {
         //     // console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものです。キャッシュを返します。${cachedData.data}`);

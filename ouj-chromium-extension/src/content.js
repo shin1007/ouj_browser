@@ -126,6 +126,7 @@ async function main() {
 }
 
 function safeMain() {
+  console.log('[OUJ拡張] safeMain()が呼び出されました。');
   
   const missing = [];
   if (typeof window.waitForLogoAndInsertMenu !== 'function') missing.push('waitForLogoAndInsertMenu');
@@ -149,10 +150,13 @@ function safeMain() {
 
 
 // safeMain()を一度だけ呼ぶ仕組み
-window.oujMainCalled = false;
+
+window.oujLastMainTime = 0;
 function callSafeMainOnce() {
-  if (!window.oujMainCalled) {
-    window.oujMainCalled = true;
+  console.log('[OUJ拡張] callSafeMainOnce()が呼び出されました。');
+  const now = Date.now();
+  if (now - window.oujLastMainTime > 500) {
+    window.oujLastMainTime = now;
     safeMain();
   }
 }
@@ -184,7 +188,7 @@ if (!window.__ouj_url_listener_added) {
     window.addEventListener("ouj-urlchange", () => {
       if (location.href !== lastUrl) {
         lastUrl = location.href;
-        window.oujMainCalled = false;
+  window.oujLastMainTime = 0;
         console.log('[OUJ拡張] URLが変化しました:', lastUrl);
         callSafeMainOnce();
       }
