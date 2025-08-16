@@ -41,7 +41,8 @@
         "page-video-select.js",
         "thumbnail-progress.js",
         "content.js"
-      ]
+      ],
+      "run_at": "document_start"
     }
   ],
   "action": {

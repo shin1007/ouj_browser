@@ -1,83 +1,69 @@
 // 画面種別を判定する関数
+async function detectOujPageType() {
+  const url = window.location.href;
 
+  // ログイン画面
+  if (url.includes('https://sso.ouj.ac.jp/cas/login')) {
+    return 'login';
+  }
+  // ホームページ
+  if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/home')) {
+    return 'home';
+  }
+  // 動画再生画面
+  if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/player?co=')) {
+    return 'player';
+  }
+  // VOD画面以外はここで終了
+  if (!url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=')) {
+    return '';
+  }
 
-function detectOujPageType() {
-  return new Promise(async (resolve) => {
-    const url = window.location.href;
-    
-    // ログイン画面の判定
-    if (url.includes('https://sso.ouj.ac.jp/cas/login')) {
-      resolve('login');
-      return;
+  const categoryId = window.getCurrentCategoryId();
+  try {
+    const parentIds = await window.parentCategories();
+    if (parentIds.includes(categoryId)) {
+      return 'course-select'; // コース一覧（科目群選択後）
     }
-    
-    // ホームページの判定
-    if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/home')) {
-      resolve('home');
-      return;
-    }
-    
-    // 動画再生画面の判定
-    if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/player?co=')) {
-      const coNum = url.split('co=')[1];
-      resolve('player');
-      return;
-    }
-    
-    // VOD画面の判定
-    if (!url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=')) {
-      resolve('');
-      return;
-    }
-    
-    const categoryId = window.getCurrentCategoryId();
-    if (!categoryId) {
-      resolve('vod-select');
-      return;
-    }
-    
-    if (isNaN(categoryId)) {
-      resolve('vod-select');
-      return;
-    }
-    
-    // parentCategories()を使って判定
-    if (typeof window.parentCategories === 'function') {
-      try {
-        const parentIds = await window.parentCategories();
-        
-        if (parentIds.includes(categoryId)) {
-          resolve('course-select');
-          return;
-        }
-        
-        const pageType = determinePageTypeFallback(categoryId);
-        resolve(pageType);
-        return;
-        
-      } catch (e) {
-        resolve('vod-select');
-        return;
-      }
-    }
-    
-    // parentCategoriesが未定義の場合は従来通り
-    const pageType = determinePageTypeFallback(categoryId);
-    resolve(pageType);
-  });
+  } catch (e) {
+    console.error('[OUJ拡張] parentCategoriesの取得に失敗:', e);
+  }
+
+  // フォールバック判定: カテゴリIDの範囲で判定
+  if (categoryId < 100 || (categoryId > 480 && categoryId < 500)) {
+    return 'course-select';
+  }
+
+  return 'video-select'; // 動画一覧
 }
 
-// カテゴリIDからページ種別を判定する関数
-function determinePageTypeFallback(categoryId) {
-  if (categoryId < 100) {
-    return 'course-select';
+// ホームページの自動ログイン処理
+async function handleHomePageAutoLogin() {
+  const result = await new Promise(resolve => chrome.storage.sync.get(['autoLogin'], resolve));
+  if (!result.autoLogin) {
+    return;
   }
-  
-  if (480 < categoryId && categoryId < 500) {
-    return 'course-select';
-  }
-  
-  return 'video-select';
+
+  // ログインボタンが表示されるまで最大10秒待機し、表示されたらクリックする
+  let retryCount = 0;
+  const maxRetries = 10;
+  const interval = setInterval(() => {
+    retryCount++;
+    const themeColorButton = document.querySelector('button#theme-color');
+
+    // ログインボタンが見つかった場合
+    if (themeColorButton && themeColorButton.textContent.includes('ログイン')) {
+      clearInterval(interval);
+      window.location.href = 'https://sso.ouj.ac.jp/cas/login?service=https%3A%2F%2Fv.ouj.ac.jp%2Fv1%2Ftenants%2F1%2Flogin%2Fcas%3FredirectUrl%3Dhttps%253A%252F%252Fv.ouj.ac.jp%252Fview%252Fouj%252F%2523%252Fnavi%252Fhome';
+      return;
+    }
+
+    // リトライ回数上限に達した場合
+    if (retryCount >= maxRetries) {
+      clearInterval(interval);
+      console.log('[OUJ拡張] 自動ログインチェックを停止しました（最大試行回数超過）。');
+    }
+  }, 1000);
 }
 
 async function main() {
@@ -98,21 +84,8 @@ async function main() {
   window.waitForLogoAndInsertMenu();
 
   if (pageType === 'home') {
-    // ホームページの処理
-    // 自動ログイン設定を確認
-    chrome.storage.sync.get(['autoLogin'], function(result) {
-      if (!result.autoLogin) return;
-      // `#theme-color > span`を取得できるまで中の文字列が「ログイン」ならば自動でログインページに遷移
-      // pythonのwaitfor_elementのような処理
-      const interval = setInterval(() => {
-        const themeColorButton = document.querySelector('button#theme-color');
-        if (themeColorButton && themeColorButton.textContent.includes('ログイン')) {
-          window.location.href = 'https://sso.ouj.ac.jp/cas/login?service=https%3A%2F%2Fv.ouj.ac.jp%2Fv1%2Ftenants%2F1%2Flogin%2Fcas%3FredirectUrl%3Dhttps%253A%252F%252Fv.ouj.ac.jp%252Fview%252Fouj%252F%2523%252Fnavi%252Fhome';
-          clearInterval(interval);
-        }
-      }, 1000);
-    });
-    return;
+    // ホームページの処理を呼び出す
+    await handleHomePageAutoLogin();
   } else if (pageType === 'player') {
     window.addFavoriteButtonToBreadCrumbs();
     window.initializeVideoPlayer();      
@@ -126,7 +99,6 @@ async function main() {
 }
 
 function safeMain() {
-  console.log('[OUJ拡張] safeMain()が呼び出されました。');
   
   const missing = [];
   if (typeof window.waitForLogoAndInsertMenu !== 'function') missing.push('waitForLogoAndInsertMenu');
@@ -135,6 +107,7 @@ function safeMain() {
   if (typeof window.addFavoriteButtonToBreadCrumbs !== 'function') missing.push('addFavoriteButtonToBreadCrumbs');
   if (typeof window.getCurrentCategoryId !== 'function') missing.push('getCurrentCategoryId');
   if (typeof window.getFavorites !== 'function') missing.push('getFavorites');
+  if (typeof window.parentCategories !== 'function') missing.push('parentCategories');
   
   if (missing.length > 0) {
     if (safeMain._warned !== missing.join(',')) {
@@ -153,7 +126,6 @@ function safeMain() {
 
 window.oujLastMainTime = 0;
 function callSafeMainOnce() {
-  console.log('[OUJ拡張] callSafeMainOnce()が呼び出されました。');
   const now = Date.now();
   if (now - window.oujLastMainTime > 500) {
     window.oujLastMainTime = now;
@@ -173,25 +145,56 @@ if (!window.__ouj_url_listener_added) {
   window.__ouj_url_listener_added = true;
   (function() {
     let lastUrl = location.href;
-    // history.pushState/replaceStateのフック
+    let pollingInterval = null; // ポーリング用のインターバルID
+
+    // URLの変更を検知してメイン処理を呼び出す共通関数
+    const handleUrlChange = (source) => {
+      // requestAnimationFrameを使い、DOMの更新を待ってから処理を実行
+      requestAnimationFrame(() => {
+        const currentUrl = location.href;
+        if (currentUrl !== lastUrl) {
+          // console.log(`[OUJ拡張 DEBUG] URL change detected by ${source}. last: ${lastUrl}, current: ${currentUrl}`);
+          // ログインページからの遷移を検知してキャッシュをクリア
+          const wasLoginPage = lastUrl.includes('https://sso.ouj.ac.jp/cas/login');
+          const isNowLoginPage = currentUrl.includes('https://sso.ouj.ac.jp/cas/login');
+          if (wasLoginPage && !isNowLoginPage) {
+            // clearCachedCategoriesDataはpage-login.jsで定義されている
+            if (typeof window.clearCachedCategoriesData === 'function') {
+              window.clearCachedCategoriesData();
+            }
+          }
+
+          lastUrl = currentUrl;
+          window.oujLastMainTime = 0;
+          callSafeMainOnce();
+        }
+      });
+    };
+
+    // history.pushState/replaceStateをフック
     ["pushState", "replaceState"].forEach(type => {
-      const orig = history[type];
+      const original = history[type];
       history[type] = function() {
-        const result = orig.apply(this, arguments);
-        window.dispatchEvent(new Event("ouj-urlchange"));
+        const result = original.apply(this, arguments);
+        handleUrlChange(`history.${type}`);
         return result;
       };
     });
-    window.addEventListener("popstate", () => {
-      window.dispatchEvent(new Event("ouj-urlchange"));
-    });
-    window.addEventListener("ouj-urlchange", () => {
-      if (location.href !== lastUrl) {
-        lastUrl = location.href;
-  window.oujLastMainTime = 0;
-        console.log('[OUJ拡張] URLが変化しました:', lastUrl);
-        callSafeMainOnce();
-      }
-    });
+
+    // popstate (戻る/進む) と hashchange (ハッシュ変更) を監視
+    window.addEventListener("popstate", () => handleUrlChange("popstate"));
+    window.addEventListener("hashchange", () => handleUrlChange("hashchange"));
+
+    // ★★★ フォールバックとしてURLのポーリングを追加 ★★★
+    const startPolling = () => {
+      if (pollingInterval) return; // 既に開始している場合は何もしない
+      pollingInterval = setInterval(() => {
+        if (location.href !== lastUrl) {
+          handleUrlChange('polling');
+        }
+      }, 250); // 250ミリ秒ごとにチェック
+    };
+
+    startPolling();
   })();
 }
