@@ -3,6 +3,13 @@ function iconHtml(iconName) {
 }
 
 async function addFavoriteButtonToBreadCrumbs() {
+    const categoryId = window.getCurrentCategoryId();
+    if (!categoryId) {
+        addCategoryIdToUrl();
+        // カテゴリIDが取得できない場合はボタンを表示しない
+        return;
+    }
+
     // 挿入位置の存在確認
     const videoListSelector = '#main > main-vod-list > ion-content > div.scroll-content > vod-list-navigator > aside > div > ul > li:last-child ';
     const videoSelector =     '#main > main-player   > ion-content > div.scroll-content > player > vod-list-navigator > aside > div > ul > li:last-child';
@@ -15,11 +22,6 @@ async function addFavoriteButtonToBreadCrumbs() {
     }
     
     // 現在のカテゴリIDを取得
-    const categoryId = window.getCurrentCategoryId();
-    if (!categoryId) {
-        // カテゴリIDが取得できない場合はボタンを表示しない
-        return;
-    }
     const categoryIdStr = categoryId.toString();
     
     // 既にお気に入りボタンがある場合は何もしない
@@ -56,5 +58,25 @@ async function addFavoriteButtonToBreadCrumbs() {
     );
     // asideの子要素として追加
     aside.appendChild(favBtn);
+}
+async function addCategoryIdToUrl() {
+  // 現在のURLを取得
+  const currentUrl = new URL(window.location.href);
+  
+  const contentId = await window.getCurrentContentId().toString();
+  const category = await window.getCategoryDataFromContentId(contentId);
+    if (!category) {
+      console.warn('[OUJ拡張] カテゴリIDが取得できませんでした。');
+      return;
+    }
+  
+  // URLのハッシュに`&ca=${category.categoryId}`を追加
+  currentUrl.hash += `&ca=${category.categoryId}`;
+  
+    
+  // URLを更新
+  window.history.replaceState({}, '', currentUrl.toString());
+  // ページをリロード
+  window.location.reload();
 }
 window.addFavoriteButtonToBreadCrumbs = addFavoriteButtonToBreadCrumbs;
