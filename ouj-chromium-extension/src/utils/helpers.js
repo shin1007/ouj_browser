@@ -6,18 +6,6 @@ const getPlaybackPosition = () => {
     return window.getSetting('playbackPosition', 0);
 };
 
-const saveFavorite = (videoId) => {
-    let favorites = window.getSetting('favorites', []);
-    if (!favorites.includes(videoId)) {
-        favorites.push(videoId);
-        window.saveSetting('favorites', favorites);
-    }
-};
-
-const getFavorites = () => {
-    return window.getSetting('favorites', []);
-};
-
 const readTitleAloud = (title) => {
     const utterance = new SpeechSynthesisUtterance(title);
     window.speechSynthesis.speak(utterance);
@@ -798,8 +786,6 @@ const showConfirmDialog = (message, title = '確認', options = {}) => {
 // グローバル関数として公開
 window.savePlaybackPosition = savePlaybackPosition;
 window.getPlaybackPosition = getPlaybackPosition;
-window.saveFavorite = saveFavorite;
-window.getFavorites = getFavorites;
 window.readTitleAloud = readTitleAloud;
 window.clearVideoElements = clearVideoElements;
 window.removeIntroAndOutro = removeIntroAndOutro;

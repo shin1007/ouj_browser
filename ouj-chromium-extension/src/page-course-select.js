@@ -9,7 +9,7 @@ async function addFavoriteButtonsToCategoryList() {
     return;
   }
   const childCategories = await window.getChildIds(ca);
-  const favorites = window.getFavorites ? window.getFavorites() : [];
+  const favorites = typeof window.getFavorites === 'function' ? window.getFavorites() : [];
 
   // ion-list#common-list-content内のion-itemを全て取得
   const items = document.querySelectorAll('#main div.icon-text > .icon-area');
@@ -44,35 +44,25 @@ async function addFavoriteButtonsToCategoryList() {
   favBtn.onmouseout = () => favBtn.style.background = 'transparent';
     
     // お気に入り状態に応じてアイコンを決定
-    const isFavorite = favorites.includes(category.categoryId.toString());
+    const isFavorite = window.isFavorite(category.categoryId);
     const iconName = isFavorite ? 'star' : 'star-outline';
     const iconClass = isFavorite ? 'ion-md-star' : 'ion-md-star-outline';
     
   favBtn.innerHTML = `<ion-icon name="${iconName}" class="icon icon-md ${iconClass} item-icon" aria-label="お気に入り" style="font-size:24px;"></ion-icon>`;
     
     // クリックイベントを追加
-    favBtn.addEventListener('click', (event) => {
+    favBtn.addEventListener('click', async (event) => {
       // ほかのイベントが発火しないようにする
       event.stopPropagation();
       event.preventDefault();
 
       const categoryId = category.categoryId.toString();
-      
-      // 現在のお気に入り状態を再取得
-      const currentFavorites = window.getFavorites();
-      const currentlyFavorite = currentFavorites.includes(categoryId);
-      
-      if (currentlyFavorite) {
-        // お気に入りから削除
-        const updatedFavorites = currentFavorites.filter(id => id !== categoryId);
-        window.saveSetting('favorites', updatedFavorites);
-  favBtn.innerHTML = '<ion-icon name="star-outline" class="icon icon-md ion-md-star-outline item-icon" aria-label="お気に入り" style="font-size:24px;"></ion-icon>';
-      } else {
-        // お気に入りに追加
-        const updatedFavorites = [...currentFavorites, categoryId];
-        window.saveSetting('favorites', updatedFavorites);
-  favBtn.innerHTML = '<ion-icon name="star" class="icon icon-md ion-md-star item-icon" aria-label="お気に入り" style="font-size:24px;"></ion-icon>';
-      }
+      favBtn.disabled = true;
+      const newIsFavorite = await window.toggleFavorite(categoryId);
+      const newIconName = newIsFavorite ? 'star' : 'star-outline';
+      const newIconClass = newIsFavorite ? 'ion-md-star' : 'ion-md-star-outline';
+      favBtn.innerHTML = `<ion-icon name="${newIconName}" class="icon icon-md ${newIconClass} item-icon" aria-label="お気に入り" style="font-size:24px;"></ion-icon>`;
+      favBtn.disabled = false;
     });
     
     // タイトルの右側に追加

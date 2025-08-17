@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "放送大学授業ブラウザ",
-  "version": "2025.8.14",
+  "version": "2025.8.17",
   "description": "放送大学の放送授業での学習を便利にする拡張機能",
   "author": "shin1007",
   "permissions": [
@@ -27,6 +27,7 @@
       ],
       "js": [
         "utils/helpers.js",
+        "utils/favorites-helper.js",
         "utils/video-ending-detection.js",
         "utils/video-player-core.js",
         "utils/video-prev-next.js",
@@ -34,11 +35,11 @@
         "utils/video-settings.js",
         "utils/video-show-subtitle.js",
         "utils/viewingStatus.js",
+        "breadcrumbs.js",
         "categories.js",
         "menu.js",
-        "page-course-select.js",
         "page-login.js",
-        "page-video-select.js",
+        "page-course-select.js",
         "thumbnail-progress.js",
         "content.js"
       ],

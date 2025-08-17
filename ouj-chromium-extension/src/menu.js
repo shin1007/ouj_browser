@@ -1385,66 +1385,6 @@ async function addHistoryEntry(contentId) {
 }
 window.addHistoryEntry = addHistoryEntry;
 
-// お気に入り追加・削除時にもプリフェッチ
-  // TODO: 反映タイミングをより早くする改善の余地あり
-function addFavorite(categoryId) {
-  let favorites = window.getSetting('favorites', []);
-  if (favorites.includes(categoryId)) {return}
-
-  favorites.push(categoryId);
-  window.saveSetting('favorites', favorites);
-  // ★お気に入り追加時におすすめリストをプリフェッチ
-  let saveResult = window.saveSetting('favorites', favorites);
-  // ★お気に入り追加時におすすめリストをプリフェッチ
-  if (saveResult && typeof saveResult.then === 'function') {
-    saveResult.then(() => {
-      prefetchRecommendListData();
-    });
-  } else {
-    prefetchRecommendListData();
-  }
-}
-
-window.addFavorite = addFavorite;
-// TODO: 反映タイミングをより早くする改善の余地あり
-function removeFavorite(categoryId) {
-  let favorites = window.getSetting('favorites', []);
-  favorites = favorites.filter(id => id !== categoryId);
-  window.saveSetting('favorites', favorites);
-  // ★お気に入り削除時におすすめリストをプリフェッチ
-  let saveResult = window.saveSetting('favorites', favorites);
-  // ★お気に入り削除時におすすめリストをプリフェッチ
-  if (saveResult && typeof saveResult.then === 'function') {
-    saveResult.then(() => {
-      prefetchRecommendListData();
-    });
-  } else {
-    prefetchRecommendListData();
-  }
-}
-window.removeFavorite = removeFavorite;
-
-// TODO: 反映タイミングをより早くする改善の余地あり
-function addPinnedFavorite(categoryId) {
-  let pinned = window.getSetting('pinnedFavorites', []);
-  if (pinned.includes(categoryId)) {return}
-
-  pinned.push(categoryId);
-  window.saveSetting('pinnedFavorites', pinned);
-  // ★ピン追加時におすすめリストをプリフェッチ
-  let saveResult = window.saveSetting('pinnedFavorites', pinned);
-  // ★ピン追加時におすすめリストをプリフェッチ
-  if (saveResult && typeof saveResult.then === 'function') {
-    saveResult.then(() => {
-      prefetchRecommendListData();
-    });
-  } else {
-    prefetchRecommendListData();
-  }
-  
-}
-window.addPinnedFavorite = addPinnedFavorite;
-
 function removePinnedFavorite(categoryId) {
   let pinned = window.getSetting('pinnedFavorites', []);
   pinned = pinned.filter(id => id !== categoryId);

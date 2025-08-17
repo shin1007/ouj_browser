@@ -16,9 +16,14 @@ async function addFavoriteButtonToBreadCrumbs() {
     
     // 現在のカテゴリIDを取得
     const categoryId = window.getCurrentCategoryId();
+    if (!categoryId) {
+        // カテゴリIDが取得できない場合はボタンを表示しない
+        return;
+    }
+    const categoryIdStr = categoryId.toString();
     
     // 既にお気に入りボタンがある場合は何もしない
-    if (document.getElementById('favorite-button')) {
+    if (aside.querySelector('.favorite-button')) {
         return;
     }
     
@@ -32,32 +37,21 @@ async function addFavoriteButtonToBreadCrumbs() {
     favBtn.onmouseout = () => { favBtn.style.background = 'transparent'; };
     
     // お気に入りの状態を取得
-    const favorites = window.getFavorites();
-    
-    // お気に入りに含まれているかチェック
-    const isFavorite = favorites.includes(categoryId);
+    const isFavorite = window.isFavorite(categoryIdStr);
     favBtn.innerHTML = iconHtml(isFavorite ? 'star' : 'star-outline');
+    
     // クリックイベントを追加
-    favBtn.addEventListener('click', (event) => {
+    favBtn.addEventListener('click', async (event) => {
         // ほかのイベントが発火しないようにする
         event.stopPropagation();
         event.preventDefault();
 
-        // 現在のお気に入り状態を再取得
-        const currentFavorites = window.getFavorites();
-        const currentlyFavorite = currentFavorites.includes(categoryId);
-
-        if (currentlyFavorite) {
-            // お気に入りから削除
-            const updatedFavorites = currentFavorites.filter(id => id !== categoryId);
-            window.saveSetting('favorites', updatedFavorites);
-            favBtn.innerHTML = iconHtml("star-outline");
-        } else {
-            // お気に入りに追加
-            const updatedFavorites = [...currentFavorites, categoryId];
-            window.saveSetting('favorites', updatedFavorites);
-            favBtn.innerHTML = iconHtml("star");
-        }
+        // ボタンを一時的に無効化
+        favBtn.disabled = true;
+        const newIsFavorite = await window.toggleFavorite(categoryIdStr);
+        favBtn.innerHTML = iconHtml(newIsFavorite ? 'star' : 'star-outline');
+        // ボタンを再度有効化
+        favBtn.disabled = false;
     }
     );
     // asideの子要素として追加
