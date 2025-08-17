@@ -1,41 +1,3 @@
-const savePlaybackPosition = (position) => {
-    window.saveSetting('playbackPosition', position);
-};
-
-const getPlaybackPosition = () => {
-    return window.getSetting('playbackPosition', 0);
-};
-
-const readTitleAloud = (title) => {
-    const utterance = new SpeechSynthesisUtterance(title);
-    window.speechSynthesis.speak(utterance);
-};
-
-const clearVideoElements = () => {
-    const videoElements = document.querySelectorAll('video');
-    videoElements.forEach(video => {
-        video.style.display = 'none';
-    });
-};
-
-const removeIntroAndOutro = (videoElement) => {
-    videoElement.currentTime = videoElement.duration - 10; // Skip last 10 seconds as an example
-};
-
-/**
- * 日付が同じかどうかをチェックする関数
- * @param {string} dateString1 - 日付文字列1
- * @param {string} dateString2 - 日付文字列2
- * @returns {boolean} 同じ日付の場合true
- */
-const isSameDate = (dateString1, dateString2) => {
-    const date1 = new Date(dateString1);
-    const date2 = new Date(dateString2);
-    
-    return date1.getFullYear() === date2.getFullYear() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getDate() === date2.getDate();
-};
 
 /**
  * キャッシュ付きのAPIリクエストを行う関数
@@ -59,9 +21,6 @@ const fetchWithCache = async (url, cacheKey, minute=720) => {
         }else if(cachedData.timestamp && (new Date().getTime() - new Date(cachedData.timestamp).getTime()) < minute * 60 * 1000) {
             // console.log(`fetchWithCache: ${cacheKey} のキャッシュは${minute}分以内です。`, cachedData.data);
             return cachedData.data;
-        // } else if(isSameDate(cachedData.timestamp, new Date().toISOString())) {
-        //     // console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものです。キャッシュを返します。${cachedData.data}`);
-        //     return cachedData.data;
         } else {
             // console.log(`fetchWithCache: ${cacheKey} のキャッシュは当日のものではありません。ネットワークからデータ取得を試行中...`);
         }
@@ -160,174 +119,6 @@ const waitForCondition = (condition, callback, interval = 100, maxAttempts = nul
     checkCondition();
 };
 
-/**
- * モーダルパネルを作成する関数
- * @param {string} id - パネルのID
- * @param {string} title - パネルのタイトル
- * @param {string} content - パネルの内容HTML
- * @param {Object} options - オプション設定
- * @returns {HTMLElement} 作成されたパネル要素
- */
-const createModalPanel = (id, title, content, options = {}) => {
-    const {
-        width = 'min(90vw, 600px)',
-        height = '480px',
-        maxHeight = '480px',
-        showCloseButton = true,
-        closeOnOutsideClick = true,
-        closeOnEscape = true,
-        onClose = null
-    } = options;
-
-    // 既存パネルがあれば削除
-    let existingPanel = document.getElementById(id);
-    if (existingPanel) {
-        existingPanel.remove();
-    }
-
-    // パネル要素を作成
-    const panel = document.createElement('div');
-    panel.id = id;
-    panel.className = 'modal-panel';
-    panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-labelledby', `${id}-title`);
-    panel.setAttribute('aria-modal', 'true');
-
-    // #mainのスタイルを取得
-    const main = document.getElementById('main');
-    let mainWidth = '800px';
-    let mainBg = '#fff';
-    let mainFont = '';
-    let mainFontSize = '14px';
-    
-    if (main) {
-        const style = window.getComputedStyle(main);
-        mainWidth = style.width;
-        mainBg = style.backgroundColor;
-        mainFont = style.fontFamily;
-        mainFontSize = style.fontSize;
-    }
-
-    // モダンなスタイルを適用
-    Object.assign(panel.style, {
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: width,
-        maxWidth: mainWidth,
-        minHeight: height,
-        maxHeight: maxHeight,
-        height: height,
-        background: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? '#1a2230' : '#f9fafb',
-        fontFamily: mainFont || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        fontSize: mainFontSize || '14px',
-        border: 'none',
-        borderRadius: '12px',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        padding: '0',
-        zIndex: '9999',
-        overflow: 'hidden',
-        opacity: '0',
-        transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.2)'
-    });
-
-    // ヘッダー部分
-    const headerHtml = `
-        <div style="background: #232c3a; padding: 20px 24px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3a4658;">
-            <h2 id="${id}-title" style="margin: 0; color: #fff; font-size: 18px; font-weight: 600; letter-spacing: 0.5px;">
-                ${title}
-            </h2>
-            ${showCloseButton ? `
-                <button id="${id}-close-btn" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: background-color 0.2s;" title="閉じる">
-                    ×
-                </button>
-            ` : ''}
-        </div>
-    `;
-
-    // コンテンツ部分
-    const contentHtml = `
-        <div style="padding: 0; height: calc(100% - 80px); overflow-y: auto;">
-            ${content}
-        </div>
-    `;
-
-    panel.innerHTML = headerHtml + contentHtml;
-
-    // イベントリスナーを追加
-    const closePanel = () => {
-        panel.style.opacity = '0';
-        panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
-        setTimeout(() => {
-            if (panel.parentNode) {
-                panel.remove();
-            }
-            if (onClose) onClose();
-        }, 200);
-    };
-
-    if (showCloseButton) {
-        const closeBtn = panel.querySelector(`#${id}-close-btn`);
-        if (closeBtn) {
-            closeBtn.addEventListener('click', closePanel);
-            closeBtn.addEventListener('mouseenter', () => {
-                closeBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-            });
-            closeBtn.addEventListener('mouseleave', () => {
-                closeBtn.style.backgroundColor = 'transparent';
-            });
-        }
-    }
-
-    if (closeOnOutsideClick) {
-        const closePanelOnOutsideClick = (event) => {
-            if (event.target === panel) {
-                closePanel();
-            }
-        };
-        panel.addEventListener('click', closePanelOnOutsideClick);
-    }
-
-    if (closeOnEscape) {
-        const closePanelOnEscape = (event) => {
-            if (event.key === 'Escape') {
-                closePanel();
-            }
-        };
-        document.addEventListener('keydown', closePanelOnEscape);
-    }
-
-    // ドキュメントに追加
-    document.body.appendChild(panel);
-
-    // アニメーション開始
-    setTimeout(() => {
-        panel.style.opacity = '1';
-        panel.style.transform = 'translate(-50%, -50%) scale(1)';
-    }, 10);
-
-    return panel;
-};
-
-/**
- * パネルを閉じる関数
- * @param {string} id - パネルのID
- */
-const closeModalPanel = (id) => {
-    const panel = document.getElementById(id);
-    if (panel) {
-        panel.style.opacity = '0';
-        panel.style.transform = 'translate(-50%, -50%) scale(0.95)';
-        setTimeout(() => {
-            if (panel.parentNode) {
-                panel.remove();
-            }
-        }, 200);
-    }
-};
 
 /**
  * 設定を保存する関数
@@ -784,17 +575,9 @@ const showConfirmDialog = (message, title = '確認', options = {}) => {
 };
 
 // グローバル関数として公開
-window.savePlaybackPosition = savePlaybackPosition;
-window.getPlaybackPosition = getPlaybackPosition;
-window.readTitleAloud = readTitleAloud;
-window.clearVideoElements = clearVideoElements;
-window.removeIntroAndOutro = removeIntroAndOutro;
-window.isSameDate = isSameDate;
 window.fetchWithCache = fetchWithCache;
 window.waitForElement = waitForElement;
 window.waitForCondition = waitForCondition;
-window.createModalPanel = createModalPanel;
-window.closeModalPanel = closeModalPanel;
 window.saveSetting = saveSetting;
 window.getSetting = getSetting;
 window.getBooleanSetting = getBooleanSetting;
@@ -807,7 +590,3 @@ window.showWarningNotification = showWarningNotification;
 window.showInfoNotification = showInfoNotification;
 window.showConfirmDialog = showConfirmDialog;
 window.createCommonPanelHTML = createCommonPanelHTML;
-
-// 初期化完了を通知
-// console.log('helpers.js: 共通関数の初期化が完了しました');
-window.helpersInitialized = true;
