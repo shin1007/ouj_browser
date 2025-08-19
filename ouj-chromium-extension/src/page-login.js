@@ -10,8 +10,10 @@ function waitForPasswordAndLogin() {
     window.waitForElement('#username', (usernameField) => {
         window.waitForElement('#password', (passwordField) => {
             window.waitForElement('button[name="submitBtn"][type="submit"]', (loginButton) => {
+                // ユーザー名フィールドにフォーカス
+                usernameField.focus();
 
-                // 監視
+                // 入力を監視
                 const interval = setInterval(() => {
                     if (passwordField.value.length > 0) {
                         clearInterval(interval);
