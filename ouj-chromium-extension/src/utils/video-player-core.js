@@ -18,8 +18,8 @@ async function initializeVideoPlayer() {
   // 動画ページのcontentIdを取得し、履歴に追加
   const url = window.location.href;
   const matchCo = url.match(/co=(\d+)/);
-  if (window.addHistoryEntry && matchCo) {
-    window.addHistoryEntry(matchCo[1]);
+  if (matchCo) {
+    addHistoryEntry(matchCo[1]);
   }
     
   // ラジオ番組判定を実行
@@ -248,6 +248,54 @@ async function getAvailableVideosFromFavorites(favorites) {
   }
   return availableVideos;
 }
+// 履歴をlocalStorageに保存する関数
+async function addHistoryEntry(contentId) {
+  if (!contentId) return;
+  // 最近の履歴追加をチェック（5秒以内の同じcontentIdは無視）
+  const lastHistoryKey = `lastHistory_${contentId}`;
+  const lastHistoryTime = window.getSetting(lastHistoryKey, 0);
+  const now = Date.now();
+  if (now - lastHistoryTime < 5000) {
+    return;
+  }
+  // 進捗取得（おすすめ機能と同じ方式）
+  let progress = 0;
+  try {
+    if (window.getVideoViewingStatus) {
+      const status = await window.getVideoViewingStatus(contentId, { cacheSeconds: 5 });
+      progress = status.currentTimeRate || 0;
+    }
+  } catch (e) {}
+  const entry = {
+    contentId,
+    date: new Date().toISOString(),
+    progress
+  };
+  let history = [];
+  try {
+    history = window.getSetting('history', []);
+  } catch (e) {
+    history = [];
+  }
+  // 既存の同じcontentIdは削除（重複防止）
+  history = history.filter(item => item.contentId !== contentId);
+  // 先頭に追加
+  history.unshift(entry);
+  // 最大30件まで
+  if (history.length > 30) history = history.slice(0, 30);
+  let saveResult = window.saveSetting('history', history);
+  window.saveSetting(lastHistoryKey, now);
+  // ★履歴追加時におすすめリストをプリフェッチ
+  // TODO: 反映タイミングをより早くする改善の余地あり
+  if (saveResult && typeof saveResult.then === 'function') {
+    saveResult.then(() => {
+      window.prefetchRecommendListData();
+    });
+  } else {
+    window.prefetchRecommendListData();
+  }
+}
+
 
 // グローバル関数として公開
 window.getNextVideoId = () => window.nextVideoId;
