@@ -89,7 +89,7 @@ function showRadioProgramUI() {
     (async () => {
       const captionAvailable = await isCaptionAvailable();
       radioUI.innerHTML = `
-        <div style="font-size: 24px; margin-bottom: 10px;">🎵</div>
+        <div style="font-size: 24px; margin-bottom: 10px; color: rgb(235,247,255);">♫</div>
         <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">ラジオ番組</div>
         <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">${await captionAvailable ? captionUi : noCaptionUi}</div>
       `;

@@ -71,8 +71,8 @@ async function insertPrevNextLinks(titleElement) {
       
       // ツールチップを表示
       if (prev.summary) {
-        showTooltip(this, prev.summary, 'left');
-      }
+        prevLink.title = prev.summary;
+        }
     };
     prevLink.onmouseleave = function() {
       this.style.background = '#fff';
@@ -138,7 +138,7 @@ async function insertPrevNextLinks(titleElement) {
       
       // ツールチップを表示
       if (next.summary) {
-        showTooltip(this, next.summary, 'right');
+        nextLink.title = next.summary; // ブラウザデフォルトツールチップ
       }
     };
     nextLink.onmouseleave = function() {
@@ -166,54 +166,6 @@ async function insertPrevNextLinks(titleElement) {
   // console.log('insertPrevNextLinks: 前後動画リンクを挿入しました');
 }
 
-// ツールチップを表示する関数
-function showTooltip(element, text, position = 'top') {
-  // 既存のツールチップを削除
-  hideTooltip();
-  
-  const tooltip = document.createElement('div');
-  tooltip.id = 'video-tooltip';
-  tooltip.style.cssText = `
-    position: fixed;
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    line-height: 1.4;
-    max-width: 300px;
-    word-wrap: break-word;
-    z-index: 10000;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    pointer-events: none;
-    white-space: pre-wrap;
-  `;
-  tooltip.textContent = text;
-  
-  document.body.appendChild(tooltip);
-  
-  // マウスポインタの位置を取得
-  const mouseX = event.clientX;
-  const mouseY = event.clientY;
-  
-  // ツールチップのサイズを取得
-  const tooltipRect = tooltip.getBoundingClientRect();
-  
-  // マウスポインタの右下に配置
-  let left = mouseX + 15; // マウスポインタから15px右
-  let top = mouseY + 15;  // マウスポインタから15px下
-  
-  // 画面外にはみ出さないように調整
-  if (left + tooltipRect.width > window.innerWidth - 10) {
-    left = mouseX - tooltipRect.width - 15; // 左側に表示
-  }
-  if (top + tooltipRect.height > window.innerHeight - 10) {
-    top = mouseY - tooltipRect.height - 15; // 上側に表示
-  }
-  
-  tooltip.style.left = left + 'px';
-  tooltip.style.top = top + 'px';
-}
 
 // ツールチップを非表示にする関数
 function hideTooltip() {
@@ -237,6 +189,5 @@ async function skipToNextVideo() {
 
 // グローバル関数として公開
 window.insertPrevNextLinks = insertPrevNextLinks;
-window.showTooltip = showTooltip;
 window.hideTooltip = hideTooltip;
 window.skipToNextVideo = skipToNextVideo; 

@@ -7,7 +7,8 @@
   "permissions": [
     "storage",
     "scripting",
-    "webNavigation"
+    "webNavigation",
+    "webRequest"
   ],
   "host_permissions": [
     "https://v.ouj.ac.jp/*",

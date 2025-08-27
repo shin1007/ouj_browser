@@ -151,6 +151,7 @@ function addVideoSettingsPanel() {
       }
       // console.log('addVideoSettingsPanel: 動画設定パネルを追加しました');
     });
+    
 }
 
 // グローバル関数として公開
