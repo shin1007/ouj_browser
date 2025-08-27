@@ -42,6 +42,8 @@ function addVideoSettingsPanel() {
   const autoCaptionEnabledRadio = window.getSetting('autoCaptionEnabledRadio', true);
   const nextVideoMode = window.getSetting('nextVideoSetting', 'same-course');
   const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
+  // 動画自動再生設定の取得
+  const autoPlayEnabled = window.getBooleanSetting('autoPlayEnabled', false);
 
     // 新規追加設定の取得
     const skipStart = window.getSetting('skipStartSeconds', 0);
@@ -62,6 +64,10 @@ function addVideoSettingsPanel() {
               <label for="auto-caption-radio" style="margin-left: 5px; cursor: pointer; color: #333;">字幕を表示する（ラジオ番組）</label>
             </div>
             <hr style="margin: 15px 0; border: none; border-top: 2px solid #bbb;"> <!-- ここで区切る -->
+            <div style='margin-bottom: 8px;'>
+              <input type="checkbox" id="auto-play-video" ${autoPlayEnabled ? 'checked' : ''}>
+              <label for="auto-play-video" style="margin-left: 5px; cursor: pointer; color: #333;">可能なら動画を自動再生する</label>
+            </div>
             <div style='margin-bottom: 8px;'>
               <input type="checkbox" id="auto-next-video" ${autoNextVideoEnabled ? 'checked' : ''}>
               <label for="auto-next-video" style="margin-left: 5px; cursor: pointer; color: #333;">動画終了時に自動で次の動画に進む</label>
@@ -164,6 +170,15 @@ function addVideoSettingsPanel() {
         });
       });
       
+      // 自動再生チェックボックスのイベントリスナー
+      const autoPlayVideoCheckbox = panel.querySelector('#auto-play-video');
+      if (autoPlayVideoCheckbox) {
+        autoPlayVideoCheckbox.addEventListener('change', (event) => {
+          const enabled = event.target.checked;
+          window.saveSetting('autoPlayEnabled', enabled);
+          // console.log('addVideoSettingsPanel: 動画自動再生設定を保存しました:', enabled);
+        });
+      }
       // チェックボックスのイベントリスナーを追加（auto-next-video, volume-normalizationのみ）
       const autoNextVideoCheckbox = panel.querySelector('#auto-next-video');
       if (autoNextVideoCheckbox) {
