@@ -13,7 +13,6 @@ async function initializeVideoPlayer() {
   
   // videoタグの出現を監視し、出現した瞬間に設定パネルを挿入
   waitForVideoElementAndInsertPanel();
-
   
   // 動画ページのcontentIdを取得し、履歴に追加
   const url = window.location.href;
@@ -35,9 +34,22 @@ async function initializeVideoPlayer() {
   startVideoEndMonitoring();
   // console.log('[動画] initializeVideoPlayer: startVideoEndMonitoring呼び出し');
   
-  // エンディング検出を開始
+  // エンディング検出、動画の最初と最後のスキップ機能を開始
   window.StartPlaybackManagement(); 
-  
+
+  // 動画自動再生設定の取得
+  const autoPlayEnabled = window.getBooleanSetting ? window.getBooleanSetting('autoPlayEnabled', false) : false;
+
+  // videoタグが存在する場合は自動再生
+  const videoEl = document.querySelector('video');
+  if (videoEl && autoPlayEnabled) {
+    // ユーザー操作不要で再生できる場合のみ
+    videoEl.play().catch(e => {
+      // 自動再生がブロックされた場合は何もしない
+      console.log('initializeVideoPlayer: 動画の自動再生がブロックされました', e)
+    });
+  }
+
 }
 
 // videoタグの出現を監視し、出現したら設定パネルを挿入する

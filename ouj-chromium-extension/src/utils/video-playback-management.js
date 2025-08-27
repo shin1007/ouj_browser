@@ -211,10 +211,21 @@ function applyVideoSkip() {
       const currentTime = video.currentTime;
       const duration = video.duration;
 
+      // オープニングのスキップ
       if (currentTime < skipStart) {
         console.log(`applyVideoSkip: 現在の再生時間 ${currentTime} 秒はスキップ開始時間 ${skipStart} 秒より前です。スキップを適用します。`);
-        video.currentTime = skipStart;
+        video.pause();
+        const seek = () => {
+          if (video.readyState > 0) {
+            video.currentTime = skipStart;
+          } else {
+            setTimeout(seek, 100);
+          }
+        };
+        seek();
+        return;
       }
+      // エンディングのスキップ
       if (currentTime > duration - skipEnd) {
         window.skipToNextVideo();
       }
