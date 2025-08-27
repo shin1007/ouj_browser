@@ -42,6 +42,12 @@ function addVideoSettingsPanel() {
   const autoCaptionEnabledRadio = window.getSetting('autoCaptionEnabledRadio', true);
   const nextVideoMode = window.getSetting('nextVideoSetting', 'same-course');
   const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
+
+    // 新規追加設定の取得
+    const skipStart = window.getSetting('skipStartSeconds', 0);
+    const fadeInStart = window.getSetting('fadeInStartSeconds', 0);
+    const skipEnd = window.getSetting('skipEndSeconds', 0);
+    const fadeOutEnd = window.getSetting('fadeOutEndSeconds', 0);
       
       panel.innerHTML = `
         <div style="display: flex; flex-direction: row; gap: 24px; align-items: flex-start;">
@@ -70,6 +76,45 @@ function addVideoSettingsPanel() {
               <label for="favorites-random" style="margin-left: 5px; cursor: pointer; color: #333;">お気に入りの中からランダムで次を再生</label>
             </div>
             <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+            <!-- 追加設定項目 -->
+            <div style="margin-bottom: 8px; display: flex; align-items: center;">
+              <label for="skip-start" style="width: 200px; color: #333;">動画の最初をスキップ</label>
+              <select id="skip-start">
+                <option value="0" ${skipStart==0?'selected':''}>なし</option>
+                <option value="15" ${skipStart==15?'selected':''}>15秒</option>
+                <option value="30" ${skipStart==30?'selected':''}>30秒</option>
+                <option value="45" ${skipStart==45?'selected':''}>45秒</option>
+                <option value="60" ${skipStart==60?'selected':''}>60秒</option>
+              </select>
+            </div>
+            <div style="margin-bottom: 8px; display: flex; align-items: center;">
+              <label for="fadein-start" style="width: 200px; color: #333;">動画の最初をフェードイン</label>
+              <select id="fadein-start">
+                <option value="0" ${fadeInStart==0?'selected':''}>なし</option>
+                <option value="5" ${fadeInStart==5?'selected':''}>5秒</option>
+                <option value="10" ${fadeInStart==10?'selected':''}>10秒</option>
+                <option value="15" ${fadeInStart==15?'selected':''}>15秒</option>
+              </select>
+            </div>
+            <div style="margin-bottom: 8px; display: flex; align-items: center;">
+              <label for="skip-end" style="width: 200px; color: #333;">動画の最後をスキップ</label>
+              <select id="skip-end">
+                <option value="0" ${skipEnd==0?'selected':''}>なし</option>
+                <option value="15" ${skipEnd==15?'selected':''}>15秒</option>
+                <option value="30" ${skipEnd==30?'selected':''}>30秒</option>
+                <option value="45" ${skipEnd==45?'selected':''}>45秒</option>
+                <option value="60" ${skipEnd==60?'selected':''}>60秒</option>
+              </select>
+            </div>
+            <div style="margin-bottom: 8px; display: flex; align-items: center;">
+              <label for="fadeout-end" style="width: 200px; color: #333;">動画の最後をフェードアウト</label>
+              <select id="fadeout-end">
+                <option value="0" ${fadeOutEnd==0?'selected':''}>なし</option>
+                <option value="5" ${fadeOutEnd==5?'selected':''}>5秒</option>
+                <option value="10" ${fadeOutEnd==10?'selected':''}>10秒</option>
+                <option value="15" ${fadeOutEnd==15?'selected':''}>15秒</option>
+              </select>
+            </div>
             <div style="margin-top: 10px; font-size: 12px; color: #666;">
               設定は自動的に保存されます
             </div>
@@ -79,6 +124,31 @@ function addVideoSettingsPanel() {
           <!-- 右カラム: キーボードショートカット説明（削除済み） -->
         </div>
       `;
+      // 追加設定項目のイベントリスナー
+      const skipStartSelect = panel.querySelector('#skip-start');
+      if (skipStartSelect) {
+        skipStartSelect.addEventListener('change', (event) => {
+          window.saveSetting('skipStartSeconds', Number(event.target.value));
+        });
+      }
+      const fadeInStartSelect = panel.querySelector('#fadein-start');
+      if (fadeInStartSelect) {
+        fadeInStartSelect.addEventListener('change', (event) => {
+          window.saveSetting('fadeInStartSeconds', Number(event.target.value));
+        });
+      }
+      const skipEndSelect = panel.querySelector('#skip-end');
+      if (skipEndSelect) {
+        skipEndSelect.addEventListener('change', (event) => {
+          window.saveSetting('skipEndSeconds', Number(event.target.value));
+        });
+      }
+      const fadeOutEndSelect = panel.querySelector('#fadeout-end');
+      if (fadeOutEndSelect) {
+        fadeOutEndSelect.addEventListener('change', (event) => {
+          window.saveSetting('fadeOutEndSeconds', Number(event.target.value));
+        });
+      }
       // 字幕自動表示チェックボックスのイベントリスナー（テレビ番組）
       const autoCaptionCheckboxTV = panel.querySelector('#auto-caption-tv');
       if (autoCaptionCheckboxTV) {
@@ -151,7 +221,7 @@ function addVideoSettingsPanel() {
       }
       // console.log('addVideoSettingsPanel: 動画設定パネルを追加しました');
     });
-    
+
 }
 
 // グローバル関数として公開
