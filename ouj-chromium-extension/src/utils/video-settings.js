@@ -85,15 +85,8 @@ function addVideoSettingsPanel() {
                 <option value="30" ${skipStart==30?'selected':''}>30秒</option>
                 <option value="45" ${skipStart==45?'selected':''}>45秒</option>
                 <option value="60" ${skipStart==60?'selected':''}>60秒</option>
-              </select>
-            </div>
-            <div style="margin-bottom: 8px; display: flex; align-items: center;">
-              <label for="fadein-start" style="width: 200px; color: #333;">動画の最初をフェードイン</label>
-              <select id="fadein-start">
-                <option value="0" ${fadeInStart==0?'selected':''}>なし</option>
-                <option value="5" ${fadeInStart==5?'selected':''}>5秒</option>
-                <option value="10" ${fadeInStart==10?'selected':''}>10秒</option>
-                <option value="15" ${fadeInStart==15?'selected':''}>15秒</option>
+                <option value="75" ${skipStart==75?'selected':''}>75秒</option>
+                <option value="90" ${skipStart==90?'selected':''}>90秒</option>
               </select>
             </div>
             <div style="margin-bottom: 8px; display: flex; align-items: center;">
@@ -104,15 +97,10 @@ function addVideoSettingsPanel() {
                 <option value="30" ${skipEnd==30?'selected':''}>30秒</option>
                 <option value="45" ${skipEnd==45?'selected':''}>45秒</option>
                 <option value="60" ${skipEnd==60?'selected':''}>60秒</option>
-              </select>
-            </div>
-            <div style="margin-bottom: 8px; display: flex; align-items: center;">
-              <label for="fadeout-end" style="width: 200px; color: #333;">動画の最後をフェードアウト</label>
-              <select id="fadeout-end">
-                <option value="0" ${fadeOutEnd==0?'selected':''}>なし</option>
-                <option value="5" ${fadeOutEnd==5?'selected':''}>5秒</option>
-                <option value="10" ${fadeOutEnd==10?'selected':''}>10秒</option>
-                <option value="15" ${fadeOutEnd==15?'selected':''}>15秒</option>
+                <option value="75" ${skipEnd==75?'selected':''}>75秒</option>
+                <option value="90" ${skipEnd==90?'selected':''}>90秒</option>
+                <option value="105" ${skipEnd==105?'selected':''}>105秒</option>  
+                <option value="120" ${skipEnd==120?'selected':''}>120秒</option>
               </select>
             </div>
             <div style="margin-top: 10px; font-size: 12px; color: #666;">

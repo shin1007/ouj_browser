@@ -36,7 +36,7 @@ async function initializeVideoPlayer() {
   // console.log('[動画] initializeVideoPlayer: startVideoEndMonitoring呼び出し');
   
   // エンディング検出を開始
-  window.startEndingDetection();
+  window.StartPlaybackManagement(); 
   
 }
 

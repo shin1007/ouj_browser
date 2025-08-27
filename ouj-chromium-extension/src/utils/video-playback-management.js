@@ -19,7 +19,7 @@ function startVideoEndMonitoring() {
         // console.log('[動画] startVideoEndMonitoring: 次の動画に自動遷移します');
         showVideoEndNotification();
         setTimeout(() => {
-          skipToNextVideo();
+          window.skipToNextVideo();
         }, 2000);
       } else {
         // console.log('[動画] startVideoEndMonitoring: 次の動画がないため、自動遷移しません');
@@ -102,7 +102,7 @@ function startPlaybackProgressMonitoring() {
 }
 
 // エンディングかどうかを判断する関数
-function isEndingMusic() {
+function isEnding() {
   const video = document.querySelector('video');
   if (!video) {
     // console.log('isEndingMusic: 動画要素が見つかりません');
@@ -117,47 +117,18 @@ function isEndingMusic() {
     return false;
   }
   
-  // エンディングの特徴をチェック
-  const endingFeatures = {
-    // 動画の最後の10%の範囲
-    timeBased: (currentTime / duration) >= 0.95,
-    
-    // 音量レベルの変化をチェック（エンディング音楽は通常音量が下がる）
-    volumeBased: false,
-    
-    // 音声の特徴（エンディング音楽は通常BGMのみ）
-    audioBased: false
-  };
-  
-  // 音量レベルの変化をチェック
-  if (video.volume !== undefined) {
-    // 現在の音量が低い場合（エンディング音楽の特徴）
-    endingFeatures.volumeBased = video.volume < 0.5;
-  }
-  
-  // 音声トラックの情報をチェック
-  if (video.audioTracks && video.audioTracks.length > 0) {
-    const audioTrack = video.audioTracks[0];
-    // エンディング音楽は通常BGMトラックとして認識されることが多い
-    endingFeatures.audioBased = audioTrack.kind === 'music' || 
-                                audioTrack.label?.toLowerCase().includes('bgm') ||
-                                audioTrack.label?.toLowerCase().includes('ending');
-  }
-  
   // 複数の条件を組み合わせて判断
-  const isEnding = endingFeatures.timeBased || 
-                   (endingFeatures.volumeBased && endingFeatures.audioBased);
+  const isEnding = (currentTime / duration) >= 0.95;
   
   return isEnding;
 }
 
 // エンディング検出の監視を開始する関数
-function startEndingDetection() {
-
-  
+function StartPlaybackManagement() {  
   let endingDetected = false;
   const interval = setInterval(() => {
-    if (!endingDetected && isEndingMusic()) {
+    applyVideoSkip();
+    if (!endingDetected && isEnding()) {
       endingDetected = true;
       
       
@@ -176,8 +147,6 @@ function startEndingDetection() {
 
 // エンディング検出時の処理
 function handleEndingDetected() {
-  
-  
   // 次の動画IDが設定されている場合のみスキップボタンを表示
   if (window.nextVideoId) {
     showEndingSkipButton();
@@ -185,7 +154,7 @@ function handleEndingDetected() {
     // 自動で次の動画に進むオプション（設定で有効な場合）
     if (window.getBooleanSetting('autoSkipEnding', false)) {
       setTimeout(() => {
-        skipToNextVideo();
+        window.skipToNextVideo();
       }, 3000); // 3秒後に自動スキップ
     }
   } else {
@@ -218,7 +187,7 @@ function showEndingSkipButton() {
   `;
   
   button.addEventListener('click', () => {
-    skipToNextVideo();
+    window.skipToNextVideo();
     button.remove();
   });
   
@@ -231,7 +200,28 @@ function showEndingSkipButton() {
     videoContainer.appendChild(button);
   }
 }
+function applyVideoSkip() {
+  if (typeof window.waitForElement === 'function') {
+    window.waitForElement('video', (video) => {
+      if (!video) return;
+      // 設定値取得
+      const skipStart = window.getSetting ? window.getSetting('skipStartSeconds', 0) : 0;
+      const skipEnd = window.getSetting ? window.getSetting('skipEndSeconds', 0) : 0;
+
+      const currentTime = video.currentTime;
+      const duration = video.duration;
+
+      if (currentTime < skipStart) {
+        console.log(`applyVideoSkip: 現在の再生時間 ${currentTime} 秒はスキップ開始時間 ${skipStart} 秒より前です。スキップを適用します。`);
+        video.currentTime = skipStart;
+      }
+      if (currentTime > duration - skipEnd) {
+        window.skipToNextVideo();
+      }
+    });
+  }
+}
 
 // グローバル関数として公開
-window.startEndingDetection = startEndingDetection;
+window.StartPlaybackManagement = StartPlaybackManagement;
 window.startVideoEndMonitoring = startVideoEndMonitoring;
