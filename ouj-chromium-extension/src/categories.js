@@ -184,7 +184,7 @@ async function postCurrentTimeRate(contentId, currentTimeRate) {
 async function getVideoProgress(contentId) {
   try {
     const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`;
-    const cacheKey = `video-viewing-status-${contentId}`;
+    const cacheKey = `videoViewingStatus_${contentId}`;
     const cachedData = await fetchWithCache(url, cacheKey, 40);
 
     return cachedData.currentTimeRate || 0;
@@ -203,7 +203,7 @@ async function cacheNetworkData(){
   const vodUrl = "https://v.ouj.ac.jp/v1/tenants/1/vod-contents"
   const categoriesUrlPattern = CATEGORIES_API_URL;
   const vodContentsUrlPattern = [`cachedVodContent_${contentId}`, `${vodUrl}/${contentId}`];
-  const viewingLogUrlPattern = [`video-progress-${contentId}`, `${vodUrl}/${contentId}/viewinglog/latest`];
+  const viewingLogUrlPattern = [`videoProgress-${contentId}`, `${vodUrl}/${contentId}/viewinglog/latest`];
   const videoListPattern = [`cachedVideoList_${categoryId}`, `${vodUrl}?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`]
 
   chrome.webRequest.onCompleted.addListener(

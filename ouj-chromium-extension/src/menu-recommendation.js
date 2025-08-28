@@ -81,21 +81,14 @@ async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
       }
     } catch (e) {}
     if (!Array.isArray(videos) || !videos.length) continue;
-    const contentIds = videos.map(v => v.contentId);
-    const statusList = await window.getMultipleVideoViewingStatus(contentIds);
-    let found = null;
-    let foundStatus = null;
+    // 未再生の動画を1件だけ追加
     for (let i = 0; i < videos.length; i++) {
-      const status = statusList[i];
-      if (status.currentTimeRate < 0.95) {
-        found = videos[i];
-        foundStatus = status;
+      const status = await window.getVideoProgress(videos[i].contentId);
+      if (status < 0.95) {
+        recommendList.push({ ...videos[i], progress: status || 0, source: 'favorites' });
+        usedCategoryIds.add(categoryId);
         break;
       }
-    }
-    if (found) {
-      recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0, source: 'favorites' });
-      usedCategoryIds.add(categoryId);
     }
   }
   return { recommendList, usedCategoryIds };
@@ -119,22 +112,15 @@ async function getRecommendFromSimilar(categories, excludeCategoryIds) {
       }
     } catch (e) {}
     if (!Array.isArray(videos) || !videos.length) continue;
-    const contentIds = videos.map(v => v.contentId);
-    const statusList = await window.getMultipleVideoViewingStatus(contentIds);
-    let found = null;
-    let foundStatus = null;
+    // 未再生の動画を1件だけ追加
     for (let i = 0; i < videos.length; i++) {
-      const status = statusList[i];
-      if (status.currentTimeRate < 0.95) {
-        found = videos[i];
-        foundStatus = status;
+      const status = await window.getVideoProgress(videos[i].contentId);
+      if (status < 0.95) {
+        recommendList.push({ ...videos[i], progress: status || 0, source: 'similar' });
+        excludeCategoryIds.add(cat.categoryId);
+        count++;
         break;
       }
-    }
-    if (found) {
-      recommendList.push({ ...found, progress: foundStatus ? foundStatus.currentTimeRate : 0, source: 'similar' });
-      excludeCategoryIds.add(cat.categoryId);
-      count++;
     }
   }
   return recommendList;

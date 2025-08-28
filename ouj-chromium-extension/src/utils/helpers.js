@@ -45,8 +45,15 @@ const fetchFromNetwork = async (url) => {
         const response = await fetch(url);
         return response.json();
     } catch (error) {
-        console.warn(`fetchFromNetwork: ${url} のネットワークからのデータ取得に失敗しました。エラー: ${error.message}`);
-        return null;
+        // 50ms待ってからリトライ
+        await new Promise(resolve => setTimeout(resolve, 50));
+        try {
+            const response = await fetch(url);
+            return response.json();
+        } catch (error) {
+            console.warn(`fetchFromNetwork: ${url} のネットワークからのデータ取得に失敗しました。エラー: ${error.message}`);
+            return null;
+        }
     }
 };
 
