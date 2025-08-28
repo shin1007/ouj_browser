@@ -1,24 +1,5 @@
 // サムネイルに再生進捗バーを表示する機能
 
-/**
- * 動画の再生進捗を取得する
- * @param {string} contentId - 動画のコンテンツID
- * @returns {Promise<number>} 再生進捗率（0-1の値）
- */
-async function getVideoProgress(contentId) {
-  try {
-    // const response = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`);
-    // if (!response.ok) {
-    //   throw new Error(`HTTP error! status: ${response.status}`);
-    // }
-    // const data = await response.json();
-    const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`;
-    const cachedData = await fetchWithCache(url, `video-progress-${contentId}`, 40);
-    return cachedData.currentTimeRate || 0;
-  } catch (error) {
-    return 0;
-  }
-}
 
 /**
  * サムネイルに進捗バーを追加する
@@ -103,7 +84,7 @@ async function showThumbnailProgress() {
       }
       
       // 再生進捗を取得
-      const progress = await getVideoProgress(contentId);
+      const progress = await window.getVideoProgress(contentId);
       
       // 進捗が0より大きい場合のみ進捗バーを表示
       if (progress > 0) {
@@ -128,7 +109,7 @@ async function updateThumbnailProgress() {
     if (thumbnail) {
       const contentId = extractContentIdFromThumbnail(thumbnail);
       if (contentId) {
-        const progress = await getVideoProgress(contentId);
+        const progress = await window.getVideoProgress(contentId);
         progressBar.style.width = `${Math.max(0, Math.min(100, progress * 100))}%`;
       }
     }

@@ -158,10 +158,6 @@ async function getVideoListInCategory(categoryId) {
 
 }
 
-/**
- * categoriesデータの中でparentIdとして使われているcategoryIdを重複なく列挙して返す
- * @returns {Promise<number[]>} parentIdとして使われているcategoryIdの配列
- */
 async function parentCategories() {
   const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
   const cachedData = result[CATEGORIES_STORAGE_KEY];
@@ -178,6 +174,43 @@ async function parentCategories() {
   return Array.from(parentIdSet);
 }
 
+// TODO: ネットワーク監視
+// webRequestを利用する
+// https://v.ouj.ac.jp/v1/tenants/1/vod-contents/34473/viewinglog?currentTimeRate=0.0003886836
+// 
+// {viewId: 53897785}
+// viewId
+// : 
+// 53897785
+async function postCurrentTimeRate(contentId, currentTimeRate) {
+  const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog${viewId}end-date`;
+  const body = { "currentTimeRate": currentTimeRate };
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+    body: JSON.stringify(body),
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to post viewing status for contentId ${contentId}: ${response.statusText}`);
+  }
+  return await response.json();
+}
+
+async function getVideoProgress(contentId) {
+  try {
+    // const response = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`);
+    // if (!response.ok) {
+    //   throw new Error(`HTTP error! status: ${response.status}`);
+    // }
+    // const data = await response.json();
+    const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`;
+    const cachedData = await fetchWithCache(url, `video-progress-${contentId}`, 40);
+    return cachedData.currentTimeRate || 0;
+  } catch (error) {
+    return 0;
+  }
+}
 async function cacheNetworkData(){
   // ネットワーク監視
   // webRequestを利用する
@@ -220,3 +253,4 @@ window.parentCategories = parentCategories;
 window.getVideoListInCategory = getVideoListInCategory;
 window.getVideoData = getVideoData;
 window.getCategoryDataFromContentId = getCategoryDataFromContentId;
+window.getVideoProgress = getVideoProgress;

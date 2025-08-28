@@ -107,10 +107,7 @@ async function fetchNextVideoId() {
 // 同じコースの中で次の動画を取得
 async function fetchNextVideoFromSameCourse(currentCourseId, currentVideoId) {
   try {
-    const cacheKey = `cachedVodContents_${currentCourseId}`;
-    const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${currentCourseId}&offset=0&limit=30&sortType=1&sortOrder=asc`;
-    const res = await fetchWithCache(url, cacheKey);
-    // --- 追加: グローバルに動画リストとインデックスを保持 ---
+    const res = await window.getVideoListInCategory(currentCourseId);
     window.videoListInCourse = Array.isArray(res) ? res : null;
     window.currentVideoIndexInCourse = null;
     if (!Array.isArray(res)) {
