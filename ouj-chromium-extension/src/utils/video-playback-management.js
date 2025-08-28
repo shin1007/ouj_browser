@@ -1,5 +1,5 @@
 let initialPosition = 0;
-
+let firstplay = true;
 // 動画終了監視機能
 function startVideoEndMonitoring() {
   const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
@@ -201,15 +201,25 @@ function applyVideoSkip() {
   }
 }
 function skipOpening(video, skipStart) {
-  video.pause();
-  const seek = () => {
+  function waitUntilReady() {
     if (video.readyState > 0) {
-      video.currentTime = skipStart;
+      return;
     } else {
-      setTimeout(seek, 100);
+      setTimeout(waitUntilReady, 100);
+      return;
     }
-  };
-  seek();
+  }
+  if (!firstplay) return;
+
+  waitUntilReady();
+  video.pause();
+  waitUntilReady();
+  video.currentTime = parseFloat(skipStart);
+  waitUntilReady();
+  video.pause();
+  waitUntilReady();
+  video.play();
+  firstplay = false;
 }
 
 async function skipToNextVideo() {
