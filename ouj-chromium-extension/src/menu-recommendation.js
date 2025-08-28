@@ -44,7 +44,7 @@ async function getRecommendFromHistory(history) {
         if (nextVideo && !usedContentIds.has(nextVideo.contentId) && !history.some(h => h.contentId == nextVideo.contentId)) {
           recommendList.push({
             ...nextVideo,
-            progress: 0,
+            progress: await window.getVideoProgress(nextVideo.contentId) || 0,
             source: 'history',
             dateStr: ''
           });

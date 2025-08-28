@@ -80,7 +80,8 @@ function createHistoryListData() {
       const video = await window.getVideoData(contentId) || {};
       if (!video.title) throw new Error('動画情報取得失敗');
       const h = history.find(h => h.contentId == contentId) || {};
-      return { ...video, progress: h.progress, date: h.date, contentId };
+      const progress = await window.getVideoProgress(contentId);
+      return { ...video, progress: progress, date: h.date, contentId };
     } catch (e) {
       return null;
     }

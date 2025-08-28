@@ -271,18 +271,9 @@ async function addHistoryEntry(contentId) {
   if (now - lastHistoryTime < 5000) {
     return;
   }
-  // 進捗取得（おすすめ機能と同じ方式）
-  let progress = 0;
-  try {
-    if (window.getVideoViewingStatus) {
-      const status = await window.getVideoViewingStatus(contentId, { cacheSeconds: 5 });
-      progress = status.currentTimeRate || 0;
-    }
-  } catch (e) {}
   const entry = {
     contentId,
     date: new Date().toISOString(),
-    progress
   };
   let history = [];
   try {
