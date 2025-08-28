@@ -75,11 +75,17 @@ function createHistoryListData() {
     history = [];
   }
   const contentIds = history.map(item => item.contentId).filter(Boolean);
-  return getPanelDataVideoPattern(contentIds).then(videoItems => {
-    const validVideoItems = videoItems.map(video => {
-      const h = history.find(h => h.contentId == video.contentId) || {};
-      return { ...video, progress: h.progress, date: h.date, contentId: video.contentId };
-    });
+  return Promise.all(contentIds.map(async (contentId) => {
+    try {
+      const video = await window.getVideoData(contentId) || {};
+      if (!video.title) throw new Error('動画情報取得失敗');
+      const h = history.find(h => h.contentId == contentId) || {};
+      return { ...video, progress: h.progress, date: h.date, contentId };
+    } catch (e) {
+      return null;
+    }
+  })).then(videoItems => {
+    const validVideoItems = videoItems.filter(Boolean);
     return window.getCategoriesData().then(categories => {
       return { history, categories, validVideoItems };
     });
@@ -103,27 +109,6 @@ function handleHistoryPanelOpen() {
   });
 }
 
-async function getPanelDataVideoPattern(ids, { getStatus = null } = {}) {
-  // ids: contentIdの配列
-  const results = await Promise.all(ids.map(async (contentId) => {
-    let video = null;
-    try {
-      const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}`;
-      video = await window.fetchWithCache(url, `cachedVodContent_${contentId}`) || {};
-      if (!video.title) throw new Error('動画情報取得失敗');
-    } catch (e) {
-      return null;
-    }
-    let status = null;
-    if (getStatus) {
-      try {
-        status = await getStatus(contentId);
-      } catch (e) {}
-    }
-    return { ...video, status };
-  }));
-  return results.filter(Boolean);
-}
 function renderHistoryListHtml(panel, closePanel, { history, categories, validVideoItems }) {
   let searchValue = '';
   let currentSortType = 'date';

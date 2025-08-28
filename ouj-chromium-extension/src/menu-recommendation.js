@@ -14,11 +14,7 @@ async function getRecommendFromHistory(history) {
     const { contentId, progress, date } = historyItem;
     if (!contentId) continue;
     if (usedContentIds.has(contentId)) continue;
-    let video = null;
-    try {
-      const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}`;
-      video = await window.fetchWithCache(url, `cachedVodContent_${contentId}`) || {};
-    } catch (e) { continue; }
+    const video = await window.getVideoData(contentId);
     if (!video || !video.contentId) continue;
     if (progress < 0.95) {
       recommendList.push({
