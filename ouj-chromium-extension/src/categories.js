@@ -32,23 +32,10 @@ async function getVideoData(contentId) {
 const CATEGORIES_API_URL = 'https://v.ouj.ac.jp/v1/tenants/1/categories';
 const CATEGORIES_STORAGE_KEY = 'cachedCategoriesData'; // カテゴリデータを保存する際のキー
 
-
-
-/**
- * 指定されたAPIからJSONデータを取得します。
- * 共通のキャッシュ機能を使用して、当日のキャッシュがある場合はそれを利用します。
- * 当日のキャッシュがない場合はネットワークリクエストを試みます。
- * ネットワークリクエストが成功すればキャッシュを更新します。
- * @returns {Promise<Object|null>} 取得またはキャッシュされたJSONデータ、またはnull
- */
 async function getCategoriesData() {
   return await fetchWithCache(CATEGORIES_API_URL, CATEGORIES_STORAGE_KEY);
 }
-/**
- * 現在のURLの右端が「ca=整数」なら、その整数をcategoryNumとして取得し、
- * storageに保存されているcategoriesデータからparentIdがcategoryNumの項目のcategoryId, name一覧を
- * nameの左端3桁を整数化して昇順で返す
- */
+
 async function getChildIds(categoryNum) {
   const categoryNumInt = parseInt(categoryNum, 10);
 
@@ -71,10 +58,6 @@ async function getChildIds(categoryNum) {
   return filtered.map(item => ({ categoryId: item.categoryId, name: item.name }));
 }
 
-/**
- * 現在のURLのhashからcaパラメータを取得し、カテゴリIDを文字列として返す
- * @returns {string} 現在のカテゴリID（文字列）
- */
 function getCurrentCategoryId() {
   const hash = window.location.hash;
   
@@ -199,13 +182,10 @@ async function postCurrentTimeRate(contentId, currentTimeRate) {
 
 async function getVideoProgress(contentId) {
   try {
-    // const response = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`);
-    // if (!response.ok) {
-    //   throw new Error(`HTTP error! status: ${response.status}`);
-    // }
-    // const data = await response.json();
     const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`;
-    const cachedData = await fetchWithCache(url, `video-progress-${contentId}`, 40);
+    const cacheKey = `video-viewing-status-${contentId}`;
+    const cachedData = await fetchWithCache(url, cacheKey, 40);
+
     return cachedData.currentTimeRate || 0;
   } catch (error) {
     return 0;
