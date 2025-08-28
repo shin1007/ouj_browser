@@ -17,26 +17,6 @@ async function getVideoViewingStatus(contentId) {
 }
 
 
-/**
- * 複数の動画IDの再生状況を並列で取得（キャッシュ付き）
- * @param {Array<string|number>} contentIds
- * @param {Object} options
- * @returns {Promise<Array<{ contentId: string|number, currentTimeRate: number, isFinished: boolean, raw: any }>>}
- */
-async function getMultipleVideoViewingStatus(contentIds, options = {}) {
-  const promises = contentIds.map(async (contentId) => {
-    try {
-      const status = await getVideoViewingStatus(contentId);
-      return { contentId, ...status };
-    } catch (e) {
-      console.error(`getMultipleVideoViewingStatus: 動画 ${contentId} の取得に失敗:`, e);
-      return { contentId, currentTimeRate: 0, isFinished: false, raw: null };
-    }
-  });
-  
-  return await Promise.all(promises);
-}
-
 // TODO: ネットワーク監視
 // webRequestを利用する
 // https://v.ouj.ac.jp/v1/tenants/1/vod-contents/34473/viewinglog?currentTimeRate=0.0003886836
@@ -62,4 +42,3 @@ async function postCurrentTimeRate(contentId, currentTimeRate) {
 
 // windowオブジェクトに公開
 window.getVideoViewingStatus = getVideoViewingStatus;
-window.getMultipleVideoViewingStatus = getMultipleVideoViewingStatus; 
