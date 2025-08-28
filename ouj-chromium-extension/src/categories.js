@@ -1,3 +1,8 @@
+// categories.js
+// カテゴリ関連の関数
+const CATEGORIES_API_URL = 'https://v.ouj.ac.jp/v1/tenants/1/categories';
+const CATEGORIES_STORAGE_KEY = 'cachedCategoriesData'; // カテゴリデータを保存する際のキー
+
 /**
  * 指定したcontentIdからカテゴリデータを取得する
  * @param {string|number} contentId
@@ -27,10 +32,6 @@ async function getVideoData(contentId) {
     return null;
   }
 }
-// categories.js
-// カテゴリ関連の関数
-const CATEGORIES_API_URL = 'https://v.ouj.ac.jp/v1/tenants/1/categories';
-const CATEGORIES_STORAGE_KEY = 'cachedCategoriesData'; // カテゴリデータを保存する際のキー
 
 async function getCategoriesData() {
   return await fetchWithCache(CATEGORIES_API_URL, CATEGORIES_STORAGE_KEY);
@@ -134,7 +135,7 @@ async function getVideoListInCategory(categoryId) {
   if (!Array.isArray(data)) return []; 
   const category = data.find(item => item.categoryId === parseInt(categoryId, 10));
   if (!category) return [];
-  const cacheKey = `cachedVodContents_${categoryId}`;
+  const cacheKey = `cachedVideoList_${categoryId}`;
   const list = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
   if (!Array.isArray(list)) return [];
   return list;
@@ -200,10 +201,10 @@ async function cacheNetworkData(){
   // 再生状況
   // 再生ID
   const vodUrl = "https://v.ouj.ac.jp/v1/tenants/1/vod-contents"
-  const categoriesUrlPattern = "https://v.ouj.ac.jp/v1/tenants/1/categories*";
-  const vodContentsUrlPattern = [`cachedVodContents_${categoryId}`, `${vodUrl}/${contentId}`];
+  const categoriesUrlPattern = CATEGORIES_API_URL;
+  const vodContentsUrlPattern = [`cachedVodContent_${contentId}`, `${vodUrl}/${contentId}`];
   const viewingLogUrlPattern = [`video-progress-${contentId}`, `${vodUrl}/${contentId}/viewinglog/latest`];
-  const videoListPattern = [`cachedVodContents_${categoryId}`, `${vodUrl}?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`]
+  const videoListPattern = [`cachedVideoList_${categoryId}`, `${vodUrl}?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`]
 
   chrome.webRequest.onCompleted.addListener(
     async (details) => {
