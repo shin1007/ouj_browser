@@ -61,7 +61,7 @@ async function handleHomePageAutoLogin() {
     // リトライ回数上限に達した場合
     if (retryCount >= maxRetries) {
       clearInterval(interval);
-      console.log('[OUJ拡張] 自動ログインチェックを停止しました（最大試行回数超過）。');
+      // console.log('[OUJ拡張] 自動ログインチェックを停止しました（最大試行回数超過）。');
     }
   }, 1000);
 }

@@ -4,7 +4,6 @@ function isCaptionHidden() {
     // captionDivにvjsHiddenクラスがあるかどうかを確認
 
     if (!captionDiv) return;
-    // console.log('classList:', captionDiv.classList);
     // vjsHiddenクラスがある場合は削除、ない場合は追加
     return captionDiv.classList.contains('vjs-hidden');
 
@@ -34,7 +33,6 @@ async function toggleCaptionRadio(isTurnOn=true) {
 }
 function toggleCaption(isTurnOn=true) {
     // トグルスイッチがあればクリックする
-    // console.log('toggleSubtitle: 字幕の表示/非表示を切り替えます');
     let slider = getCaptionSlider();
     if (!slider) {
         // console.warn('toggleSubtitle: 字幕のトグルスイッチが見つかりません。');
@@ -51,7 +49,6 @@ function toggleCaption(isTurnOn=true) {
 async function showCaptionAccordingToSetting() {
     // 設定に応じて字幕を表示する
     const isRadioProgram = await window.isRadioProgram();
-    // console.log('showCaptionAccordingToSetting: ラジオ番組かどうか:', isRadioProgram);
     if (isRadioProgram) {
         const autoCaptionEnabledRadio = window.getSetting('autoCaptionEnabledRadio', true);
         toggleCaptionRadio(autoCaptionEnabledRadio);

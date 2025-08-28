@@ -1,10 +1,9 @@
+let initialPosition = 0;
+
 // 動画終了監視機能
 function startVideoEndMonitoring() {
-  // console.log('[動画] startVideoEndMonitoring: 開始');
   const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
-  // console.log('[動画] startVideoEndMonitoring: autoNextVideoEnabled=', autoNextVideoEnabled);
   if (!autoNextVideoEnabled) {
-    // console.log('[動画] startVideoEndMonitoring: 自動次の動画遷移が無効化されているため、スキップします');
     return;
   }
   if (typeof window.waitForElement !== 'function') {
@@ -12,17 +11,13 @@ function startVideoEndMonitoring() {
     return;
   }
   window.waitForElement('video', (video) => {
-    // console.log('[動画] startVideoEndMonitoring: video要素取得', video);
     const handleVideoEnded = () => {
-      // console.log('[動画] startVideoEndMonitoring: 動画が終了しました, nextVideoId=', window.nextVideoId);
       if (window.nextVideoId) {
-        // console.log('[動画] startVideoEndMonitoring: 次の動画に自動遷移します');
         showVideoEndNotification();
         setTimeout(() => {
-          window.skipToNextVideo();
+          skipToNextVideo();
         }, 2000);
       } else {
-        // console.log('[動画] startVideoEndMonitoring: 次の動画がないため、自動遷移しません');
       }
     };
     video.removeEventListener('ended', handleVideoEnded);
@@ -45,7 +40,6 @@ function calculatePlaybackPercentage() {
   const durationDisplay = document.querySelector('.vjs-duration-display');
   
   if (!currentTimeDisplay || !durationDisplay) {
-    // console.log('calculatePlaybackPercentage: 再生時間表示要素が見つかりません');
     return null;
   }
   
@@ -69,43 +63,19 @@ function calculatePlaybackPercentage() {
   const durationSeconds = timeStringToSeconds(durationStr);
   
   if (durationSeconds === 0) {
-    // console.log('calculatePlaybackPercentage: 総再生時間が0秒です');
     return null;
   }
   
   const percentage = (currentTimeSeconds / durationSeconds) * 100;
-  // console.log(`calculatePlaybackPercentage: 再生進捗: ${percentage.toFixed(1)}% (${currentTimeStr} / ${durationStr})`);
   
   return percentage;
 }
 
-// 定期的に再生進捗を監視する関数
-function startPlaybackProgressMonitoring() {
-  // console.log('startPlaybackProgressMonitoring: 再生進捗監視を開始します');
-  
-  const interval = setInterval(() => {
-    const percentage = calculatePlaybackPercentage();
-    if (percentage !== null) {
-      // ここで進捗率を使用した処理を追加できます
-      // 例: 特定の進捗率で何かをする
-      if (percentage >= 50) {
-        // console.log('startPlaybackProgressMonitoring: 動画の50%を視聴しました');
-      }
-    }
-  }, 1000); // 1秒ごとにチェック
-  
-  // 監視を停止する関数を返す
-  return () => {
-    clearInterval(interval);
-    // console.log('startPlaybackProgressMonitoring: 再生進捗監視を停止しました');
-  };
-}
 
 // エンディングかどうかを判断する関数
 function isEnding() {
   const video = document.querySelector('video');
   if (!video) {
-    // console.log('isEndingMusic: 動画要素が見つかりません');
     return false;
   }
   
@@ -113,7 +83,6 @@ function isEnding() {
   const duration = video.duration;
   
   if (duration === 0 || isNaN(duration)) {
-    // console.log('isEndingMusic: 動画の長さが取得できません');
     return false;
   }
   
@@ -126,6 +95,9 @@ function isEnding() {
 // エンディング検出の監視を開始する関数
 function StartPlaybackManagement() {  
   let endingDetected = false;
+  window.waitForElement('video', (video) => {
+    initialPosition = video.currentTime;
+  });
   const interval = setInterval(() => {
     applyVideoSkip();
     if (!endingDetected && isEnding()) {
@@ -141,7 +113,6 @@ function StartPlaybackManagement() {
   // 監視を停止する関数を返す
   return () => {
     clearInterval(interval);
-    // console.log('startEndingDetection: エンディング検出監視を停止しました');
   };
 }
 
@@ -154,11 +125,10 @@ function handleEndingDetected() {
     // 自動で次の動画に進むオプション（設定で有効な場合）
     if (window.getBooleanSetting('autoSkipEnding', false)) {
       setTimeout(() => {
-        window.skipToNextVideo();
+        skipToNextVideo();
       }, 3000); // 3秒後に自動スキップ
     }
   } else {
-    // console.log('handleEndingDetected: 次の動画がないため、スキップボタンは表示しません');
   }
 }
 
@@ -187,7 +157,7 @@ function showEndingSkipButton() {
   `;
   
   button.addEventListener('click', () => {
-    window.skipToNextVideo();
+    skipToNextVideo();
     button.remove();
   });
   
@@ -213,26 +183,45 @@ function applyVideoSkip() {
 
       // オープニングのスキップ
       if (currentTime < skipStart) {
-        console.log(`applyVideoSkip: 現在の再生時間 ${currentTime} 秒はスキップ開始時間 ${skipStart} 秒より前です。スキップを適用します。`);
-        video.pause();
-        const seek = () => {
-          if (video.readyState > 0) {
-            video.currentTime = skipStart;
-          } else {
-            setTimeout(seek, 100);
-          }
-        };
-        seek();
+        skipOpening(video, skipStart);
         return;
       }
       // エンディングのスキップ
       if (currentTime > duration - skipEnd) {
-        window.skipToNextVideo();
+        // 再生ボタンが押されてから5秒以上が経過している場合のみ
+        if (currentTime - initialPosition < 5) {
+          return;
+        }
+        // 動画が再生中の場合のみ
+        if (!video.paused) {
+          skipToNextVideo();
+        }
       }
     });
   }
 }
+function skipOpening(video, skipStart) {
+  video.pause();
+  const seek = () => {
+    if (video.readyState > 0) {
+      video.currentTime = skipStart;
+    } else {
+      setTimeout(seek, 100);
+    }
+  };
+  seek();
+}
 
+async function skipToNextVideo() {
+  if (window.nextVideoId) {
+    const url = window.location.href;
+    const matchCo = url.match(/co=(\d+)/);
+    if (matchCo) {
+      let nextVideoUrl = url.replace(matchCo[0], `co=${window.nextVideoId}`);
+      window.location.href = nextVideoUrl;
+    }
+  }
+}
 // グローバル関数として公開
 window.StartPlaybackManagement = StartPlaybackManagement;
 window.startVideoEndMonitoring = startVideoEndMonitoring;

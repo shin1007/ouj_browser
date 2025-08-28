@@ -1,6 +1,5 @@
 // --- 追加: 前後動画リンク挿入関数 ---
 async function insertPrevNextLinks(titleElement) {
-  // console.log('insertPrevNextLinks: 開始');
   // 既存のリンクがあれば一度消す
   const old = document.getElementById('prev-next-links');
   if (old) old.remove();
@@ -78,9 +77,6 @@ async function insertPrevNextLinks(titleElement) {
       this.style.background = '#fff';
       this.style.borderColor = '#ddd';
       this.style.transform = 'translateX(0)';
-      
-      // ツールチップを非表示
-      hideTooltip();
     };
     container.appendChild(prevLink);
   } else {
@@ -146,8 +142,6 @@ async function insertPrevNextLinks(titleElement) {
       this.style.borderColor = '#ddd';
       this.style.transform = 'translateX(0)';
       
-      // ツールチップを非表示
-      hideTooltip();
     };
     container.appendChild(nextLink);
   } else {
@@ -156,38 +150,14 @@ async function insertPrevNextLinks(titleElement) {
     emptyDiv.style.cssText = 'flex: 1; min-width: 0;';
     container.appendChild(emptyDiv);
   }
-  
   // タイトル要素の直後に挿入
   if (titleElement.nextSibling) {
     titleElement.parentNode.insertBefore(container, titleElement.nextSibling);
   } else {
     titleElement.parentNode.appendChild(container);
   }
-  // console.log('insertPrevNextLinks: 前後動画リンクを挿入しました');
 }
 
-
-// ツールチップを非表示にする関数
-function hideTooltip() {
-  const tooltip = document.getElementById('video-tooltip');
-  if (tooltip) {
-    tooltip.remove();
-  }
-}
-
-// 次の動画にスキップ
-async function skipToNextVideo() {
-  if (window.nextVideoId) {
-    const url = window.location.href;
-    const matchCo = url.match(/co=(\d+)/);
-    if (matchCo) {
-      let nextVideoUrl = url.replace(matchCo[0], `co=${window.nextVideoId}`);
-      window.location.href = nextVideoUrl;
-    }
-  }
-}
 
 // グローバル関数として公開
 window.insertPrevNextLinks = insertPrevNextLinks;
-window.hideTooltip = hideTooltip;
-window.skipToNextVideo = skipToNextVideo; 

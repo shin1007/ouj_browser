@@ -93,7 +93,6 @@ function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idTo
     window.saveSetting('pinnedFavorites', pinned);
   }
   async function renderFavoriteList(filter = '') {
-    // console.log('renderFavoriteList called');
     const pinnedFavorites = getPinnedFavorites();
     // 毎回最新のpinned状態を反映
     favoriteItemsWithParent.forEach(item => {
@@ -210,10 +209,8 @@ function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idTo
   }
   function attachPinButtonListeners() {
     const pinButtons = panel.querySelectorAll('.favorite-pin-btn');
-    // console.log('attachPinButtonListeners called', pinButtons.length);
     pinButtons.forEach(button => {
       button.addEventListener('click', (event) => {
-        // console.log('pin button clicked');
         event.stopPropagation();
         const categoryId = button.getAttribute('data-category-id');
         let pinned = getPinnedFavorites();

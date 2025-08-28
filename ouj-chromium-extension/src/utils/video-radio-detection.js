@@ -34,15 +34,12 @@ async function isCaptionAvailable() {
 }
 // ラジオ番組判定関数
 async function checkIfRadioProgram() {
-  // console.log('checkIfRadioProgram: ラジオ番組判定を開始します');
   try {
     // ラジオ番組はUIを表示
     if (await isRadioProgram()) {
-      // console.log('checkIfRadioProgram: ラジオ番組です');
       showRadioProgramUI();
     // テレビ番組の場合は何もしない
     } else {
-      // console.log('checkIfRadioProgram: テレビ番組です（ラジオ番組ではありません。）');
     }    
   } catch (error) {
     // console.error('checkIfRadioProgram: ラジオ番組判定でエラーが発生しました:', error);
@@ -52,7 +49,6 @@ async function checkIfRadioProgram() {
 
 // ラジオ番組用のUI表示関数
 function showRadioProgramUI() {
-  // console.log('showRadioProgramUI: ラジオ番組用UIを表示します');
   
   // 既にラジオ番組UIが表示されている場合は何もしない
   if (document.getElementById('radio-program-ui')) {
@@ -66,7 +62,6 @@ function showRadioProgramUI() {
   }
   
   window.waitForElement('video', (video) => {
-    // console.log('showRadioProgramUI: 動画要素が見つかりました。ラジオ番組用UIを挿入します');
     
     // ラジオ番組用のUI要素を作成
     const radioUI = document.createElement('div');
@@ -101,7 +96,6 @@ function showRadioProgramUI() {
       videoContainer.style.position = 'relative';
       videoContainer.appendChild(radioUI);
       
-      // console.log('showRadioProgramUI: ラジオ番組用UIを挿入しました');
     } else {
       console.error('showRadioProgramUI: 動画要素の親要素が見つかりませんでした');
     }

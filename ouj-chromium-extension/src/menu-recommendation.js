@@ -289,13 +289,6 @@ function renderRecommendListHtml(panel, closePanel, recommendList) {
         }
       }
     });
-    // console.log('[おすすめ描画] recommendList:', recommendList.map(item => ({
-    //   contentId: item.contentId,
-    //   source: item.source,
-    //   progress: item.progress,
-    //   title: item.title,
-    //   dateStr: item.dateStr
-    // })));
   }
 }
 window.oujRecommendCache = {
