@@ -29,6 +29,7 @@
       "js": [
         "utils/helpers.js",
         "utils/favorites-helper.js",
+        "utils/video-ending.js",
         "utils/video-playback-management.js",
         "utils/video-player-core.js",
         "utils/video-prev-next.js",

@@ -14,7 +14,6 @@ function addVideoSettingsPanel() {
     return;
   }
   window.waitForElement('#content-detail-area > div.title', (targetElement) => {
-    // --- 追加: 前後動画リンク挿入（パネルより先に） ---
     window.insertPrevNextLinks(targetElement);
     insertSettingsPanel(targetElement);
   });
@@ -76,19 +75,7 @@ function insertSettingsPanel(targetElement) {
           <label for="favorites-random" style="margin-left: 5px; cursor: pointer; color: #333;">お気に入りの中からランダムで次を再生</label>
         </div>
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
-        <!-- 追加設定項目 -->
-        <div style="margin-bottom: 8px; display: flex; align-items: center;">
-          <label for="skip-start" style="width: 200px; color: #333;">動画の最初をスキップ</label>
-          <select id="skip-start">
-            <option value="0" ${skipStart == 0 ? 'selected' : ''}>なし</option>
-            <option value="15" ${skipStart == 15 ? 'selected' : ''}>15秒</option>
-            <option value="30" ${skipStart == 30 ? 'selected' : ''}>30秒</option>
-            <option value="45" ${skipStart == 45 ? 'selected' : ''}>45秒</option>
-            <option value="60" ${skipStart == 60 ? 'selected' : ''}>60秒</option>
-            <option value="75" ${skipStart == 75 ? 'selected' : ''}>75秒</option>
-            <option value="90" ${skipStart == 90 ? 'selected' : ''}>90秒</option>
-          </select>
-        </div>
+
         <div style="margin-bottom: 8px; display: flex; align-items: center;">
           <label for="skip-end" style="width: 200px; color: #333;">動画の最後をスキップ</label>
           <select id="skip-end">

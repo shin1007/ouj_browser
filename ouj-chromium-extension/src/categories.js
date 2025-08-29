@@ -158,28 +158,6 @@ async function parentCategories() {
   return Array.from(parentIdSet);
 }
 
-// TODO: ネットワーク監視
-// webRequestを利用する
-// https://v.ouj.ac.jp/v1/tenants/1/vod-contents/34473/viewinglog?currentTimeRate=0.0003886836
-// 
-// {viewId: 53897785}
-// viewId
-// : 
-// 53897785
-async function postCurrentTimeRate(contentId, currentTimeRate) {
-  const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog${viewId}end-date`;
-  const body = { "currentTimeRate": currentTimeRate };
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-    body: JSON.stringify(body),
-    credentials: 'include'
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to post viewing status for contentId ${contentId}: ${response.statusText}`);
-  }
-  return await response.json();
-}
 
 async function getVideoProgress(contentId) {
   try {
@@ -191,40 +169,6 @@ async function getVideoProgress(contentId) {
   } catch (error) {
     return 0;
   }
-}
-async function cacheNetworkData(){
-  // ネットワーク監視
-  // webRequestを利用する
-  // カテゴリデータ
-  // 動画リスト
-  // 動画データ
-  // 再生状況
-  // 再生ID
-  const vodUrl = "https://v.ouj.ac.jp/v1/tenants/1/vod-contents"
-  const categoriesUrlPattern = CATEGORIES_API_URL;
-  const vodContentsUrlPattern = [`cachedVodContent_${contentId}`, `${vodUrl}/${contentId}`];
-  const viewingLogUrlPattern = [`videoProgress-${contentId}`, `${vodUrl}/${contentId}/viewinglog/latest`];
-  const videoListPattern = [`cachedVideoList_${categoryId}`, `${vodUrl}?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`]
-
-  chrome.webRequest.onCompleted.addListener(
-    async (details) => {
-      const url = new URL(details.url);
-      if (url.pathname.match(/\/vod-contents\/(\d+)\/viewinglog$/) && url.searchParams.has('currentTimeRate')) {
-        const contentId = url.pathname.match(/\/vod-contents\/(\d+)\/viewinglog$/)[1];
-        const currentTimeRate = parseFloat(url.searchParams.get('currentTimeRate'));
-        if (isNaN(currentTimeRate)) return;
-        // console.log(`postCurrentTimeRate: 動画 ${contentId} の currentTimeRate=${currentTimeRate} をサーバーに送信します`);
-        try {
-          await postCurrentTimeRate(contentId, currentTimeRate);
-          // console.log(`postCurrentTimeRate: 動画 ${contentId} の currentTimeRate=${currentTimeRate} をサーバーに送信しました`);
-        } catch (error) {
-          console.error(`postCurrentTimeRate: 動画 ${contentId} の currentTimeRate=${currentTimeRate} の送信に失敗しました:`, error);
-        }
-      }
-    },
-    { urls: ["https://v.ouj.ac.jp/v1/tenants/1/vod-contents/*/viewinglog*"] },
-    []
-  );
 }
 window.getCategoriesData = getCategoriesData;
 window.getChildIds = getChildIds;

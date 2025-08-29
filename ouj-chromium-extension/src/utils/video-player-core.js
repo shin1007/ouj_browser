@@ -53,7 +53,7 @@ async function initializeVideoPlayer() {
     
   // 次の動画IDを取得
   await fetchNextVideoId();
-  startVideoEndMonitoring();
+  window.startVideoEndMonitoring();
   
   // エンディング検出、動画の最初と最後のスキップ機能を開始
   window.StartPlaybackManagement(); 
