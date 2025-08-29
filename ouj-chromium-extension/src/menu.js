@@ -7,6 +7,8 @@ const MENU_CONFIG = {
     { id: "recommend", text: "おすすめ動画", icon: "play" }
   ]
 };
+const LEFT_SELECTOR = '#menu > menu-navi > ion-content > div.scroll-content > ion-content > div.scroll-content > ion-list:nth-child(3)';
+const POPOVER_SELECTOR = 'body > ion-app > ion-popover > div > div.popover-content > div > menu-navi > ion-content > div.scroll-content > ion-content > div.scroll-content > ion-list:nth-child(3)';
 
 
 // メニューHTMLを生成する関数
@@ -59,25 +61,23 @@ function createMenuHTML() {
   `;
 }
 function startMenuOpeningMutationObserver() {
-  return;
-  console.log('Starting menu opening mutation observer');
   if (window.oujMenuOpeningObserver) {
     return;
   }
+  console.log('Starting menu opening mutation observer');
   const ionApp = document.querySelector('ion-app');
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
-      console.log('Menu mutation observed:', mutation);
       // ion-popoverが開かれたかどうかをチェック
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType !== Node.ELEMENT_NODE) {
           return;
         }
+
         if (node.tagName.toLowerCase() === 'ion-popover') {
-          console.log('ion-popover detected, re-inserting menu if needed');
           // 少し遅延してからメニュー挿入を試みる
           setTimeout(() => {
-            waitForLogoAndInsertMenu();
+            insertPopoverMenu();
           }, 100);
         }
       });
@@ -88,67 +88,40 @@ function startMenuOpeningMutationObserver() {
   window.oujMenuOpeningObserver = observer;
 }
 // ロゴを待ってメニューを挿入する処理
-function waitForLogoAndInsertMenu() {
-  
+function insertLeftMenu() {
   // 重要な関数が設定されていなければ再実行
   if (typeof window.waitForElement !== 'function') {
-    setTimeout(waitForLogoAndInsertMenu, 100);
+    setTimeout(insertLeftMenu, 100);
     return;
   }
-  // 既にメニューが存在する場合はスキップ（aria-labelで検索）
-  const existingMenu = document.querySelector('ion-list[aria-label="拡張機能"]');
-  if (existingMenu) return;
-  
-  // 重複挿入防止（不要かも）
-  if (window.oujMenuInsertionInProgress) return;
-  window.oujMenuInsertionInProgress = true;
-  
+  // 重複挿入防止
+  if (window.isLeftMenuInProgress) return;
+  window.isLeftMenuInProgress = true;
   
   // ロゴの存在確認
   window.waitForElement('img.logo-img[src="./assets/images/icon_logo.png"]', (logo) => {    
-    // メニュー要素を作成
-    const menuContainer = document.createElement('div');
-    const menuHTML = createMenuHTML();
-    menuContainer.innerHTML = menuHTML;
-    const menuList = menuContainer.firstElementChild;
-        
-    // 設定リストの前に挿入
-    const settingList = findInsertionPosition();
-    if (!settingList) return;
-    settingList.parentNode.insertBefore(menuList, settingList);
-    
-    // イベントリスナーを追加
-    addMenuEventListeners();
-    
+    // 既にメニューが存在する場合はスキップ（aria-labelで検索）
+    insertMenu(LEFT_SELECTOR)
     // 挿入処理完了フラグをリセット
-    window.oujMenuInsertionInProgress = false;
+    window.isLeftMenuInProgress = false;
   });
 }
-
-// 挿入位置を特定する関数
-function findInsertionPosition() {
-  // 複数のセレクタを順番に試す
-  const selectors = [
-    '#menu > menu-navi > ion-content > div.scroll-content > ion-content > div.scroll-content > ion-list:nth-child(3)',
-    '#menu ion-list:nth-child(3)',
-    '#menu ion-list:last-child'
-  ];
-  
-  for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    if (element) {
-      return element;
-    }
-  }
-  
-  // 最後の手段: 最初のion-listの前に挿入
-  const allMenuLists = document.querySelectorAll('#menu ion-list');
-  if (allMenuLists.length > 0) {
-    return allMenuLists[0];
-  }
-  
-  return null;
+function insertMenu(selector){
+  // 既にメニューが存在する場合はスキップ（aria-labelで検索）
+  const isMenuInserted = document.querySelector(selector).getAttribute('aria-label') === '拡張機能';
+  if (isMenuInserted) return;
+  // メニュー要素を作成
+  const menuList = createMenuList();
+      
+  // 設定リストの前に挿入
+  const settingList = document.querySelector(selector);
+  if (!settingList) return;
+  settingList.parentNode.insertBefore(menuList, settingList);
 }
+function insertPopoverMenu() {
+  insertMenu(POPOVER_SELECTOR);
+}
+
 
 // メニューを再挿入する関数
 function reinsertMenu(observer = null) {
@@ -166,7 +139,7 @@ function reinsertMenu(observer = null) {
   newMenuContainer.innerHTML = createMenuHTML();
   const newMenuList = newMenuContainer.firstElementChild;
   currentSettingList.parentNode.insertBefore(newMenuList, currentSettingList);
-  addMenuEventListeners();
+  createMenuList();
   
   // 監視を継続する場合
   if (observer) {
@@ -180,19 +153,24 @@ function reinsertMenu(observer = null) {
 }
 
 // メニューのイベントリスナーを追加
-function addMenuEventListeners() {
-  const historyItem = document.getElementById('history-menu-item');
+function createMenuList() {
+  // メニュー要素を作成
+  const menuContainer = document.createElement('div');
+  menuContainer.innerHTML = createMenuHTML();
+  const menuList = menuContainer.firstElementChild;
+  const historyItem = menuList.querySelector('#history-menu-item');
   if (historyItem) {
     historyItem.addEventListener('click', window.handleHistoryPanelOpen);
   }
-  const favoritesItem = document.getElementById('favorites-menu-item');
+  const favoritesItem = menuList.querySelector('#favorites-menu-item');
   if (favoritesItem) {
     favoritesItem.addEventListener('click', window.handleFavoritesPanelOpen);
   }
-  const recommendItem = document.getElementById('recommend-menu-item');
+  const recommendItem = menuList.querySelector('#recommend-menu-item');
   if (recommendItem) {
     recommendItem.addEventListener('click', window.handleRecommendPanelOpen);
   }
+  return menuList;
 }
 
 // =========================
@@ -240,5 +218,5 @@ function getIconHtml(type) {
   }
 }
 window.getIconHtml = getIconHtml;
-window.waitForLogoAndInsertMenu = waitForLogoAndInsertMenu;
+window.insertLeftMenu = insertLeftMenu;
 window.startMenuOpeningMutationObserver = startMenuOpeningMutationObserver;

@@ -81,7 +81,7 @@ async function main() {
     }
     return;
   }
-  window.waitForLogoAndInsertMenu();
+  window.insertLeftMenu();
   window.startMenuOpeningMutationObserver();
   if (pageType === 'home') {
     // ホームページの処理を呼び出す
@@ -101,7 +101,7 @@ async function main() {
 function safeMain() {
   
   const missing = [];
-  if (typeof window.waitForLogoAndInsertMenu !== 'function') missing.push('waitForLogoAndInsertMenu');
+  if (typeof window.insertLeftMenu !== 'function') missing.push('waitForLogoAndInsertMenu');
   if (typeof window.getCategoriesData !== 'function') missing.push('getCategoriesData');
   if (typeof window.waitThenAddFavBtnToCategoryList !== 'function') missing.push('waitThenAddFavToCategoryList');
   if (typeof window.addFavoriteButtonToBreadCrumbs !== 'function') missing.push('addFavoriteButtonToBreadCrumbs');
