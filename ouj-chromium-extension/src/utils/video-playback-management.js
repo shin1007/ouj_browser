@@ -1,7 +1,9 @@
 let initialPosition = 0;
 let firstplay = true;
+let video = null;
 // 動画終了監視機能
 function startVideoEndMonitoring() {
+  firstplay = true;
   const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
   if (!autoNextVideoEnabled) {
     return;
@@ -10,19 +12,20 @@ function startVideoEndMonitoring() {
     setTimeout(startVideoEndMonitoring, 100);
     return;
   }
-  window.waitForElement('video', (video) => {
-    const handleVideoEnded = () => {
-      if (window.nextVideoId) {
-        showVideoEndNotification();
-        setTimeout(() => {
-          skipToNextVideo();
-        }, 2000);
-      } else {
-      }
-    };
-    video.removeEventListener('ended', handleVideoEnded);
-    video.addEventListener('ended', handleVideoEnded);
+  window.waitForElement('video', (v) => {
+    video = v;
   });
+  const handleVideoEnded = () => {
+    if (window.nextVideoId) {
+      showVideoEndNotification();
+      setTimeout(() => {
+        skipToNextVideo();
+      }, 2000);
+    } else {
+    }
+  };
+  video.removeEventListener('ended', handleVideoEnded);
+  video.addEventListener('ended', handleVideoEnded);
 }
 
 // 動画終了時の通知を表示
@@ -74,20 +77,14 @@ function calculatePlaybackPercentage() {
 
 // エンディングかどうかを判断する関数
 function isEnding() {
-  const video = document.querySelector('video');
-  if (!video) {
-    return false;
-  }
+  if (!video) return false;
   
-  const currentTime = video.currentTime;
-  const duration = video.duration;
-  
-  if (duration === 0 || isNaN(duration)) {
+  if (video.duration === 0 || isNaN(video.duration)) {
     return false;
   }
   
   // 複数の条件を組み合わせて判断
-  const isEnding = (currentTime / duration) >= 0.95;
+  const isEnding = (video.currentTime / video.duration) >= 0.95;
   
   return isEnding;
 }
@@ -98,20 +95,12 @@ function StartPlaybackManagement() {
     initialPosition = video.currentTime;
   });
 
-  video = document.querySelector('video');
-  i = 1;
+  i = 1;  
   const interval = setInterval(() => {
-    applyVideoSkip();
-    if (!endingDetected && isEnding()) {
-      endingDetected = true;
-      handleEndingDetected();
-    }
+
     // 15秒に1回、動画を一時停止してから再生することで、再生ログを残せるようにする
     if (i % 15 === 0) {
-      video.pause();
-      setTimeout(() => {
-        video.play();
-      }, 1);
+      sendPlayLog();
     }
     i++;
   }, 1000); // 1秒ごとにチェック
@@ -122,110 +111,74 @@ function StartPlaybackManagement() {
   };
 }
 
-// エンディング検出時の処理
-function handleEndingDetected() {
-  // 次の動画IDが設定されている場合のみスキップボタンを表示
-  if (window.nextVideoId) {
-    showEndingSkipButton();
-    
-    // 自動で次の動画に進むオプション（設定で有効な場合）
-    if (window.getBooleanSetting('autoSkipEnding', false)) {
-      setTimeout(() => {
-        skipToNextVideo();
-      }, 3000); // 3秒後に自動スキップ
+function sendPlayLog(){
+  // 既に停止している場合は何もしない
+  if (video.paused) return;
+  video.pause();
+  setTimeout(() => {
+    try {
+      console.log('動画の再生ログを残すために一時停止後に再生します');
+      video.play().catch(e => {
+        console.log('動画の自動再生がブロックされました:', e);
+      });
+    } catch(e){
+      console.log('動画の自動再生がブロックされました:', e);
     }
-  } else {
-  }
-}
-
-// エンディングスキップボタンを表示
-function showEndingSkipButton() {
-  // 既にボタンが存在する場合は何もしない
-  if (document.getElementById('ending-skip-button')) {
-    return;
-  }
-  
-  const button = document.createElement('button');
-  button.id = 'ending-skip-button';
-  button.textContent = 'エンディングをスキップ';
-  button.style.cssText = `
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-  `;
-  
-  button.addEventListener('click', () => {
-    skipToNextVideo();
-    button.remove();
-  });
-  
-  // 動画プレイヤーの近くに配置
-  const videoContainer = document.querySelector('.video-js') || 
-                        document.querySelector('video')?.parentElement ||
-                        document.body;
-  
-  if (videoContainer) {
-    videoContainer.appendChild(button);
-  }
+  }, 1);
 }
 function applyVideoSkip() {
-  if (typeof window.waitForElement === 'function') {
-    window.waitForElement('video', (video) => {
-      if (!video) return;
-      // 設定値取得
-      const skipStart = window.getSetting ? window.getSetting('skipStartSeconds', 0) : 0;
-      const skipEnd = window.getSetting ? window.getSetting('skipEndSeconds', 0) : 0;
+  if (!typeof window.waitForElement === 'function')return; 
+  window.waitForElement('video', (video) => {
+    if (!video) return;
+    // 設定値取得
+    const skipStart = window.getSetting ? window.getSetting('skipStartSeconds', 0) : 0;
+    const skipEnd = window.getSetting ? window.getSetting('skipEndSeconds', 0) : 0;
 
-      const currentTime = video.currentTime;
-      const duration = video.duration;
+    const currentTime = video.currentTime;
+    const duration = video.duration;
 
-      // オープニングのスキップ
-      if (currentTime < skipStart) {
-        skipOpening(video, skipStart);
+    // オープニングのスキップ
+    if (currentTime < skipStart) {
+      skipOpening(video, skipStart);
+      return;
+    }
+    // エンディングのスキップ
+    if (currentTime > duration - skipEnd) {
+      // 再生ボタンが押されてから5秒以上が経過している場合のみ
+      if (currentTime - initialPosition < 5) {
         return;
       }
-      // エンディングのスキップ
-      if (currentTime > duration - skipEnd) {
-        // 再生ボタンが押されてから5秒以上が経過している場合のみ
-        if (currentTime - initialPosition < 5) {
-          return;
-        }
-        // 動画が再生中の場合のみ
-        if (!video.paused) {
-          skipToNextVideo();
-        }
+      // 動画が再生中の場合のみ
+      if (!video.paused) {
+        skipToNextVideo();
       }
-    });
-  }
+    }
+  });
+  
 }
+
+function skipOpening(video, skipStart) {
   function waitUntilReady() {
-    if (video.readyState > 0) {
+    // video.readyState >= 2（HAVE_CURRENT_DATA以上）になってからシークする。
+    if (video.readyState >= 2 && !isNaN(video.duration)) {
       return;
-    } else {
+    } else if (video.readyState < 2) {
       setTimeout(waitUntilReady, 200);
       return;
     }
   }
-
-function skipOpening(video, skipStart) {
   if (!firstplay) return;
-
+  console.log('オープニングスキップ: ', skipStart);
   waitUntilReady();
-  video.pause();
-  waitUntilReady();
+  // TODO: うまくいかない時がある。
+  video.seeking = true;
   video.currentTime = parseFloat(skipStart);
+  video.seeking = false;
   waitUntilReady();
-  video.pause();
-  waitUntilReady();
-  video.play();
+  console.log('オープニングスキップ後の自動再生を試みます');
+  video.play().catch(e => {
+    console.log('動画の自動再生がブロックされました:', e);
+  });
   firstplay = false;
 }
 
