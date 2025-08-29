@@ -64,7 +64,6 @@ function startMenuOpeningMutationObserver() {
   if (window.oujMenuOpeningObserver) {
     return;
   }
-  console.log('Starting menu opening mutation observer');
   const ionApp = document.querySelector('ion-app');
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {

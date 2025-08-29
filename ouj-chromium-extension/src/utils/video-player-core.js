@@ -18,7 +18,6 @@ async function initializeVideoPlayer() {
   // URLの変化だけではなく、動画タイトルがHTML内にあるかどうかを確認するのが有用そう。
   const contentId = window.getCurrentVideoId();
   const categoryData = await window.getCategoryDataFromContentId(contentId);
-  console.log('initializeVideoPlayer: contentId=', contentId, ' categoryData=', categoryData);
   const videos = await window.getVideoListInCategory(categoryData.categoryId);
   let videoTitle = ''
   for (const video of videos) {
