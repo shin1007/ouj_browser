@@ -58,7 +58,34 @@ function createMenuHTML() {
     </ion-list>
   `;
 }
-
+function startMenuOpeningMutationObserver() {
+  console.log('Starting menu opening mutation observer');
+  if (window.oujMenuOpeningObserver) {
+    return;
+  }
+  const ionApp = document.querySelector('ion-app');
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      console.log('Menu mutation observed:', mutation);
+      // ion-popoverが開かれたかどうかをチェック
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+          return;
+        }
+        if (node.tagName.toLowerCase() === 'ion-popover') {
+          console.log('ion-popover detected, re-inserting menu if needed');
+          // 少し遅延してからメニュー挿入を試みる
+          setTimeout(() => {
+            waitForLogoAndInsertMenu();
+          }, 100);
+        }
+      });
+      
+    });
+  });
+  observer.observe(ionApp, { childList: true, subtree: true });
+  window.oujMenuOpeningObserver = observer;
+}
 // ロゴを待ってメニューを挿入する処理
 function waitForLogoAndInsertMenu() {
   
@@ -327,3 +354,4 @@ function getIconHtml(type) {
 }
 window.getIconHtml = getIconHtml;
 window.waitForLogoAndInsertMenu = waitForLogoAndInsertMenu;
+window.startMenuOpeningMutationObserver = startMenuOpeningMutationObserver;

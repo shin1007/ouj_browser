@@ -82,7 +82,7 @@ async function main() {
     return;
   }
   window.waitForLogoAndInsertMenu();
-
+  window.startMenuOpeningMutationObserver();
   if (pageType === 'home') {
     // ホームページの処理を呼び出す
     await handleHomePageAutoLogin();
