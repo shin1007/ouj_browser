@@ -92,23 +92,29 @@ function isEnding() {
   return isEnding;
 }
 
-// エンディング検出の監視を開始する関数
 function StartPlaybackManagement() {  
   let endingDetected = false;
   window.waitForElement('video', (video) => {
     initialPosition = video.currentTime;
   });
+
+  video = document.querySelector('video');
+  i = 1;
   const interval = setInterval(() => {
     applyVideoSkip();
     if (!endingDetected && isEnding()) {
       endingDetected = true;
-      
-      
-      // エンディング検出時の処理をここに追加
-      // 例: 自動で次の動画に進む、スキップボタンを表示するなど
       handleEndingDetected();
     }
-  }, 2000); // 2秒ごとにチェック
+    // 15秒に1回、動画を一時停止してから再生することで、再生ログを残せるようにする
+    if (i % 15 === 0) {
+      video.pause();
+      setTimeout(() => {
+        video.play();
+      }, 1);
+    }
+    i++;
+  }, 1000); // 1秒ごとにチェック
   
   // 監視を停止する関数を返す
   return () => {
@@ -200,15 +206,16 @@ function applyVideoSkip() {
     });
   }
 }
-function skipOpening(video, skipStart) {
   function waitUntilReady() {
     if (video.readyState > 0) {
       return;
     } else {
-      setTimeout(waitUntilReady, 100);
+      setTimeout(waitUntilReady, 200);
       return;
     }
   }
+
+function skipOpening(video, skipStart) {
   if (!firstplay) return;
 
   waitUntilReady();
