@@ -1,30 +1,75 @@
 const captionUi = "字幕が利用可能です"
 const noCaptionUi = "字幕なし"
 
+async function isTvSize(){
+  const title = await new Promise(resolve => window.waitForElement('#content-detail-area > div.title', resolve, { timeout: 3000 }));
+  const styleElement = await new Promise(resolve => window.waitForElement('style.vjs-styles-dimensions', resolve, { timeout: 3000 }));
+    
+  // 最大3秒間 textContent を監視
+  const styleContent = await new Promise(resolve => {
+    const start = Date.now();
+    const check = () => {
+      if (styleElement.textContent && styleElement.textContent.trim() !== '') {
+        resolve(styleElement.textContent);
+      } else if (Date.now() - start > 3000) {
+        resolve('');
+      } else {
+        setTimeout(check, 100);
+      }
+    };
+    check();
+  });
 
+  if (!styleContent) {
+    return false;
+  }
+
+  // widthが300px以下の場合にラジオと判定
+  const widthMatch = styleContent.match(/width:\s*(\d+)px;/);
+  if (widthMatch && parseInt(widthMatch[1], 10) <= 300) {
+    return false;
+  } 
+  return true;
+}
 async function isRadioProgram() {
-    // 現在の動画IDを取得
-    const currentVideoId = window.getCurrentContentId();
-    if (!currentVideoId) return False;
-    
-    // 動画IDから現在のカテゴリデータを取得
-    const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
-    if (!currentCategory) return False;
-    
-    // summary欄でラジオ番組かどうかを判定
-    const isRadio = currentCategory.summary && (
-      currentCategory.summary.startsWith('(ラジオ')
-    );
-    return isRadio;
+  // 動画用のサイズであればFalseを返す
+  if (await isTvSize()) return false;
+
+  // 現在の動画IDを取得
+  const currentVideoId = window.getCurrentContentId();
+  if (!currentVideoId) return false;
+  
+  // 動画IDから現在のカテゴリデータを取得
+  const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
+  if (!currentCategory) return false;
+  console.log('isRadioProgram: 現在のカテゴリ', currentCategory);
+  // ラジオ番組の字幕付加実験のカテゴリはテレビ番組扱いとする
+  // const parentCategory = await window.getCategoryData(currentCategory.parentId);
+  // console.log('isRadioProgram: 親カテゴリ', parentCategory ? parentCategory.name : '不明');
+  // if (parentCategory && "ラジオ番組の字幕付加実験" in parentCategory.name) {
+  //   return false;
+  // }
+  if (currentCategory.categoryId === 30636
+    || currentCategory.categoryId === 30637
+    || currentCategory.categoryId === 30638
+    || currentCategory.categoryId === 30725){
+    return false
+  }
+
+  // summary欄でラジオ番組かどうかを判定
+  const isRadio = currentCategory.summary && (
+    currentCategory.summary.startsWith('(ラジオ')
+  );
+  return isRadio;
 }
 async function isCaptionAvailable() {
     // 現在の動画IDを取得
     const currentVideoId = window.getCurrentContentId();
-    if (!currentVideoId) return False;
+    if (!currentVideoId) return false;
     
     // 動画IDから現在のカテゴリデータを取得
     const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
-    if (!currentCategory) return False;
+    if (!currentCategory) return false;
     
     // summary欄でラジオ番組かどうかを判定
     const isCaptionAvailable = currentCategory.summary && (

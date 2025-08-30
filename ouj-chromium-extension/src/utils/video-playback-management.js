@@ -8,7 +8,6 @@ function StartPlaybackManagement() {
   // TODO: オープニングスキップがうまくいかない
   // skipOpening(video);
   initialPosition = video.currentTime;
-  const skipEnd = window.getSetting ? window.getSetting('skipEndSeconds', 0) : 0;
 
   i = 0;  
   const interval = setInterval(() => {
@@ -19,7 +18,7 @@ function StartPlaybackManagement() {
       i = 0; // カウンタをリセット
     }
 
-
+    let skipEnd = window.getSetting ? window.getSetting('skipEndSeconds', 0) : 0;
     // エンディングのスキップ
     if (video.currentTime > video.duration - skipEnd) {
       // 再生ボタンが押されてから5秒以上が経過している場合のみ

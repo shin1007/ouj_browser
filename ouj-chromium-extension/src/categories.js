@@ -16,6 +16,12 @@ async function getCategoryDataFromContentId(contentId) {
   const category = categories.find(cat => cat.categoryId === videoData.categoryId);
   return category || null;
 }
+async function getCategoryData(categoryId){
+  const categories = await getCategoriesData();
+  if (!(categories && Array.isArray(categories))) return null;
+  const category = categories.find(cat => cat.categoryId === categoryId);
+  return category || null;
+}
 /**
  * 指定したcontentIdの動画データをAPIから取得する
  * @param {string|number} contentId
@@ -179,3 +185,4 @@ window.getVideoListInCategory = getVideoListInCategory;
 window.getVideoData = getVideoData;
 window.getCategoryDataFromContentId = getCategoryDataFromContentId;
 window.getVideoProgress = getVideoProgress;
+window.getCategoryData = getCategoryData;

@@ -10,11 +10,11 @@ function startVideoEndMonitoring() {
 
   // 動画終了時に次の動画へスキップ
   // 2秒間通知を出した後に次の動画に移る
-  const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
-  if (!autoNextVideoEnabled) {
-    return;
-  }
   const handleVideoEnded = () => {
+    const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
+    if (!autoNextVideoEnabled) {
+      return;
+    }
     if (window.nextVideoId) {
       showVideoEndNotification();
       setTimeout(() => {
