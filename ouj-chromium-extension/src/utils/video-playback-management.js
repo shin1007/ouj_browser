@@ -12,8 +12,8 @@ function StartPlaybackManagement() {
   i = 0;  
   const interval = setInterval(() => {
 
-    // 15秒に1回、動画を一時停止してから再生することで、再生ログを残せるようにする
-    if (i % 15 === 0) {
+    // 3分に1回、動画を一時停止してから再生することで、再生ログを残せるようにする
+    if (i % (3 * 60) === 0) {
       sendPlayLog(video);
       i = 0; // カウンタをリセット
     }

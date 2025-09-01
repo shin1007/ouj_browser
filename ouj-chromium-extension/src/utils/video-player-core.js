@@ -252,7 +252,6 @@ async function getAvailableVideosFromFavorites(favorites) {
       // 未完了動画が見つかった場合はリストに追加
       if (firstUnfinishedVideo) {
         availableVideos.push(firstUnfinishedVideo);
-
       }
       
     } catch (error) {
