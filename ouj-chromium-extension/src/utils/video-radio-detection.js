@@ -42,7 +42,7 @@ async function isRadioProgram() {
   // 動画IDから現在のカテゴリデータを取得
   const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
   if (!currentCategory) return false;
-  console.log('isRadioProgram: 現在のカテゴリ', currentCategory);
+  // console.log('isRadioProgram: 現在のカテゴリ', currentCategory);
   // ラジオ番組の字幕付加実験のカテゴリはテレビ番組扱いとする
   // const parentCategory = await window.getCategoryData(currentCategory.parentId);
   // console.log('isRadioProgram: 親カテゴリ', parentCategory ? parentCategory.name : '不明');
