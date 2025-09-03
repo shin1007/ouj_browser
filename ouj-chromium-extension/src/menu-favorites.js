@@ -52,15 +52,7 @@ function removePinnedFavorite(categoryId) {
 // コースパターン（お気に入り）
 async function getPanelDataCoursePattern(ids) {
   // ids: categoryIdの配列
-  const result = await chrome.storage.local.get(['cachedCategoriesData']);
-  const cachedData = result.cachedCategoriesData;
-  let categories = [];
-  if (cachedData && cachedData.data) {
-    categories = cachedData.data;
-  } else {
-    categories = await window.getCategoriesData();
-  }
-  if (!Array.isArray(categories)) categories = [];
+  const categories = await window.getCategoriesData(minute=1);
   const idToName = {};
   categories.forEach(cat => {
     idToName[cat.categoryId] = cat.name;

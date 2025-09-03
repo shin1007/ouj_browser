@@ -56,7 +56,25 @@ const fetchFromNetwork = async (url) => {
         }
     }
 };
-
+const fetchWithoutCache = async (url,cacheKey) => {
+    try {
+        const response = await fetch(url);
+        if (response.ok) {
+            const data = await response.json();
+            // 成功した場合のみキャッシュを更新
+            const cacheData = {
+                data: data,
+                timestamp: new Date().toISOString()
+            };
+            await chrome.storage.local.set({ [cacheKey]: cacheData });
+            return data;
+        }
+        return response.json();
+    } catch (error) {
+        console.warn(`fetchWithoutCache: ${url} のネットワークからのデータ取得に失敗しました。エラー: ${error.message}`);
+        return null;
+    }
+};
 /**
  * 指定された要素が存在するまで待機し、存在したらコールバックを実行する関数
  * @param {string} selector - CSSセレクタ

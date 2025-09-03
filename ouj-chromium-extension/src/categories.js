@@ -39,8 +39,8 @@ async function getVideoData(contentId) {
   }
 }
 
-async function getCategoriesData() {
-  return await fetchWithCache(CATEGORIES_API_URL, CATEGORIES_STORAGE_KEY);
+async function getCategoriesData(minute=720) {
+  return await fetchWithCache(CATEGORIES_API_URL, CATEGORIES_STORAGE_KEY, minute);
 }
 
 async function getChildIds(categoryNum) {
