@@ -1,7 +1,7 @@
 function iconHtml(iconName) {
   return `<ion-icon name="${iconName}" class="icon icon-md ion-md-${iconName} item-icon" aria-label="お気に入り" style="font-size:20px;"></ion-icon>`;
 }
-
+// TODO: document_idleで実行した場合にも動作するようにする
 async function addFavoriteButtonToBreadCrumbs() {
     const categoryId = window.getCurrentCategoryId();
     if (!categoryId) {

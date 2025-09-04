@@ -30,7 +30,7 @@ function addProgressBarToThumbnail(thumbnailElement, progress) {
   progressBar.className = 'progress-bar';
   progressBar.style.cssText = `
     height: 100%;
-    background: #ff0000;
+    background: #0091d9;
     width: ${Math.max(0, Math.min(100, progress * 100))}%;
     transition: width 0.3s ease;
   `;
