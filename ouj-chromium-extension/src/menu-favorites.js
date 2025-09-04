@@ -52,7 +52,31 @@ function removePinnedFavorite(categoryId) {
 // コースパターン（お気に入り）
 async function getPanelDataCoursePattern(ids) {
   // ids: categoryIdの配列
-  const categories = await window.getCategoriesData(minute=1);
+  let categories = await window.getCategoriesData();
+  const idToName = {};
+  categories.forEach(cat => {
+    idToName[cat.categoryId] = cat.name;
+    idToName[cat.categoryId.toString()] = cat.name;
+  });
+  const items = await Promise.all(ids.map(async (id) => {
+    const categoryName = idToName[id];
+    const parentCategoryName = await window.getParentCategoryName(id);
+    const displayName = categoryName || `不明なコース (ID: ${id})`;
+    return {
+      id: id,
+      categoryName: displayName,
+      parentCategoryName: parentCategoryName || 'その他',
+      hasParent: !!parentCategoryName
+    };
+  }));
+  if (items[0].categoryName.startsWith('不明なコース')){
+    return await getPanelDataCoursePatternAgain(ids)
+  }
+  return { categories, idToName, items };
+}
+async function getPanelDataCoursePatternAgain(ids) {
+  // ids: categoryIdの配列
+  let categories = await window.getCategoriesData(minute=0);
   const idToName = {};
   categories.forEach(cat => {
     idToName[cat.categoryId] = cat.name;
