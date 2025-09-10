@@ -109,7 +109,7 @@ function createPanel({ id, className, ariaLabelledby, ariaModal = 'true', mainId
     minHeight: 'min(80vh, 480px)',
     maxHeight: '85vh',
     padding: '0',
-    borderRadius: '12px 12px 0 0',
+    borderRadius: '12px',
     boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
     background: '#232c3a',
     border: '1px solid rgba(255,255,255,0.2)',
