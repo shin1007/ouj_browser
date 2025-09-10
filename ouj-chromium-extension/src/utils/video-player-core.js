@@ -66,6 +66,9 @@ async function initializeVideoPlayer() {
     if (video){
       // 自動再生設定が有効な場合は再生
       if (autoPlayEnabled) {
+        video.seeking= true
+        video.seeking = false
+        video.pause()
         video.play().catch(e => {
           // 自動再生がブロックされた場合は何もしない
         });
