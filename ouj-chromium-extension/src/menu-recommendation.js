@@ -176,7 +176,7 @@ function handleRecommendPanelOpen() {
     searchBoxHtml: '',
     listHtml: dummyCards,
     closeBtnId: 'close-recommend-list-panel',
-    contentClass: 'history-panel-content',
+    contentClass: 'recommend-panel-content',
     listClass: 'history-list',
     fetchData: async () => {
       // キャッシュがあれば即返す。なければ取得
@@ -251,7 +251,7 @@ function renderRecommendListHtml(panel, closePanel, recommendList) {
       });
     }).join('');
     if (!listHtml) listHtml = `<div class=\"history-empty\" style=\"color:${isDark ? '#fff' : '#222'};padding:16px;text-align:center;\">おすすめ動画はありません（全て再生済み）</div>`;
-    panel.querySelector('.history-panel-content').innerHTML = `<div class=\"history-list\">${listHtml}</div>`;
+    panel.querySelector('.recommend-panel-content').innerHTML = `<div class=\"history-list\">${listHtml}</div>`;
     // setupListItemEventsで共通化
     window.setupListItemEvents(panel, '.recommend-card', {
       onClick: (event, item) => {

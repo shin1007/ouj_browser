@@ -52,8 +52,8 @@ function createSearchBoxHtml(type) {
   const boxClass = type === 'history' ? 'history-search-box' : 'favorite-search-box';
   const placeholder = 'コース名・親カテゴリ名で検索';
   return `
-    <div class="${boxClass}" style="background: #232c3a; border-radius: 10px; padding: 4px 12px; margin: 0 24px 10px 24px; box-shadow: 0 2px 8px rgba(30,40,60,0.18); border: 1.5px solid #3a4658;">
-      <input id="${id}" type="text" placeholder="${placeholder}" style="width: 100%; background: #232c3a; color: #fff; font-size: 14px; padding: 6px 8px; border-radius: 6px; letter-spacing: 0.5px;">
+    <div class="${boxClass}">
+      <input id="${id}" type="text" placeholder="${placeholder}">
     </div>
   `;
 }
@@ -104,12 +104,12 @@ function createPanel({ id, className, ariaLabelledby, ariaModal = 'true', mainId
     position: 'fixed',
     top: '50%',
     left: '50%',
-    zIndex: 9999,
+    zIndex: 10000,
     minWidth: 'min(90vw, 600px)',
-    minHeight: '480px',
-    maxHeight: '480px',
+    minHeight: 'min(80vh, 480px)',
+    maxHeight: '85vh',
     padding: '0',
-    borderRadius: '12px 12px 0 0',
+    borderRadius: '12px',
     boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
     background: '#232c3a',
     border: '1px solid rgba(255,255,255,0.2)',
@@ -119,7 +119,8 @@ function createPanel({ id, className, ariaLabelledby, ariaModal = 'true', mainId
     transform: 'translate(-50%, -50%) scale(0.95)',
     opacity: '0',
     transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
-    backdropFilter: 'blur(10px)'
+    backdropFilter: 'blur(10px)',
+    overflow: 'hidden'
   });
   return panel;
 }
