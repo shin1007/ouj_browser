@@ -1,23 +1,5 @@
 // サムネイルに再生進捗バーを表示する機能
 
-/**
- * 動画の再生進捗を取得する
- * @param {string} contentId - 動画のコンテンツID
- * @returns {Promise<number>} 再生進捗率（0-1の値）
- */
-async function getVideoProgress(contentId) {
-  try {
-    const response = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.currentTimeRate || 0;
-  } catch (error) {
-    console.log(`getVideoProgress: 動画 ${contentId} の再生進捗取得に失敗:`, error);
-    return 0;
-  }
-}
 
 /**
  * サムネイルに進捗バーを追加する
@@ -48,7 +30,7 @@ function addProgressBarToThumbnail(thumbnailElement, progress) {
   progressBar.className = 'progress-bar';
   progressBar.style.cssText = `
     height: 100%;
-    background: #ff0000;
+    background: #0091d9;
     width: ${Math.max(0, Math.min(100, progress * 100))}%;
     transition: width 0.3s ease;
   `;
@@ -98,17 +80,15 @@ async function showThumbnailProgress() {
       // コンテンツIDを抽出
       const contentId = extractContentIdFromThumbnail(thumbnail);
       if (!contentId) {
-        console.log('showThumbnailProgress: コンテンツIDが見つかりませんでした');
         continue;
       }
       
       // 再生進捗を取得
-      const progress = await getVideoProgress(contentId);
+      const progress = await window.getVideoProgress(contentId);
       
       // 進捗が0より大きい場合のみ進捗バーを表示
       if (progress > 0) {
         addProgressBarToThumbnail(thumbnail, progress);
-        console.log(`showThumbnailProgress: 動画 ${contentId} の進捗 ${(progress * 100).toFixed(1)}% を表示`);
       }
     } catch (error) {
       console.error('showThumbnailProgress: エラーが発生しました:', error);
@@ -129,7 +109,7 @@ async function updateThumbnailProgress() {
     if (thumbnail) {
       const contentId = extractContentIdFromThumbnail(thumbnail);
       if (contentId) {
-        const progress = await getVideoProgress(contentId);
+        const progress = await window.getVideoProgress(contentId);
         progressBar.style.width = `${Math.max(0, Math.min(100, progress * 100))}%`;
       }
     }
@@ -143,8 +123,8 @@ function initializeThumbnailProgress() {
   // 初期表示
   showThumbnailProgress();
   
-  // 定期的に更新（5分ごと）
-  setInterval(updateThumbnailProgress, 5 * 60 * 1000);
+  // 定期的に更新（30分ごと）
+  setInterval(updateThumbnailProgress, 30 * 60 * 1000);
   
   // DOM変更を監視して新しいサムネイルが追加されたときに進捗を表示
   const observer = new MutationObserver((mutations) => {

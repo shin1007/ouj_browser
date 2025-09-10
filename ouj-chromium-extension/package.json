@@ -38,5 +38,8 @@
   "devDependencies": {
     "chai": "^5.2.0",
     "mocha": "^11.7.1"
+  },
+  "dependencies": {
+    "sharp": "^0.34.3"
   }
 }

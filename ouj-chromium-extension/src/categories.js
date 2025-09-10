@@ -3,23 +3,46 @@
 const CATEGORIES_API_URL = 'https://v.ouj.ac.jp/v1/tenants/1/categories';
 const CATEGORIES_STORAGE_KEY = 'cachedCategoriesData'; // カテゴリデータを保存する際のキー
 
-
-
 /**
- * 指定されたAPIからJSONデータを取得します。
- * 共通のキャッシュ機能を使用して、当日のキャッシュがある場合はそれを利用します。
- * 当日のキャッシュがない場合はネットワークリクエストを試みます。
- * ネットワークリクエストが成功すればキャッシュを更新します。
- * @returns {Promise<Object|null>} 取得またはキャッシュされたJSONデータ、またはnull
+ * 指定したcontentIdからカテゴリデータを取得する
+ * @param {string|number} contentId
+ * @returns {Promise<Object|null>} カテゴリデータ or null
  */
-async function getCategoriesData() {
-  return await fetchWithCache(CATEGORIES_API_URL, CATEGORIES_STORAGE_KEY);
+async function getCategoryDataFromContentId(contentId) {
+  const videoData = await getVideoData(contentId);
+  if (!videoData || !videoData.categoryId) return null;
+  const categories = await getCategoriesData();
+  if (!(categories && Array.isArray(categories))) return null;
+  const category = categories.find(cat => cat.categoryId === videoData.categoryId);
+  return category || null;
+}
+async function getCategoryData(categoryId){
+  const categories = await getCategoriesData();
+  if (!(categories && Array.isArray(categories))) return null;
+  const category = categories.find(cat => cat.categoryId === categoryId);
+  return category || null;
 }
 /**
- * 現在のURLの右端が「ca=整数」なら、その整数をcategoryNumとして取得し、
- * storageに保存されているcategoriesデータからparentIdがcategoryNumの項目のcategoryId, name一覧を
- * nameの左端3桁を整数化して昇順で返す
+ * 指定したcontentIdの動画データをAPIから取得する
+ * @param {string|number} contentId
+ * @returns {Promise<Object|null>}
  */
+async function getVideoData(contentId) {
+  try {
+    const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}`;
+    const cacheKey = `cachedVodContent_${contentId}`;
+    const videoData = await window.fetchWithCache(url, cacheKey);
+    return videoData;
+  } catch (error) {
+    console.error('getVideoData: 動画データ取得でエラーが発生しました:', error);
+    return null;
+  }
+}
+
+async function getCategoriesData(minute=720) {
+  return await fetchWithCache(CATEGORIES_API_URL, CATEGORIES_STORAGE_KEY, minute);
+}
+
 async function getChildIds(categoryNum) {
   const categoryNumInt = parseInt(categoryNum, 10);
 
@@ -42,32 +65,40 @@ async function getChildIds(categoryNum) {
   return filtered.map(item => ({ categoryId: item.categoryId, name: item.name }));
 }
 
-/**
- * 現在のURLのhashからcaパラメータを取得し、カテゴリIDを文字列として返す
- * @returns {string} 現在のカテゴリID（文字列）
- */
 function getCurrentCategoryId() {
   const hash = window.location.hash;
-  console.log("getCurrentCategoryId - hash:", hash);
   
   // hashのcaを取得
   const params = hash.split('?')[1];
   if (!params) {
-    console.error("getCurrentCategoryId: URLパラメータが見つかりません");
-    return null;
+    return 0;
   }
   
   const caMatch = params.match(/ca=(\d+)/);
   if (!caMatch) {
-    console.error("getCurrentCategoryId: caパラメータが見つかりません");
-    return null;
+    return 0;
   }
   
   const categoryId = caMatch[1];
-  console.log("getCurrentCategoryId - categoryId:", categoryId);
-  return categoryId;
+  return parseInt(categoryId, 10);
 }
-
+function getCurrentContentId() {
+  const hash = window.location.hash;
+  
+  // hashのcaを取得
+  const params = hash.split('?')[1];
+  if (!params) {
+    return 0;
+  }
+  
+  const caMatch = params.match(/co=(\d+)/);
+  if (!caMatch) {
+    return 0;
+  }
+  
+  const categoryId = caMatch[1];
+  return parseInt(categoryId, 10);
+}
 /**
  * 指定されたカテゴリIDの親カテゴリ名を取得する
  * @param {number|string} categoryId - カテゴリID
@@ -103,11 +134,20 @@ async function getParentCategoryName(categoryId) {
     return null;
   }
 }
+async function getVideoListInCategory(categoryId) {
+  const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
+  const cachedData = result[CATEGORIES_STORAGE_KEY];
+  const data = cachedData && cachedData.data ? cachedData.data : cachedData;
+  if (!Array.isArray(data)) return []; 
+  const category = data.find(item => item.categoryId === parseInt(categoryId, 10));
+  if (!category) return [];
+  const cacheKey = `cachedVideoList_${categoryId}`;
+  const list = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
+  if (!Array.isArray(list)) return [];
+  return list;
 
-/**
- * categoriesデータの中でparentIdとして使われているcategoryIdを重複なく列挙して返す
- * @returns {Promise<number[]>} parentIdとして使われているcategoryIdの配列
- */
+}
+
 async function parentCategories() {
   const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
   const cachedData = result[CATEGORIES_STORAGE_KEY];
@@ -124,8 +164,25 @@ async function parentCategories() {
   return Array.from(parentIdSet);
 }
 
+
+async function getVideoProgress(contentId) {
+  try {
+    const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`;
+    const cacheKey = `videoViewingStatus_${contentId}`;
+    const cachedData = await fetchWithCache(url, cacheKey, 40);
+
+    return cachedData.currentTimeRate || 0;
+  } catch (error) {
+    return 0;
+  }
+}
 window.getCategoriesData = getCategoriesData;
 window.getChildIds = getChildIds;
 window.getCurrentCategoryId = getCurrentCategoryId;
 window.getParentCategoryName = getParentCategoryName;
 window.parentCategories = parentCategories;
+window.getVideoListInCategory = getVideoListInCategory;
+window.getVideoData = getVideoData;
+window.getCategoryDataFromContentId = getCategoryDataFromContentId;
+window.getVideoProgress = getVideoProgress;
+window.getCategoryData = getCategoryData;

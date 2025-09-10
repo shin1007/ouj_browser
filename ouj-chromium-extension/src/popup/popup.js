@@ -1,42 +1,44 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const favoriteButton = document.getElementById('favorite-button');
-    const speedSelect = document.getElementById('speed-select');
-    const playNextButton = document.getElementById('play-next-button');
-
-    // お気に入り機能の実装
-    favoriteButton.addEventListener('click', function() {
-        const videoId = getCurrentVideoId();
-        toggleFavorite(videoId);
+    // 大きな放送大学ページボタン
+    const openOujHomeButton = document.getElementById('open-ouj-home');
+    
+    // 自動ログインのチェックボックス
+    const autoLoginCheckbox = document.getElementById('auto-login-checkbox');
+    
+    // ポップアップが開いた際にボタンにフォーカスを当てる
+    openOujHomeButton.focus();
+    
+    // 保存された自動ログイン設定を読み込む
+    chrome.storage.sync.get(['autoLogin'], function(result) {
+        if (result.autoLogin !== undefined) {
+            autoLoginCheckbox.checked = result.autoLogin;
+        }
+    });
+    
+    // 自動ログイン設定の変更を保存
+    autoLoginCheckbox.addEventListener('change', function() {
+        chrome.storage.sync.set({
+            autoLogin: autoLoginCheckbox.checked
+        }, function() {
+        });
+    });
+    
+    // 放送大学ホームページを開く
+    openOujHomeButton.addEventListener('click', function() {
+        const targetUrl = "https://v.ouj.ac.jp/view/ouj/#/navi/home";
+        
+        // 新しいタブで放送大学のホームページを開く
+        chrome.tabs.create({ 
+            url: targetUrl,
+            active: true
+        }, (newTab) => {
+            if (chrome.runtime.lastError) {
+                console.error('タブ作成エラー:', chrome.runtime.lastError);
+            } else {
+                // ポップアップを閉じる
+                window.close();
+            }
+        });
     });
 
-    // 再生速度の設定
-    speedSelect.addEventListener('change', function() {
-        const speed = speedSelect.value;
-        setPlaybackSpeed(speed);
-    });
-
-    // 次の動画を再生
-    playNextButton.addEventListener('click', function() {
-        playNextVideo();
-    });
-
-    // 現在の動画IDを取得する関数
-    function getCurrentVideoId() {
-        // 実装に応じて現在の動画IDを取得するロジックを追加
-    }
-
-    // お気に入りのトグル
-    function toggleFavorite(videoId) {
-        // お気に入りの追加または削除のロジックを追加
-    }
-
-    // 再生速度を設定する関数
-    function setPlaybackSpeed(speed) {
-        // 再生速度を設定するロジックを追加
-    }
-
-    // 次の動画を再生する関数
-    function playNextVideo() {
-        // 次の動画を再生するロジックを追加
-    }
 });
