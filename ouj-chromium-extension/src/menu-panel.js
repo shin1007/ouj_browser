@@ -52,8 +52,8 @@ function createSearchBoxHtml(type) {
   const boxClass = type === 'history' ? 'history-search-box' : 'favorite-search-box';
   const placeholder = 'コース名・親カテゴリ名で検索';
   return `
-    <div class="${boxClass}" style="background: #232c3a; border-radius: 10px; padding: 4px 12px; margin: 0 24px 10px 24px; box-shadow: 0 2px 8px rgba(30,40,60,0.18); border: 1.5px solid #3a4658;">
-      <input id="${id}" type="text" placeholder="${placeholder}" style="width: 100%; background: #232c3a; color: #fff; font-size: 14px; padding: 6px 8px; border-radius: 6px; letter-spacing: 0.5px;">
+    <div class="${boxClass}">
+      <input id="${id}" type="text" placeholder="${placeholder}">
     </div>
   `;
 }
