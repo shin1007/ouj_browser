@@ -119,7 +119,8 @@ function createPanel({ id, className, ariaLabelledby, ariaModal = 'true', mainId
     transform: 'translate(-50%, -50%) scale(0.95)',
     opacity: '0',
     transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
-    backdropFilter: 'blur(10px)'
+    backdropFilter: 'blur(10px)',
+    overflow: 'hidden'
   });
   return panel;
 }
