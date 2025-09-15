@@ -118,7 +118,7 @@ function showRadioProgramUI() {
       transform: translate(-50%, -50%);
       background: rgba(0, 0, 0, 0.8);
       color: white;
-      padding: 20px;
+      padding: 3px;
       border-radius: 10px;
       text-align: center;
       z-index: 1000;
@@ -129,7 +129,7 @@ function showRadioProgramUI() {
     (async () => {
       const captionAvailable = await isCaptionAvailable();
       radioUI.innerHTML = `
-        <div style="font-size: 24px; margin-bottom: 10px; color: rgb(235,247,255);">♫</div>
+        <div style="font-size: 26px; font-weight: bold; margin-bottom: 5px; color: rgb(234,246,255);">♫</div>
         <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">ラジオ番組</div>
         <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">${await captionAvailable ? captionUi : noCaptionUi}</div>
       `;
