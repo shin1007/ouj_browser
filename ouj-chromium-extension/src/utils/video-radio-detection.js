@@ -3,9 +3,29 @@ const noCaptionUi = "字幕なし"
 
 async function isTvSize(){
   const title = await new Promise(resolve => window.waitForElement('#content-detail-area > div.title', resolve, { timeout: 3000 }));
+  // TODO: ラジオ番組にもかかわらず動画として読み込まれるものに対処したいが、まだうまくできていない
+  // const vjsVideo3 = await new Promise(resolve => window.waitForElement('#vjs_video_3', resolve, { timeout: 3000 }));
+  // // vjsVideo3のクラスにvjs-user-inactiveが出るまで最大3秒待機
+  // await new Promise(resolve => {
+  //   const start = Date.now();
+  //   const check = () => {
+  //     if (vjsVideo3.classList.contains('vjs-user-inactive')) {
+  //       console.log('vjs-user-inactive発見')
+  //       resolve();
+  //     } else if (Date.now() - start > 3000) {
+  //       console.log('vjs-user-inactiveが見つからなかった')
+  //       resolve();
+  //     } else {
+  //       setTimeout(check, 100);
+  //     }
+  //   };
+  //   check();
+  // });
+  
+
   const styleElement = await new Promise(resolve => window.waitForElement('style.vjs-styles-dimensions', resolve, { timeout: 3000 }));
     
-  // 最大3秒間 textContent を監視
+  // textContent の中身が出るまで最大3秒間待機
   const styleContent = await new Promise(resolve => {
     const start = Date.now();
     const check = () => {
@@ -123,7 +143,7 @@ function showRadioProgramUI() {
       text-align: center;
       z-index: 1000;
       font-family: 'Arial', sans-serif;
-      min-width: 300px;
+      min-width: 150px;
     `;
     
     (async () => {

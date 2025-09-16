@@ -65,6 +65,12 @@ function startMenuOpeningMutationObserver() {
     return;
   }
   const ionApp = document.querySelector('ion-app');
+  if (!ionApp) {
+    // The <ion-app> element might not be available when the script first runs.
+    // Log a warning and rely on subsequent executions (e.g., from URL changes) to set up the observer.
+    console.warn('[OUJ拡張] <ion-app> element not found. Popover menu observer not attached.');
+    return;
+  }
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       // ion-popoverが開かれたかどうかをチェック
@@ -72,7 +78,6 @@ function startMenuOpeningMutationObserver() {
         if (node.nodeType !== Node.ELEMENT_NODE) {
           return;
         }
-
         if (node.tagName.toLowerCase() === 'ion-popover') {
           // 少し遅延してからメニュー挿入を試みる
           setTimeout(() => {

@@ -38,6 +38,7 @@
         "utils/viewingStatus.js",
         "breadcrumbs.js",
         "categories.js",
+        "goToLoginPage.js",
         "menu-favorites.js",
         "menu-history.js",
         "menu-recommendation.js",
