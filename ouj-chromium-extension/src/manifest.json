@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "放送大学授業ブラウザ",
-  "version": "2025.9.2",
+  "version": "2025.9.16",
   "description": "放送大学の放送授業での学習を便利にする拡張機能",
   "author": "shin1007",
   "permissions": [
@@ -38,6 +38,7 @@
         "utils/viewingStatus.js",
         "breadcrumbs.js",
         "categories.js",
+        "goToLoginPage.js",
         "menu-favorites.js",
         "menu-history.js",
         "menu-recommendation.js",
@@ -51,6 +52,7 @@
       "run_at": "document_end"
     }
   ],
+  "options_page": "popup/popup.html",
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {

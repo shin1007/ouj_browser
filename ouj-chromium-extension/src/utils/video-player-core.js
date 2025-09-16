@@ -17,7 +17,13 @@ async function initializeVideoPlayer() {
   // ページ遷移がちゃんと終了しているかを確認する。
   // URLの変化だけではなく、動画タイトルがHTML内にあるかどうかを確認するのが有用そう。
   const contentId = window.getCurrentVideoId();
+
   const categoryData = await window.getCategoryDataFromContentId(contentId);
+  if (categoryData === null) {
+    console.log("initializeVideoPlayer: categoryData is null")
+    await window.handleHomePageAutoLogin();
+    return;
+  }
   const videos = await window.getVideoListInCategory(categoryData.categoryId);
   let videoTitle = ''
   for (const video of videos) {
@@ -31,7 +37,9 @@ async function initializeVideoPlayer() {
     const titleElement = document.querySelector('#content-detail-area > div.title');
     if (!titleElement || !titleElement.textContent.includes(videoTitle)) {
       // タイトルがまだ反映されていない
-      window.isInitializingVideo = false; 
+      window.isInitializingVideo = false;
+      // 未ログインの場合の処理
+      window.tryPushLoginButton();
       setTimeout(initializeVideoPlayer, 500);
       return;
     }
@@ -66,16 +74,9 @@ async function initializeVideoPlayer() {
     if (video){
       // 自動再生設定が有効な場合は再生
       if (autoPlayEnabled) {
-        video.seeking= true
-        video.seeking = false
-        video.pause()
-        video.play().catch(e => {
-          // 自動再生がブロックされた場合は何もしない
-        });
-
+        video.autoplay = true;
       }
-    }
-  });
+    }  }, { timeout: 3000 });
   window.isInitializingVideo = false; 
 }
 

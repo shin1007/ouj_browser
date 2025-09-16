@@ -37,35 +37,6 @@ async function detectOujPageType() {
   return 'video-select'; // 動画一覧
 }
 
-// ホームページの自動ログイン処理
-async function handleHomePageAutoLogin() {
-  const result = await new Promise(resolve => chrome.storage.sync.get(['autoLogin'], resolve));
-  if (!result.autoLogin) {
-    return;
-  }
-
-  // ログインボタンが表示されるまで最大10秒待機し、表示されたらクリックする
-  let retryCount = 0;
-  const maxRetries = 10;
-  const interval = setInterval(() => {
-    retryCount++;
-    const themeColorButton = document.querySelector('button#theme-color');
-
-    // ログインボタンが見つかった場合
-    if (themeColorButton && themeColorButton.textContent.includes('ログイン')) {
-      clearInterval(interval);
-      window.location.href = 'https://sso.ouj.ac.jp/cas/login?service=https%3A%2F%2Fv.ouj.ac.jp%2Fv1%2Ftenants%2F1%2Flogin%2Fcas%3FredirectUrl%3Dhttps%253A%252F%252Fv.ouj.ac.jp%252Fview%252Fouj%252F%2523%252Fnavi%252Fhome';
-      return;
-    }
-
-    // リトライ回数上限に達した場合
-    if (retryCount >= maxRetries) {
-      clearInterval(interval);
-      // console.log('[OUJ拡張] 自動ログインチェックを停止しました（最大試行回数超過）。');
-    }
-  }, 1000);
-}
-
 async function main() {
   
   // 画面種別を判定して処理を分岐
@@ -85,7 +56,7 @@ async function main() {
   window.startMenuOpeningMutationObserver();
   if (pageType === 'home') {
     // ホームページの処理を呼び出す
-    await handleHomePageAutoLogin();
+    await window.handleHomePageAutoLogin();
   } else if (pageType === 'player') {
     window.addFavoriteButtonToBreadCrumbs();
     window.initializeVideoPlayer();      
