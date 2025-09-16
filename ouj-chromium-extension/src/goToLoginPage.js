@@ -1,14 +1,13 @@
 // ホームページの自動ログイン処理
 async function handleHomePageAutoLogin() {
   if (!chrome.storage || !chrome.storage.sync) {
-    console.warn('[OUJ拡張] 自動ログイン機能は利用できません (chrome.storage.sync が未定義です)');
+    console.warn('[OUJ拡張] chrome.storage.sync が未定義のため、自動でログイン画面に遷移します。');
   } else {
     autoLogin = await new Promise(resolve => chrome.storage.sync.get(['autoLogin'], resolve));
     if (!autoLogin) {
       return;
     }
   }
-  console.log('[OUJ拡張] 自動ログイン機能が有効です');
   // ログインボタンが表示されるまで最大10秒待機し、表示されたらクリックする
   let retryCount = 0;
   const maxRetries = 10;
@@ -19,15 +18,6 @@ async function handleHomePageAutoLogin() {
       clearInterval(interval);
       return;
     }
-    
-    // const themeColorButton = document.querySelector('button#theme-color');
-
-    // // ログインボタンが見つかった場合
-    // if (themeColorButton && themeColorButton.textContent.includes('ログイン')) {
-    //   clearInterval(interval);
-    //   window.location.href = 'https://sso.ouj.ac.jp/cas/login?service=https%3A%2F%2Fv.ouj.ac.jp%2Fv1%2Ftenants%2F1%2Flogin%2Fcas%3FredirectUrl%3Dhttps%253A%252F%252Fv.ouj.ac.jp%252Fview%252Fouj%252F%2523%252Fnavi%252Fhome';
-    //   return;
-    // }
 
     // リトライ回数上限に達した場合
     if (retryCount >= maxRetries) {
@@ -55,9 +45,7 @@ function tryPushLoginButton(){
     window.location.href = newUrl
     return true;
   }
-  // https://v.ouj.ac.jp/view/ouj/#/navi/player?co=34475&ct=V&ca=30427
-  // https://sso.ouj.ac.jp/cas/login?service=https%3A%2F%2Fv.ouj.ac.jp%2Fv1%2Ftenants%2F1%2Flogin%2Fcas%3FredirectUrl%3Dhttps%253A%252F%252Fv.ouj.ac.jp%252Fview%252Fouj%252F%2523%252Fnavi%252Fplayer%26co%3D34475%26ct%3DV%26ca%3D30427
-  // https://sso.ouj.ac.jp/cas/login?service=https%3A%2F%2Fv.ouj.ac.jp%2Fv1%2Ftenants%2F1%2Flogin%2Fcas%3FredirectUrl%3Dhttps%253A%252F%252Fv.ouj.ac.jp%252Fview%252Fouj%252F%2523%252Fnavi%252Fplayer%3Fco%3D34475%26ct%3DV%26ca%3D30427
+  // ログイン画面に切り替わるかテスト用
   // https://v.ouj.ac.jp/view/ouj/#/navi/player?co=34475&ct=V&ca=30427
   return false;
 }
