@@ -43,6 +43,18 @@ function insertSettingsPanel(targetElement) {
   // 新規追加設定の取得
   const skipStart = window.getSetting('skipStartSeconds', 0);
   const skipEnd = window.getSetting('skipEndSeconds', 0);
+  // 再生速度設定の取得
+  const playbackSpeedControlEnabled = window.getBooleanSetting('playbackSpeedControlEnabled', true);
+  const playbackSpeed = Number(window.getSetting('playbackSpeed', 1.0));
+
+  // 再生速度の選択肢を生成
+  let speedOptions = '';
+  for (let i = 0.5; i <= 1.5; i += 0.1) {
+    const speedValue = i.toFixed(1);
+    // 浮動小数点数の比較誤差を考慮
+    const selected = Math.abs(playbackSpeed - i) < 0.01 ? 'selected' : '';
+    speedOptions += `<option value="${speedValue}" ${selected}>${speedValue}x</option>`;
+  }
 
   panel.innerHTML = `
     <div style="display: flex; flex-direction: row; gap: 24px; align-items: flex-start;">
@@ -73,6 +85,17 @@ function insertSettingsPanel(targetElement) {
         <div style="margin-bottom: 8px;">
           <input type="radio" id="favorites-random" name="next-video" value="favorites-random" ${nextVideoMode === 'favorites-random' ? 'checked' : ''}>
           <label for="favorites-random" style="margin-left: 5px; cursor: pointer; color: #333;">お気に入りの中からランダムで次を再生</label>
+        </div>
+        <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+        <div style='margin-bottom: 8px;'>
+          <input type="checkbox" id="playback-speed-control-enabled" ${playbackSpeedControlEnabled ? 'checked' : ''}>
+          <label for="playback-speed-control-enabled" style="margin-left: 5px; cursor: pointer; color: #333;">再生速度を調整する</label>
+        </div>
+        <div id="playback-speed-container" style="margin-bottom: 8px; display: flex; align-items: center; ${playbackSpeedControlEnabled ? '' : 'display: none;'}">
+          <label for="playback-speed" style="width: 120px; color: #333;">再生速度</label>
+          <select id="playback-speed" style="flex: 1;">
+            ${speedOptions}
+          </select>
         </div>
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
@@ -124,6 +147,32 @@ function insertSettingsPanel(targetElement) {
       window.saveSetting('fadeOutEndSeconds', Number(event.target.value));
     });
   }
+
+  // 再生速度調整のイベントリスナー
+  const speedControlCheckbox = panel.querySelector('#playback-speed-control-enabled');
+  const speedContainer = panel.querySelector('#playback-speed-container');
+  const speedSelect = panel.querySelector('#playback-speed');
+
+  if (speedControlCheckbox) {    
+    speedControlCheckbox.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      window.saveSetting('playbackSpeedControlEnabled', enabled);
+      if (speedContainer) {
+        speedContainer.style.display = enabled ? 'flex' : 'none';
+      }
+      // 有効/無効に応じて再生速度を更新
+      window.setPlaybackSpeed();
+    });
+  }
+
+  if (speedSelect) {
+    speedSelect.addEventListener('change', (event) => {
+      const speed = Number(event.target.value);
+      window.setPlaybackSpeed();
+      window.saveSetting('playbackSpeed', speed);
+    });
+  }
+
   // 字幕自動表示チェックボックスのイベントリスナー（テレビ番組）
   const autoCaptionCheckboxTV = panel.querySelector('#auto-caption-tv');
   if (autoCaptionCheckboxTV) {

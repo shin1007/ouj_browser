@@ -1,32 +1,51 @@
+let managedVideo = null;
 let initialPosition = 0;
+
+// 再生速度を設定するグローバル関数
+function setPlaybackSpeed() {
+  speed = window.getSetting('playbackSpeed', 1.0)
+  if (managedVideo) {
+    const speedControlEnabled = window.getBooleanSetting('playbackSpeedControlEnabled', true);
+    managedVideo.playbackRate = speedControlEnabled ? speed : 1.0;
+  }
+}
 
 // 動画の再生管理機能
 function StartPlaybackManagement() {  
   window.waitForElement('video', (v) => {
-    const video = v;
+    managedVideo = v;
+
+
+    initialPosition = managedVideo.currentTime;
   });
   // TODO: オープニングスキップがうまくいかない
-  // skipOpening(video);
-  initialPosition = video.currentTime;
+  // skipOpening(managedVideo);
 
   i = 0;  
   const interval = setInterval(() => {
-
+    // 再生ボタンを押したときに再生速度がx1.0になるっぽいので、その対策。
+    // 本来は毎秒やる必要はないが。
+    setPlaybackSpeed();
     // 3分に1回、動画を一時停止してから再生することで、再生ログを残せるようにする
+    // TODO: ユーザーに設定させる（スマホだと1msの一時停止でも結構重い感じがする）
     if (i % (3 * 60) === 0) {
-      sendPlayLog(video);
+      sendPlayLog(managedVideo);
       i = 0; // カウンタをリセット
+    }
+
+    if (!managedVideo) {
+      return;
     }
 
     let skipEnd = window.getSetting ? window.getSetting('skipEndSeconds', 0) : 0;
     // エンディングのスキップ
-    if (video.currentTime > video.duration - skipEnd) {
+    if (managedVideo.currentTime > managedVideo.duration - skipEnd) {
       // 再生ボタンが押されてから5秒以上が経過している場合のみ
-      if (video.currentTime - initialPosition < 5) {
+      if (managedVideo.currentTime - initialPosition < 5) {
         return;
       }
       // 動画が再生中の場合のみ
-      if (!video.paused) {
+      if (!managedVideo.paused) {
         skipToNextVideo();
       }
     }
@@ -92,4 +111,5 @@ async function skipToNextVideo() {
 }
 // グローバル関数として公開
 window.StartPlaybackManagement = StartPlaybackManagement;
+window.setPlaybackSpeed = setPlaybackSpeed;
 window.skipToNextVideo = skipToNextVideo;
