@@ -38,9 +38,11 @@ async function initializeVideoPlayer() {
     if (!titleElement || !titleElement.textContent.includes(videoTitle)) {
       // タイトルがまだ反映されていない
       window.isInitializingVideo = false;
-      // 未ログインの場合の処理
-      window.tryPushLoginButton();
-      setTimeout(initializeVideoPlayer, 500);
+      // 未ログインの場合はログインページに行く
+      pageChange = window.tryPushLoginButton();
+      if (!pageChange){
+        setTimeout(initializeVideoPlayer, 500);
+      }
       return;
     }
   }
