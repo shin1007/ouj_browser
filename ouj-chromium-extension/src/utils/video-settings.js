@@ -42,14 +42,15 @@ function insertSettingsPanel(targetElement) {
 
   // 新規追加設定の取得
   const skipStart = window.getSetting('skipStartSeconds', 0);
-  const skipEnd = window.getSetting('skipEndSeconds', 0);
+  const skipEnd = Number(window.getSetting('skipEndSeconds', 0));
+  const playlogIntervalMinutes = Number(window.getSetting('playlogIntervalMinutes', 3));
   // 再生速度設定の取得
   const playbackSpeedControlEnabled = window.getBooleanSetting('playbackSpeedControlEnabled', true);
   const playbackSpeed = Number(window.getSetting('playbackSpeed', 1.0));
 
   // 再生速度の選択肢を生成
   let speedOptions = '';
-  for (let i = 0.5; i <= 1.5; i += 0.1) {
+  for (let i = 0.5; i <= 1.6; i += 0.1) {
     const speedValue = i.toFixed(1);
     // 浮動小数点数の比較誤差を考慮
     const selected = Math.abs(playbackSpeed - i) < 0.01 ? 'selected' : '';
@@ -61,6 +62,18 @@ function insertSettingsPanel(targetElement) {
       <!-- 左カラム: 設定項目 -->
       <div style="flex: 1 1 0; min-width: 260px;">
         <div style='margin-bottom: 8px;'>
+          <input type="checkbox" id="playback-speed-control-enabled" ${playbackSpeedControlEnabled ? 'checked' : ''}>
+          <label for="playback-speed-control-enabled" style="margin-left: 5px; cursor: pointer; color: #333;">再生速度を調整する</label>
+        </div>
+        <div id="playback-speed-container" style="margin-bottom: 8px; display: flex; align-items: center; ${playbackSpeedControlEnabled ? '' : 'display: none;'}">
+          <label for="playback-speed" style="width: 120px; color: #333;">再生速度</label>
+          <select id="playback-speed" style="flex: 1;">
+            ${speedOptions}
+          </select>
+        </div>
+        <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+
+        <div style='margin-bottom: 8px;'>
           <input type="checkbox" id="auto-caption-tv" ${autoCaptionEnabledTV ? 'checked' : ''}>
           <label for="auto-caption-tv" style="margin-left: 5px; cursor: pointer; color: #333;">字幕を表示する（テレビ番組）</label>
         </div>
@@ -68,7 +81,8 @@ function insertSettingsPanel(targetElement) {
           <input type="checkbox" id="auto-caption-radio" ${autoCaptionEnabledRadio ? 'checked' : ''}>
           <label for="auto-caption-radio" style="margin-left: 5px; cursor: pointer; color: #333;">字幕を表示する（ラジオ番組）</label>
         </div>
-        <hr style="margin: 15px 0; border: none; border-top: 2px solid #bbb;"> <!-- ここで区切る -->
+        <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+
         <div style='margin-bottom: 8px;'>
           <input type="checkbox" id="auto-play-video" ${autoPlayEnabled ? 'checked' : ''}>
           <label for="auto-play-video" style="margin-left: 5px; cursor: pointer; color: #333;">可能なら動画を自動再生する</label>
@@ -78,6 +92,7 @@ function insertSettingsPanel(targetElement) {
           <label for="auto-next-video" style="margin-left: 5px; cursor: pointer; color: #333;">動画終了時に自動で次の動画に進む</label>
         </div>
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+
         <div style="margin-bottom: 8px;">
           <input type="radio" id="same-course" name="next-video" value="same-course" ${nextVideoMode === 'same-course' ? 'checked' : ''}>
           <label for="same-course" style="margin-left: 5px; cursor: pointer; color: #333;">同じコースの中で次を再生</label>
@@ -85,17 +100,6 @@ function insertSettingsPanel(targetElement) {
         <div style="margin-bottom: 8px;">
           <input type="radio" id="favorites-random" name="next-video" value="favorites-random" ${nextVideoMode === 'favorites-random' ? 'checked' : ''}>
           <label for="favorites-random" style="margin-left: 5px; cursor: pointer; color: #333;">お気に入りの中からランダムで次を再生</label>
-        </div>
-        <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
-        <div style='margin-bottom: 8px;'>
-          <input type="checkbox" id="playback-speed-control-enabled" ${playbackSpeedControlEnabled ? 'checked' : ''}>
-          <label for="playback-speed-control-enabled" style="margin-left: 5px; cursor: pointer; color: #333;">再生速度を調整する</label>
-        </div>
-        <div id="playback-speed-container" style="margin-bottom: 8px; display: flex; align-items: center; ${playbackSpeedControlEnabled ? '' : 'display: none;'}">
-          <label for="playback-speed" style="width: 120px; color: #333;">再生速度</label>
-          <select id="playback-speed" style="flex: 1;">
-            ${speedOptions}
-          </select>
         </div>
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
@@ -113,6 +117,20 @@ function insertSettingsPanel(targetElement) {
             <option value="120" ${skipEnd == 120 ? 'selected' : ''}>120秒</option>
           </select>
         </div>
+        <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+
+        <div style="margin-bottom: 8px; display: flex; align-items: center;">
+          <label for="playlog-interval" style="width: 200px; color: #333;">再生ログの保存頻度</label>
+          <select id="playlog-interval">
+            <option value="3" ${playlogIntervalMinutes == 3 ? 'selected' : ''}>3分</option>
+            <option value="5" ${playlogIntervalMinutes == 5 ? 'selected' : ''}>5分</option>
+            <option value="10" ${playlogIntervalMinutes == 10 ? 'selected' : ''}>10分</option>
+            <option value="15" ${playlogIntervalMinutes == 15 ? 'selected' : ''}>15分</option>
+          </select>
+        </div>
+        <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+
+        
         <div style="margin-top: 10px; font-size: 12px; color: #666;">
           設定は自動的に保存されます
         </div>
@@ -145,6 +163,12 @@ function insertSettingsPanel(targetElement) {
   if (fadeOutEndSelect) {
     fadeOutEndSelect.addEventListener('change', (event) => {
       window.saveSetting('fadeOutEndSeconds', Number(event.target.value));
+    });
+  }
+  const playlogIntervalSelect = panel.querySelector('#playlog-interval');
+  if (playlogIntervalSelect) {
+    playlogIntervalSelect.addEventListener('change', (event) => {
+      window.saveSetting('playlogIntervalMinutes', Number(event.target.value));
     });
   }
 

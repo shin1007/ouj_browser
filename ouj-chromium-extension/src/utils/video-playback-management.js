@@ -24,11 +24,12 @@ function StartPlaybackManagement() {
   i = 0;  
   const interval = setInterval(() => {
     // 再生ボタンを押したときに再生速度がx1.0になるっぽいので、その対策。
-    // 本来は毎秒やる必要はないが。
+    // 本来は毎秒やる必要はないが、再生速度を適用する。
     setPlaybackSpeed();
-    // 3分に1回、動画を一時停止してから再生することで、再生ログを残せるようにする
-    // TODO: ユーザーに設定させる（スマホだと1msの一時停止でも結構重い感じがする）
-    if (i % (3 * 60) === 0) {
+    // 定期的に動画を一時停止してから再生することで、再生ログを残せるようにする
+    const playlogIntervalMinutes = window.getSetting('playlogIntervalMinutes', 3);
+    const playlogIntervalSeconds = playlogIntervalMinutes * 60;
+    if (i % playlogIntervalSeconds === 0) {
       sendPlayLog(managedVideo);
       i = 0; // カウンタをリセット
     }
