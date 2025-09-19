@@ -45,6 +45,7 @@ function toggleCaption(isTurnOn=true) {
     if (!isTurnOn && !isAlreadyOn) return;
     // トグルスイッチをクリックして状態を切り替える
     slider.click();
+
 }
 async function showCaptionAccordingToSetting() {
     // 設定に応じて字幕を表示する
