@@ -31,7 +31,7 @@ async function detectOujPageType() {
   try {
     const parentIds = await window.parentCategories();
     if (parentIds.includes(categoryId)) {
-      return 'lecture-series'; // コース一覧（科目群選択後）
+      return 'series-select'; // コース一覧（科目群選択後）
     }
   } catch (e) {
     console.error('[OUJ拡張] parentCategoriesの取得に失敗:', e);
@@ -39,7 +39,7 @@ async function detectOujPageType() {
 
   // フォールバック判定: カテゴリIDの範囲で判定
   if (categoryId < 100 || (categoryId > 480 && categoryId < 500)) {
-    return 'lecture-series';
+    return 'series-select';
   }
 
   return 'video-select'; // 動画一覧
@@ -70,7 +70,7 @@ async function main() {
   } else if (pageType === 'player') {
     window.addFavoriteButtonToBreadCrumbs();
     window.initializeVideoPlayer();      
-  } else if (pageType === 'lecture-series') {
+  } else if (pageType === 'series-select') {
     window.waitThenAddFavBtnToCategoryList();
   } else if (pageType === 'video-select') {
     window.addFavoriteButtonToBreadCrumbs();
