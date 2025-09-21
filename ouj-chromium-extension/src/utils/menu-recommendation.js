@@ -145,7 +145,22 @@ function calculateSimilarity(s1, s2) {
   if (longerLength === 0) {
     return 1.0;
   }
-  return (longerLength - levenshteinDistance(longer, shorter)) / parseFloat(longerLength);
+  return (longerLength - levenshteinDistance(longer, shorter)) / longerLength;
+}
+
+/**
+ * 2つの名詞リストからJaccard係数を計算して意味的な類似度を算出する
+ * @param {string[]} nouns1
+ * @param {string[]} nouns2
+ * @returns {number} 類似度 (0-1)
+ */
+function calculateJaccardSimilarity(nouns1, nouns2) {
+  const set1 = new Set(nouns1);
+  const set2 = new Set(nouns2);
+  const intersection = new Set([...set1].filter(x => set2.has(x)));
+  const union = new Set([...set1, ...set2]);
+  if (union.size === 0) return 0;
+  return intersection.size / union.size;
 }
 
 /**
@@ -154,42 +169,48 @@ function calculateSimilarity(s1, s2) {
  */
 async function getRecommendFromSimilar(allCategories, excludeCategoryIds) {
   if (!Array.isArray(allCategories) || !allCategories.length) return [];
+  console.log('allCategories', allCategories);
+  // kuromoji.jsのTokenizerを準備
+  await window.getTokenizer();
 
-  // excludeCategoryAliasを作成
-  const excludeCategoryNames = new Set();
+  // 除外対象コースの名詞リストとエイリアスを作成
+  const excludeNounsList = [];
   const excludeCategoryAliases = new Set();
-  allCategories.forEach(category => {
+
+  for (const category of allCategories) {
     if (excludeCategoryIds.has(category.categoryId)) {
       const aliasNum = (category.alias || '').match(/^[0-9]+/);
       if (aliasNum) {
         excludeCategoryAliases.add(aliasNum[0]);
-        const cleanName = (category.name || '').replace(/\s*（’\d{2}）\s*\d*[a-zA-Z]*$/, '').replace(/^[0-9]+\s/, '');
-        excludeCategoryNames.add(cleanName);
+        const nouns = await window.extractNouns(category.name);
+        if (nouns.length > 0) {
+          excludeNounsList.push(nouns);
+        }
       }
     }
-  });
+  }
 
-  if (excludeCategoryAliases.size === 0) return [];
+  if (excludeNounsList.length === 0) return [];
+  console.log('excludeNounsList', excludeNounsList);
 
-  const candidates = allCategories.map(category => {
-    // 除外カテゴリは見ない
+  const candidatePromises = allCategories.map(async (category) => {
     if (excludeCategoryIds.has(category.categoryId)) return null;
-    // alias（数字のみ）が同じなら見ない
     const aliasNum = (category.alias || '').match(/^[0-9]+/);
     if (aliasNum && excludeCategoryAliases.has(aliasNum[0])) return null;
     if (aliasNum === null) return null;
-    // 同じものを2つ追加する可能性を除外
-    excludeCategoryAliases.add(aliasNum[0]);
-    // excludeNameとの名前の類似度を見る
-    const cleanName = (category.name || '').replace(/\s*（’\d{2}）\s*\d*[a-zA-Z]*$/, '').replace(/^[0-9]+\s/, '');
+
+    const nouns = await window.extractNouns(category.name);
+    if (nouns.length === 0) return null;
+
     let maxSimilarity = 0;
-    for (const excludeName of excludeCategoryNames) {
-      const similarity = calculateSimilarity(cleanName, excludeName);
+    for (const excludeNouns of excludeNounsList) {
+      const similarity = calculateJaccardSimilarity(nouns, excludeNouns);
       if (similarity > maxSimilarity) maxSimilarity = similarity;
     }
-    // 一番高い類似度をとる
     return { ...category, similarity: maxSimilarity };
-  }).filter(Boolean);
+  });
+
+  const candidates = (await Promise.all(candidatePromises)).filter(Boolean);
 
   candidates.sort((a, b) => b.similarity - a.similarity);
 

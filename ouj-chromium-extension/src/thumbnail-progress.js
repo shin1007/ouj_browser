@@ -153,12 +153,8 @@ function initializeThumbnailProgress() {
   });
 }
 
-// グローバル関数として公開
-window.showThumbnailProgress = showThumbnailProgress;
-window.updateThumbnailProgress = updateThumbnailProgress;
-window.initializeThumbnailProgress = initializeThumbnailProgress;
-
 // ページ読み込み時に初期化
+// TODO: 現状だとどのページでも対応させている形なので、一部のページのみに絞る
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeThumbnailProgress);
 } else {

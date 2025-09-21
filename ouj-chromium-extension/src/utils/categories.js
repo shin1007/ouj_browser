@@ -145,9 +145,11 @@ async function getVideoListInCategory(categoryId) {
   const list = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
   if (!Array.isArray(list)) return [];
   return list;
-
 }
 
+async function getCourseNumber(categoryId){
+  
+}
 async function parentCategories() {
   const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
   const cachedData = result[CATEGORIES_STORAGE_KEY];
