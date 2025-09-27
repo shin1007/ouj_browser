@@ -41,4 +41,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // ライセンスセクションのアコーディオン機能
+    const licensesHeader = document.getElementById('licenses-header');
+    const licensesContent = document.getElementById('licenses-content');
+    const accordionIcon = licensesHeader.querySelector('.accordion-icon');
+
+    licensesHeader.addEventListener('click', () => {
+        const isOpen = licensesContent.style.display === 'block';
+        licensesContent.style.display = isOpen ? 'none' : 'block';
+        accordionIcon.textContent = isOpen ? '▼' : '▲';
+    });
+
 });

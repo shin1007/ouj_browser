@@ -70,7 +70,7 @@
     {
       "resources": [
         "icons/*",
-        "public/dict/*"
+        "popup/*"
       ],
       "matches": [
         "https://v.ouj.ac.jp/*"
