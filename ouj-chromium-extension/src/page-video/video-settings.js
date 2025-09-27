@@ -120,7 +120,7 @@ function insertSettingsPanel(targetElement) {
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
         <div style="margin-bottom: 8px; display: flex; align-items: center;">
-          <label for="playlog-interval" style="width: 200px; color: #333;">再生ログの保存頻度</label>
+          <label for="playlog-interval" style="width: 200px; color: #333;">再生ログ保存頻度(一瞬止まるかも)</label>
           <select id="playlog-interval">
             <option value="3" ${playlogIntervalMinutes == 3 ? 'selected' : ''}>3分</option>
             <option value="5" ${playlogIntervalMinutes == 5 ? 'selected' : ''}>5分</option>
