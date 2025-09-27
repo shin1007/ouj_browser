@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "放送大学授業ブラウザ",
-  "version": "2025.9.18",
+  "version": "2025.9.27",
   "description": "放送大学の放送授業での学習を便利にする拡張機能",
   "author": "shin1007",
   "permissions": [
@@ -33,8 +33,6 @@
         "utils/categories.js",
         "utils/goToLoginPage.js",
         "utils/thumbnail-progress.js",
-        // "lib/kuromoji.js",
-        // "utils/kuromoji-helper.js",
         "menu/menu-favorites.js",
         "menu/menu-history.js",
         "menu/menu-recommendation.js",
