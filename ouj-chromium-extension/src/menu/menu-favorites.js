@@ -23,7 +23,7 @@ function handleFavoritesPanelOpen() {
   window.openPanel({
     id: 'favorite-list-panel',
     className: 'favorite-panel',
-    title: 'お気に入りコース一覧',
+    title: 'お気に入り科目一覧',
     iconHtml: window.getIconHtml('favorite'),
     actionHtml: '',
     searchBoxHtml: window.createSearchBoxHtml('favorite'),
@@ -49,7 +49,7 @@ function removePinnedFavorite(categoryId) {
     if (window.prefetchRecommendListData) window.prefetchRecommendListData();
   }
 }
-// コースパターン（お気に入り）
+// 科目パターン（お気に入り）
 async function getPanelDataCoursePattern(ids) {
   // ids: categoryIdの配列
   let categories = await window.getCategoriesData();
@@ -61,7 +61,7 @@ async function getPanelDataCoursePattern(ids) {
   const items = await Promise.all(ids.map(async (id) => {
     const categoryName = idToName[id];
     const parentCategoryName = await window.getParentCategoryName(id);
-    const displayName = categoryName || `不明なコース (ID: ${id})`;
+    const displayName = categoryName || `不明な科目 (ID: ${id})`;
     return {
       id: id,
       categoryName: displayName,
@@ -69,7 +69,7 @@ async function getPanelDataCoursePattern(ids) {
       hasParent: !!parentCategoryName
     };
   }));
-  if (items[0].categoryName.startsWith('不明なコース')){
+  if (items[0].categoryName.startsWith('不明な科目')){
     return await getPanelDataCoursePatternAgain(ids)
   }
   return { categories, idToName, items };
@@ -85,7 +85,7 @@ async function getPanelDataCoursePatternAgain(ids) {
   const items = await Promise.all(ids.map(async (id) => {
     const categoryName = idToName[id];
     const parentCategoryName = await window.getParentCategoryName(id);
-    const displayName = categoryName || `不明なコース (ID: ${id})`;
+    const displayName = categoryName || `不明な科目 (ID: ${id})`;
     return {
       id: id,
       categoryName: displayName,

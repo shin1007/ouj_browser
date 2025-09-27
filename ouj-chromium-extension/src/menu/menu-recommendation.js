@@ -2,7 +2,7 @@
 // 履歴・お気に入り・カテゴリからおすすめ動画リストを生成
 
 /**
- * 履歴から最大2件（2コース）を選定
+ * 履歴から最大2件（2科目）を選定
  */
 async function getRecommendFromHistory(history) {
   let recommendList = [];
@@ -59,7 +59,7 @@ async function getRecommendFromHistory(history) {
 }
 
 /**
- * お気に入りから最大5件（履歴で選ばれた2コースと重複しない5コース）
+ * お気に入りから最大5件（履歴で選ばれた2科目と重複しない5科目）
  */
 async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
   let recommendList = [];
@@ -149,8 +149,8 @@ function calculateSimilarity(s1, s2) {
 }
 
 /**
- * 類似している3件（履歴・お気に入りの合計7コースと重複がない3コース）
- * 履歴やお気に入りのコース名と類似したコースをおすすめする
+ * 類似している3件（履歴・お気に入りの合計7科目と重複がない3科目）
+ * 履歴やお気に入りの科目名と類似した科目をおすすめする
  */
 async function getRecommendFromSimilar(allCategories, excludeCategoryIds) {
   if (!Array.isArray(allCategories) || !allCategories.length) return [];

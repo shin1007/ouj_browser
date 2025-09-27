@@ -50,7 +50,7 @@ function openPanel({
 function createSearchBoxHtml(type) {
   const id = type === 'history' ? 'history-search-input' : 'favorite-search-input';
   const boxClass = type === 'history' ? 'history-search-box' : 'favorite-search-box';
-  const placeholder = 'コース名・親カテゴリ名で検索';
+  const placeholder = '科目名・親カテゴリ名で検索';
   return `
     <div class="${boxClass}">
       <input id="${id}" type="text" placeholder="${placeholder}">

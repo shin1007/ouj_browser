@@ -1,5 +1,5 @@
 
-// コース一覧の各動画にお気に入りボタンを追加
+// 科目一覧の各動画にお気に入りボタンを追加
 async function addFavoriteButtonsToCategoryList() {
   // 追加前に既存の.favorite-btnを全て削除
   document.querySelectorAll('.favorite-btn').forEach(btn => btn.remove());

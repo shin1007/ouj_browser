@@ -156,8 +156,10 @@ function initializeThumbnailProgress() {
 // ページ読み込み時に初期化
 // TODO: 現状だとどのページでも対応させている形なので、一部のページのみに絞る
 // 検索ページ：https://v.ouj.ac.jp/view/ouj/#/navi/vod?se=%25E8%258B%25B1%25E8%25AA%259E
-
-if (document.readyState === 'loading') {
+if (!window.location.href.includes('ouj.ac.jp')) {
+// 'ouj.ac.jp'をURLに含まない場合は動作をしない
+// ほかのサイトで動作をしてしまう不具合があったので念のために入れている
+} else if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeThumbnailProgress);
 } else {
   initializeThumbnailProgress();

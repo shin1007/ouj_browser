@@ -104,13 +104,13 @@ async function fetchNextVideoId() {
       await fetchNextVideoFromFavorites();
     }
   } else {
-    console.warn('[動画] fetchNextVideoId: URLからコースIDまたは動画IDを取得できません', url);
+    console.warn('[動画] fetchNextVideoId: URLから科目IDまたは動画IDを取得できません', url);
     nextVideoId = null;
     window.nextVideoId = nextVideoId;
   }
 }
 
-// 同じコースの中で次の動画を取得
+// 同じ科目の中で次の動画を取得
 async function fetchNextVideoFromSameCourse(currentCourseId, currentVideoId) {
   try {
     const res = await window.getVideoListInCategory(currentCourseId);
@@ -161,7 +161,7 @@ async function fetchNextVideoFromFavorites() {
       return;
     }
     
-    // 各お気に入りコースの未再生動画を取得
+    // 各お気に入り科目の未再生動画を取得
     const availableVideos = await getAvailableVideosFromFavorites(favorites);
     
     
@@ -222,7 +222,7 @@ async function checkVideoViewingStatus(video, favoriteId) {
   }
 }
 
-// お気に入りコースから未再生動画を取得する関数
+// お気に入り科目から未再生動画を取得する関数
 async function getAvailableVideosFromFavorites(favorites) {
   const availableVideos = [];
   const currentVideoId = getCurrentVideoId();
@@ -230,7 +230,7 @@ async function getAvailableVideosFromFavorites(favorites) {
   for (const favoriteId of favorites) {
     try {
       
-      // コースの動画リストを取得
+      // 科目の動画リストを取得
       const cacheKey = `cachedVodContents_${favoriteId}`;
       const videos = await fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${favoriteId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
       

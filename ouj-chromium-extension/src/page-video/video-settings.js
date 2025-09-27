@@ -95,7 +95,7 @@ function insertSettingsPanel(targetElement) {
 
         <div style="margin-bottom: 8px;">
           <input type="radio" id="same-course" name="next-video" value="same-course" ${nextVideoMode === 'same-course' ? 'checked' : ''}>
-          <label for="same-course" style="margin-left: 5px; cursor: pointer; color: #333;">同じコースの中で次を再生</label>
+          <label for="same-course" style="margin-left: 5px; cursor: pointer; color: #333;">同じ科目の中で次を再生</label>
         </div>
         <div style="margin-bottom: 8px;">
           <input type="radio" id="favorites-random" name="next-video" value="favorites-random" ${nextVideoMode === 'favorites-random' ? 'checked' : ''}>

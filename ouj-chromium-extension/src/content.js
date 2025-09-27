@@ -31,7 +31,7 @@ async function detectOujPageType() {
   try {
     const parentIds = await window.parentCategories();
     if (parentIds.includes(categoryId)) {
-      return 'series-select'; // コース一覧（科目群選択後）
+      return 'series-select'; // 科目一覧（科目群選択後）
     }
   } catch (e) {
     console.error('[OUJ拡張] parentCategoriesの取得に失敗:', e);
@@ -102,9 +102,7 @@ function safeMain() {
   main();
 }
 
-
 // safeMain()を一度だけ呼ぶ仕組み
-
 window.oujLastMainTime = 0;
 function callSafeMainOnce() {
   const now = Date.now();
@@ -113,16 +111,23 @@ function callSafeMainOnce() {
     safeMain();
   }
 }
-
-if (document.readyState === "complete" || document.readyState === "interactive") {
+if (!window.location.href.includes('ouj.ac.jp')) {
+// 'ouj.ac.jp'をURLに含まない場合は動作をしない
+// ほかのサイトで動作をしてしまう不具合があったので念のために入れている
+} else if (document.readyState === "complete" || document.readyState === "interactive") {
+  console.log("[OUJ拡張 DEBUG] DOM is already loaded");
   callSafeMainOnce();
 } else {
+  console.log("[OUJ拡張 DEBUG] Waiting for DOM to be loaded");
   document.addEventListener("DOMContentLoaded", callSafeMainOnce);
 }
 
 // SPA対応: URL変化を監視してsafeMain()を再実行
-
-if (!window.__ouj_url_listener_added) {
+if (!window.location.href.includes('ouj.ac.jp')) {
+// 'ouj.ac.jp'をURLに含まない場合は動作をしない
+// ほかのサイトで動作をしてしまう不具合があったので念のために入れている
+} else if (!window.__ouj_url_listener_added) {
+  console.log("[OUJ拡張 DEBUG] URL listener added");
   window.__ouj_url_listener_added = true;
   (function() {
     let lastUrl = location.href;
