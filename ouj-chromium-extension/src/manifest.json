@@ -22,31 +22,33 @@
         "*://*.ouj.ac.jp/*"
       ],
       "css": [
-        "favorite-panel.css",
+        "menu/favorite-panel.css",
         "thumbnail-progress.css"
       ],
       "js": [
         "utils/helpers.js",
         "utils/favorites-helper.js",
-        "utils/video-ending.js",
-        "utils/video-playback-management.js",
-        "utils/video-player-core.js",
-        "utils/video-prev-next.js",
-        "utils/video-radio-detection.js",
-        "utils/video-settings.js",
-        "utils/video-show-subtitle.js",
         "utils/viewingStatus.js",
-        "breadcrumbs.js",
-        "categories.js",
-        "goToLoginPage.js",
-        "menu-favorites.js",
-        "menu-history.js",
-        "menu-recommendation.js",
-        "menu-panel.js",
-        "menu.js",
+        "utils/breadcrumbs.js",
+        "utils/categories.js",
+        "utils/goToLoginPage.js",
+        "utils/thumbnail-progress.js",
+        // "lib/kuromoji.js",
+        // "utils/kuromoji-helper.js",
+        "menu/menu-favorites.js",
+        "menu/menu-history.js",
+        "menu/menu-recommendation.js",
+        "menu/menu-panel.js",
+        "menu/menu.js",
+        "page-video/video-ending.js",
+        "page-video/video-playback-management.js",
+        "page-video/video-player-core.js",
+        "page-video/video-prev-next.js",
+        "page-video/video-radio-detection.js",
+        "page-video/video-settings.js",
+        "page-video/video-show-subtitle.js",
         "page-login.js",
         "page-course-select.js",
-        "thumbnail-progress.js",
         "content.js"
       ],
       "run_at": "document_end"
@@ -69,10 +71,11 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "icons/*"
+        "icons/*",
+        "public/dict/*"
       ],
       "matches": [
-        "<all_urls>"
+        "https://v.ouj.ac.jp/*"
       ]
     }
   ]

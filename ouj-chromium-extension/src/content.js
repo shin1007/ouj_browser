@@ -14,6 +14,14 @@ async function detectOujPageType() {
   if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/player?co=')) {
     return 'player';
   }
+  // 検索結果
+  if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?se=')){
+    return 'search-result';
+  }
+
+  // 怪しい例：
+  // 検索結果からの動画
+  // co=36739&ct=V&se=英語&ca=30648
   // VOD画面以外はここで終了
   if (!url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=')) {
     return '';
@@ -23,7 +31,7 @@ async function detectOujPageType() {
   try {
     const parentIds = await window.parentCategories();
     if (parentIds.includes(categoryId)) {
-      return 'course-select'; // コース一覧（科目群選択後）
+      return 'series-select'; // コース一覧（科目群選択後）
     }
   } catch (e) {
     console.error('[OUJ拡張] parentCategoriesの取得に失敗:', e);
@@ -31,7 +39,7 @@ async function detectOujPageType() {
 
   // フォールバック判定: カテゴリIDの範囲で判定
   if (categoryId < 100 || (categoryId > 480 && categoryId < 500)) {
-    return 'course-select';
+    return 'series-select';
   }
 
   return 'video-select'; // 動画一覧
@@ -57,10 +65,12 @@ async function main() {
   if (pageType === 'home') {
     // ホームページの処理を呼び出す
     await window.handleHomePageAutoLogin();
+  } else if (pageType === 'search-result') {
+    // TODO: 動画進捗の挿入 
   } else if (pageType === 'player') {
     window.addFavoriteButtonToBreadCrumbs();
     window.initializeVideoPlayer();      
-  } else if (pageType === 'course-select') {
+  } else if (pageType === 'series-select') {
     window.waitThenAddFavBtnToCategoryList();
   } else if (pageType === 'video-select') {
     window.addFavoriteButtonToBreadCrumbs();
