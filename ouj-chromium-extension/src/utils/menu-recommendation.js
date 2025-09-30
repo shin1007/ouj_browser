@@ -193,6 +193,7 @@ async function getRecommendFromSimilar(allCategories, excludeCategoryIds) {
   if (excludeNounsList.length === 0) return [];
   console.log('excludeNounsList', excludeNounsList);
 
+  // 除外対象科目の名詞リストとどれくらい似ているかを算出
   const candidatePromises = allCategories.map(async (category) => {
     if (excludeCategoryIds.has(category.categoryId)) return null;
     const aliasNum = (category.alias || '').match(/^[0-9]+/);
@@ -214,7 +215,7 @@ async function getRecommendFromSimilar(allCategories, excludeCategoryIds) {
 
   candidates.sort((a, b) => b.similarity - a.similarity);
 
-  // 
+  // 3つに絞る
   let recommendList = [];
   let count = 0;
   const usedContentIds = new Set();

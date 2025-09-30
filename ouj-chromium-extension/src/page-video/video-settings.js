@@ -135,11 +135,11 @@ function insertSettingsPanel(targetElement) {
           設定は自動的に保存されます
         </div>
       </div>
-      <!-- 分割バー -->
-      <div style="width: 1px; background: #ccc; height: 100%; min-height: 320px; margin: 0 8px; align-self: stretch;"></div>
-      <!-- 右カラム: キーボードショートカット説明（削除済み） -->
     </div>
   `;
+      //   <!-- 分割バー -->
+      // <div style="width: 1px; background: #ccc; height: 100%; min-height: 320px; margin: 0 8px; align-self: stretch;"></div>
+
   // 追加設定項目のイベントリスナー
   const skipStartSelect = panel.querySelector('#skip-start');
   if (skipStartSelect) {

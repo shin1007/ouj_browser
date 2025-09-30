@@ -2,45 +2,65 @@
 // 履歴・お気に入り・カテゴリからおすすめ動画リストを生成
 
 /**
- * 履歴から最大2件（2科目）を選定
+ * 視聴履歴に基づいて最大2件のおすすめ動画を選定します。
+ * 1. 視聴途中の動画があれば、それを「続きから見る」として推薦します。
+ * 2. 視聴完了した動画があれば、そのコースの次の未視聴動画を推薦します。
+ * @param {Array<Object>} history - 視聴履歴の配列。各要素は { contentId, progress, date } を含みます。
+ * @returns {Promise<Object>} おすすめ動画リスト、使用済みカテゴリIDセット、使用済みコンテンツIDセットを含むオブジェクト。
  */
 async function getRecommendFromHistory(history) {
+  // おすすめ動画の最大件数を定義
+  const reccomendFromHistoryLength = 2;
+  // 返却するおすすめ動画のリスト
   let recommendList = [];
+  // 同じカテゴリから重複して推薦しないように、使用したカテゴリIDを記録
   let usedCategoryIds = new Set();
+  // 同じ動画を重複して推薦しないように、使用したコンテンツIDを記録
   let usedContentIds = new Set();
+  // おすすめリストに追加した件数カウンター
   let count = 0;
-  for (let i = 0; i < history.length && count < 2; i++) {
+
+  // 履歴をループし、最大件数に達するまでおすすめを選定
+  for (let i = 0; i < history.length && count < reccomendFromHistoryLength; i++) {
     const historyItem = history[i];
     const { contentId, progress, date } = historyItem;
+
+    // 不正なデータはスキップ
     if (!contentId) continue;
     if (usedContentIds.has(contentId)) continue;
+
+    // 動画情報を取得
     const video = await window.getVideoData(contentId);
     if (!video || !video.contentId) continue;
+
+    // パターン1: 視聴が完了していない動画 (進捗率95%未満)
     if (progress < 0.95) {
+      // 「続きから見る」おすすめとしてリストに追加
       recommendList.push({
         ...video,
         progress,
         source: 'history',
         dateStr: new Date(date).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
       });
+      // 使用済みIDとして記録
       usedContentIds.add(contentId);
       usedCategoryIds.add(video.categoryId);
       count++;
       continue;
     } else {
+      // パターン2: 視聴完了済みの動画 (進捗率95%以上)
       const categoryId = video.categoryId;
       if (!categoryId) continue;
-      const cacheKey = `cachedVodContents_${categoryId}`;
-      let videos = [];
-      try {
-        if (typeof window.fetchWithCache === 'function') {
-          videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
-        }
-      } catch (e) {}
+
+      // 同じカテゴリ（コース）の動画リストを取得
+      const videos = await window.getVideoListInCategory(categoryId);
       if (!Array.isArray(videos) || !videos.length) continue;
+
+      // 現在の動画のインデックスを探し、次の動画を取得
       const idx = videos.findIndex(v => v.contentId == contentId);
       if (idx !== -1 && idx + 1 < videos.length) {
         const nextVideo = videos[idx + 1];
+        // 次の動画が未視聴であれば、おすすめとしてリストに追加
         if (nextVideo && !usedContentIds.has(nextVideo.contentId) && !history.some(h => h.contentId == nextVideo.contentId)) {
           recommendList.push({
             ...nextVideo,
@@ -48,6 +68,7 @@ async function getRecommendFromHistory(history) {
             source: 'history',
             dateStr: ''
           });
+          // 使用済みIDとして記録
           usedContentIds.add(nextVideo.contentId);
           usedCategoryIds.add(nextVideo.categoryId);
           count++;
@@ -60,8 +81,10 @@ async function getRecommendFromHistory(history) {
 
 /**
  * お気に入りから最大5件（履歴で選ばれた2科目と重複しない5科目）
+ * TODO: 表示されなくなっちゃった！
  */
 async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
+  const reccomendFromFavoritesLength = 5;
   let recommendList = [];
   let usedCategoryIds = new Set(excludeCategoryIds);
   if (!favorites.length) return { recommendList, usedCategoryIds };
@@ -71,10 +94,12 @@ async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
     [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
   }
   for (const categoryId of favorites) {
-    if (recommendList.length >= 5) break;
+    if (recommendList.length >= reccomendFromFavoritesLength) break;
     if (usedCategoryIds.has(categoryId)) continue;
+    usedCategoryIds.add(categoryId);
     const cacheKey = `cachedVodContents_${categoryId}`;
     let videos = [];
+    // お気に入りの動画リストを取得
     try {
       if (typeof window.fetchWithCache === 'function') {
         videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
@@ -86,11 +111,11 @@ async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
       const status = await window.getVideoProgress(videos[i].contentId);
       if (status < 0.95) {
         recommendList.push({ ...videos[i], progress: status || 0, source: 'favorites' });
-        usedCategoryIds.add(categoryId);
         break;
       }
     }
   }
+  console.log(usedCategoryIds);
   return { recommendList, usedCategoryIds };
 }
 
@@ -148,11 +173,105 @@ function calculateSimilarity(s1, s2) {
   return (longerLength - levenshteinDistance(longer, shorter)) / parseFloat(longerLength);
 }
 
+
+// /**
+//  * 2つの名詞リストからJaccard係数を計算して意味的な類似度を算出する
+//  * @param {string[]} nouns1
+//  * @param {string[]} nouns2
+//  * @returns {number} 類似度 (0-1)
+//  */
+// function calculateJaccardSimilarity(nouns1, nouns2) {
+//   const set1 = new Set(nouns1);
+//   const set2 = new Set(nouns2);
+//   const intersection = new Set([...set1].filter(x => set2.has(x)));
+//   const union = new Set([...set1, ...set2]);
+//   if (union.size === 0) return 0;
+//   return intersection.size / union.size;
+// }
+
+// /**
+//  * 類似している3件（履歴・お気に入りの合計7科目と重複がない3科目）
+//  * 履歴やお気に入りの科目名と類似した科目をおすすめする
+//  */
+// async function getRecommendFromSimilar(allCategories, excludeCategoryIds) {
+//   if (!Array.isArray(allCategories) || !allCategories.length) return [];
+//   console.log('allCategories', allCategories);
+//   // kuromoji.jsのTokenizerを準備
+//   await window.getTokenizer();
+
+//   // 除外対象科目の名詞リストとエイリアスを作成
+//   const excludeNounsList = [];
+//   const excludeCategoryAliases = new Set();
+
+//   for (const category of allCategories) {
+//     if (excludeCategoryIds.has(category.categoryId)) {
+//       const aliasNum = (category.alias || '').match(/^[0-9]+/);
+//       if (aliasNum) {
+//         excludeCategoryAliases.add(aliasNum[0]);
+//         const nouns = await window.extractNouns(category.name);
+//         if (nouns.length > 0) {
+//           excludeNounsList.push(nouns);
+//         }
+//       }
+//     }
+//   }
+
+//   if (excludeNounsList.length === 0) return [];
+//   console.log('excludeNounsList', excludeNounsList);
+
+//   // 除外対象科目の名詞リストとどれくらい似ているかを算出
+//   const candidatePromises = allCategories.map(async (category) => {
+//     if (excludeCategoryIds.has(category.categoryId)) return null;
+//     const aliasNum = (category.alias || '').match(/^[0-9]+/);
+//     if (aliasNum && excludeCategoryAliases.has(aliasNum[0])) return null;
+//     if (aliasNum === null) return null;
+
+//     const nouns = await window.extractNouns(category.name);
+//     if (nouns.length === 0) return null;
+
+//     let maxSimilarity = 0;
+//     for (const excludeNouns of excludeNounsList) {
+//       const similarity = calculateJaccardSimilarity(nouns, excludeNouns);
+//       if (similarity > maxSimilarity) maxSimilarity = similarity;
+//     }
+//     return { ...category, similarity: maxSimilarity };
+//   });
+
+//   const candidates = (await Promise.all(candidatePromises)).filter(Boolean);
+//   console.log('candidates', candidates);
+
+//   candidates.sort((a, b) => b.similarity - a.similarity);
+
+//   // 3つに絞る
+//   let recommendList = [];
+//   let count = 0;
+//   const usedContentIds = new Set();
+
+//   for (const category of candidates) {
+//     if (count >= 3) break;
+//     if (category.similarity < 0.3) continue;
+//     const videos = await window.getVideoListInCategory(category.categoryId);
+//     if (!Array.isArray(videos) || !videos.length) continue;
+//     for (const video of videos) {
+//       if (usedContentIds.has(video.contentId)) continue;
+//       const status = await window.getVideoProgress(video.contentId);
+//       if (status < 0.95) {
+//         recommendList.push({ ...video, progress: status || 0, source: 'similar' });
+//         usedContentIds.add(video.contentId);
+//         count++;
+//         break;
+//       }
+//     }
+//   }
+//   return recommendList;
+// }
+
 /**
  * 類似している3件（履歴・お気に入りの合計7科目と重複がない3科目）
  * 履歴やお気に入りの科目名と類似した科目をおすすめする
  */
 async function getRecommendFromSimilar(allCategories, excludeCategoryIds) {
+  const reccomendFromSimilarLength = 3;
   if (!Array.isArray(allCategories) || !allCategories.length) return [];
 
   // excludeCategoryAliasを作成
@@ -191,16 +310,23 @@ async function getRecommendFromSimilar(allCategories, excludeCategoryIds) {
     return { ...category, similarity: maxSimilarity };
   }).filter(Boolean);
 
+  // 類似度順に並べ、reccomendFromSimilarLength*2の数までに絞る
   candidates.sort((a, b) => b.similarity - a.similarity);
+  candidates.splice(0, candidates.length - reccomendFromSimilarLength * 2);
 
-  // 
+  // ランダムに並べ替える
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+
+  // 3つに絞る
   let recommendList = [];
   let count = 0;
   const usedContentIds = new Set();
 
   for (const category of candidates) {
-    if (count >= 3) break;
-    if (category.similarity < 0.3) continue;
+    if (count >= reccomendFromSimilarLength) break;
     const videos = await window.getVideoListInCategory(category.categoryId);
     if (!Array.isArray(videos) || !videos.length) continue;
     for (const video of videos) {
