@@ -127,7 +127,6 @@ function showRadioProgramUI() {
   }
   
   window.waitForElement('video', (video) => {
-    
     // ラジオ番組用のUI要素を作成
     const radioUI = document.createElement('div');
     radioUI.id = 'radio-program-ui';

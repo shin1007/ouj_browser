@@ -17,12 +17,16 @@ async function getRecommendFromHistory(history) {
   let usedCategoryIds = new Set();
   // 同じ動画を重複して推薦しないように、使用したコンテンツIDを記録
   let usedContentIds = new Set();
-  // おすすめリストに追加した件数カウンター
-  let count = 0;
+  // historyをランダムに並べ替え
+  for (let i = history.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [history[i], history[j]] = [history[j], history[i]];
+  }
 
   // 履歴をループし、最大件数に達するまでおすすめを選定
-  for (let i = 0; i < history.length && count < reccomendFromHistoryLength; i++) {
+  for (let i = 0; i < history.length; i++) {
     const historyItem = history[i];
+    // && count < reccomendFromHistoryLength
     const { contentId, progress, date } = historyItem;
 
     // 不正なデータはスキップ
@@ -32,10 +36,12 @@ async function getRecommendFromHistory(history) {
     // 動画情報を取得
     const video = await window.getVideoData(contentId);
     if (!video || !video.contentId) continue;
-
+    usedCategoryIds.add(video.categoryId);
+    if (recommendList.length + 1 > reccomendFromHistoryLength*2) continue;
     // パターン1: 視聴が完了していない動画 (進捗率95%未満)
     if (progress < 0.95) {
       // 「続きから見る」おすすめとしてリストに追加
+      console.log('履歴からおすすめ追加', video.progress, video.title);
       recommendList.push({
         ...video,
         progress,
@@ -44,8 +50,6 @@ async function getRecommendFromHistory(history) {
       });
       // 使用済みIDとして記録
       usedContentIds.add(contentId);
-      usedCategoryIds.add(video.categoryId);
-      count++;
       continue;
     } else {
       // パターン2: 視聴完了済みの動画 (進捗率95%以上)
@@ -61,42 +65,52 @@ async function getRecommendFromHistory(history) {
       if (idx !== -1 && idx + 1 < videos.length) {
         const nextVideo = videos[idx + 1];
         // 次の動画が未視聴であれば、おすすめとしてリストに追加
-        if (nextVideo && !usedContentIds.has(nextVideo.contentId) && !history.some(h => h.contentId == nextVideo.contentId)) {
-          recommendList.push({
-            ...nextVideo,
-            progress: await window.getVideoProgress(nextVideo.contentId) || 0,
-            source: 'history',
-            dateStr: ''
-          });
-          // 使用済みIDとして記録
-          usedContentIds.add(nextVideo.contentId);
-          usedCategoryIds.add(nextVideo.categoryId);
-          count++;
-        }
+        if (!nextVideo) continue;
+        if (usedContentIds.has(nextVideo.contentId)) continue;
+        if (history.some(h => h.contentId == nextVideo.contentId)) continue;
+
+        const progress = await window.getVideoProgress(nextVideo.contentId);
+        if (progress >= 0.95) continue; // 既に視聴済みならスキップ
+        recommendList.push({
+          ...nextVideo,
+          progress,
+          source: 'history',
+          dateStr: ''
+        });
+        // 使用済みIDとして記録
+        usedContentIds.add(nextVideo.contentId);
       }
     }
   }
+  console.log(usedCategoryIds);
+  // recommendListをランダムに最大件数（reccomendFromHistoryLength）に絞る
+  for (let i = recommendList.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [recommendList[i], recommendList[j]] = [recommendList[j], recommendList[i]];
+  }
+  recommendList = recommendList.slice(0, reccomendFromHistoryLength);
   return { recommendList, usedCategoryIds, usedContentIds };
 }
 
 /**
  * お気に入りから最大5件（履歴で選ばれた2科目と重複しない5科目）
- * TODO: 表示されなくなっちゃった！
  */
 async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
-  const reccomendFromFavoritesLength = 5;
+  const recommendFromFavoritesLength = 5;
   let recommendList = [];
   let usedCategoryIds = new Set(excludeCategoryIds);
   if (!favorites.length) return { recommendList, usedCategoryIds };
+  // favoritesをシャッフルしてランダムにする
   favorites = favorites.slice();
   for (let i = favorites.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
   }
   for (const categoryId of favorites) {
-    if (recommendList.length >= reccomendFromFavoritesLength) break;
     if (usedCategoryIds.has(categoryId)) continue;
     usedCategoryIds.add(categoryId);
+    // 長さを超える分はここまで
+    if (recommendList.length >= recommendFromFavoritesLength*2) continue;
     const cacheKey = `cachedVodContents_${categoryId}`;
     let videos = [];
     // お気に入りの動画リストを取得
@@ -116,7 +130,13 @@ async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
     }
   }
   console.log(usedCategoryIds);
-  return { recommendList, usedCategoryIds };
+  // recommendListをランダムに最大件数（reccomendFromFavoritesLength）に絞る
+  for (let i = recommendList.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [recommendList[i], recommendList[j]] = [recommendList[j], recommendList[i]];
+  }
+  recommendList = recommendList.slice(0, recommendFromFavoritesLength);
+  return { recommendList, usedCategoryIds};
 }
 
 /**
