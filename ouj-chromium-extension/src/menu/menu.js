@@ -197,7 +197,7 @@ window.prefetchRecommendListData();
 
 
 // アイコンやSVGのHTMLを共通化
-function getIconHtml(type) {
+function getIconHtml(type, filled = false) {
   switch (type) {
     case 'history':
       return '<ion-icon name="time" class="history-panel-icon" aria-hidden="true"></ion-icon>';
@@ -206,17 +206,17 @@ function getIconHtml(type) {
     case 'recommend':
       return '<ion-icon name="play" class="history-panel-icon" aria-hidden="true"></ion-icon>';
     case 'delete':
-      return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      return `<svg width="16" height="16" viewBox="0 0 24 24" fill="${filled ? 'white' : 'none'}" stroke="currentColor" stroke-width="2">
         <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
       </svg>`;
     case 'close':
-      return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      return `<svg width="20" height="20" viewBox="0 0 24 24" fill="${filled ? 'white' : 'none'}" stroke="currentColor" stroke-width="2">
         <path d="M18 6L6 18M6 6l12 12"/>
       </svg>`;
     case 'pin':
-      return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>`;
+      return `<svg width="18" height="18" viewBox="0 0 24 24" fill="${filled ? 'white' : 'none'}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H8L6 9h12L16 3z M12 9v12"/></svg>`;
     case 'arrow':
-      return `<svg class="history-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>`;
+      return `<svg class="history-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="${filled ? 'white' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>`;
     default:
       return '';
   }

@@ -1,6 +1,7 @@
 // お気に入り機能（menu.jsから分離）
 // お気に入りリストの描画・データ取得・パネル操作関連
 
+
 function createFavoriteListData() {
   const favorites = window.getSetting('favorites', []);
   return getPanelDataCoursePattern(favorites).then(({ categories, idToName, items: favoriteItemsWithParent }) => {
@@ -150,7 +151,7 @@ function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idTo
                     <div class="favorite-child-category">${item.categoryName}</div>
                   </div>
                   <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="ピンを外す" title="ピンを外す" style="background:none;border:none;cursor:pointer;padding:0 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="${item.pinned ? '#ffd600' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>
+                    ${getIconHtml('pin', item.pinned)}
                   </button>
                   ${getIconHtml('arrow')}
                 </li>
@@ -171,7 +172,7 @@ function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idTo
               <div class="favorite-child-category">${item.categoryName}</div>
             </div>
             <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="${item.pinned ? 'ピンを外す' : 'ピン止め'}" title="${item.pinned ? 'ピンを外す' : 'ピン止め'}" style="background:none;border:none;cursor:pointer;padding:0 8px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="${item.pinned ? '#ffd600' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>
+              ${getIconHtml('pin', item.pinned)}
             </button>
             ${getIconHtml('arrow')}
             </li>`;
