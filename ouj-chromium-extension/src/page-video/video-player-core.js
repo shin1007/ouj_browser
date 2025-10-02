@@ -325,6 +325,8 @@ function addShareButtonAfterVideoTitle() {
   const button = document.createElement('button');
   button.classList.add('video-share-button');
   button.style.marginLeft = '2px';
+  button.style.verticalAlign = 'middle';
+
   button.style.padding = '2px 4px';
   button.style.fontSize = '12px';
   button.style.fontWeight = 'bold';
