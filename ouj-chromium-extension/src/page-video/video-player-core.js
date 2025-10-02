@@ -45,6 +45,8 @@ async function initializeVideoPlayer() {
       }
       return;
     }
+    addShareButtonAfterVideoTitle();
+
   }
   
   // videoタグの出現を監視し、出現した瞬間に設定パネルを挿入
@@ -305,6 +307,66 @@ async function addHistoryEntry(contentId) {
   }
 }
 
+function addShareButtonAfterVideoTitle() {
+  console.log("addShareButtonAfterVideoTitle");
+  const titleElement = document.querySelector('#content-detail-area > div.title');
+  if (!titleElement) return;
+  const lectureName = document.querySelector('#main > main-player > ion-content > div.scroll-content > player > vod-list-navigator > aside > div > ul > li:nth-child(3) > a')?.textContent.trim() || '';
+  // 以下のように不要な情報を削除
+  // before: 030 幼児教育の指導法（’２２） 1529668a
+  // after: 幼児教育の指導法
+  const trimmedLectureName = lectureName
+    .replace(/^[0-9]{3}\s+/, '') // 先頭の3桁の数字と空白を削除
+    .replace(/\s+[a-zA-Z0-9]{5,}\s*$/, '') // 末尾の7桁以上の英数字と空白を削除
+    .replace(/（.*?）\s*$/, '') // 全角括弧とその中身を削除
+  const videoTitle = titleElement.textContent.trim();
+  // すでに追加されている場合はスキップ
+  if (document.querySelector('.video-share-button')) return;
+  const button = document.createElement('button');
+  button.classList.add('video-share-button');
+  button.style.marginLeft = '2px';
+  button.style.padding = '2px 4px';
+  button.style.fontSize = '12px';
+  button.style.fontWeight = 'bold';
+  button.style.cursor = 'pointer';
+  button.style.border = '1px solid #ccc';
+  button.style.borderRadius = '3px';
+  button.style.backgroundColor = '#f0f0f0';
+  button.innerHTML = getIconHtml('share') + '共有';
+  button.title = '科目名、授業名、URLをクリップボードにコピー';
+  button.addEventListener('click', () => {
+    // 既存のメッセージがあれば削除
+    const existingMessage = button.parentNode.querySelector('.copy-status-message');
+    if (existingMessage) {
+      existingMessage.remove();
+    }
+
+    const showCopyStatusMessage = (message, isSuccess) => {
+      const messageElement = document.createElement('span');
+      messageElement.textContent = message;
+      messageElement.className = 'copy-status-message';
+      messageElement.style.marginLeft = '8px';
+      messageElement.style.padding = '2px 6px';
+      messageElement.style.borderRadius = '3px';
+      messageElement.style.color = 'white';
+      messageElement.style.backgroundColor = isSuccess ? '#4CAF50' : '#F44336'; // 成功時は緑、失敗時は赤
+      messageElement.style.fontSize = '12px';
+      button.parentNode.insertBefore(messageElement, button.nextSibling);
+      setTimeout(() => messageElement.remove(), 2000);
+    };
+
+    const url = window.location.href;
+    const copyText = `\n${trimmedLectureName} ${videoTitle}\n#放送大学\n${url}`;
+    navigator.clipboard.writeText(copyText)
+      .then(() => showCopyStatusMessage('コピーしました', true))
+      .catch(err => {
+        console.error('クリップボードへのコピーに失敗しました:', err);
+        showCopyStatusMessage('コピー失敗', false);
+      });
+  });
+
+  titleElement.appendChild(button, titleElement);
+}
 
 // グローバル関数として公開
 window.getNextVideoId = () => window.nextVideoId;

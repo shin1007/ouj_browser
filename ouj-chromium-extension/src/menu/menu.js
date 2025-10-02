@@ -217,6 +217,8 @@ function getIconHtml(type, filled = false) {
       return `<svg width="18" height="18" viewBox="0 0 24 24" fill="${filled ? 'white' : 'none'}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H8L6 9h12L16 3z M12 9v12"/></svg>`;
     case 'arrow':
       return `<svg class="history-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="${filled ? 'white' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>`;
+    case 'share':
+      return `<svg width="16" height="16" viewBox="0 0 24 24" fill="${filled ? 'white' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M20 12h-6m-4 0H4v7a2 2 0 002 2h12a2 2 0 002-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v11"/></svg>`;
     default:
       return '';
   }
