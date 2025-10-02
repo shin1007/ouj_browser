@@ -162,13 +162,13 @@ function showRadioProgramUI() {
           -${outerPixel} -${outerPixel} 1px ${outer}, /* 左上 */
           ${outerPixel} 0px 1px ${outer},   /* 右 */
           -${outerPixel} 0px 1px ${outer},  /* 左 */
-          0px ${outerPixel} 1px ${outer},   /* 下 */
           0px -${outerPixel} 1px ${outer};  /* 上 */;
         ">♬</div>
         <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">ラジオ番組</div>
         <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">${await captionAvailable ? captionUi : noCaptionUi}</div>
       `;
     })();
+          // 0px ${outerPixel} 1px ${outer},   /* 下 */
     
     // 動画要素の親要素に挿入
     const videoContainer = video.parentElement;
