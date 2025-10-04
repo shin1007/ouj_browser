@@ -466,23 +466,28 @@ function createDropdownHtml() {
     }
     return options;
   };
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const historyLabel = isPortrait ? '履歴' : '履歴から';
+  const favoriteLabel = isPortrait ? '気入' : 'お気に入りから';
+  const similarLabel = isPortrait ? '類似' : '類似から';
+  const ken = isPortrait ? '' : '件';
   return `
     <div class="recommend-dropdowns">
-      <label for="history-recommend-level">履歴から</label>
+      <label for="history-recommend-level">${historyLabel}</label>
       <select id="history-recommend-level" title="履歴からのおすすめ表示数">
       ${createOptions(historyLevel)}
       </select>
-      <span>件　</span>
-      <label for="favorite-recommend-level">お気に入りから</label>
+      <span>${ken} </span>
+      <label for="favorite-recommend-level">${favoriteLabel}</label>
       <select id="favorite-recommend-level" title="お気に入りからのおすすめ表示数">
       ${createOptions(favoriteLevel)}
       </select>
-      <span>件　</span>
-      <label for="similar-recommend-level">類似から</label>
+      <span>${ken} </span>
+      <label for="similar-recommend-level">${similarLabel}</label>
       <select id="similar-recommend-level" title="類似からのおすすめ表示数">
       ${createOptions(similarLevel)}
       </select>
-      <span>件</span>
+      <span>${ken}</span>
     </div>
 `;
 }
