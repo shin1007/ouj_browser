@@ -13,7 +13,8 @@ function openPanel({
   contentClass,
   listClass,
   fetchData,
-  renderList
+  renderList,
+  setupExtraEventListeners
 }) {
   let panel = document.getElementById(id);
   if (panel) panel.remove();
@@ -44,6 +45,11 @@ function openPanel({
   if (typeof fetchData === 'function' && typeof renderList === 'function') {
     fetchData().then(data => { renderList(panel, closePanel, data); });
   }
+
+  // 追加のイベントリスナーをセットアップ（例：ドロップダウンなど）
+  if (typeof setupExtraEventListeners === 'function') {
+    setupExtraEventListeners(panel, closePanel);
+  }
   return panel;
 }
 
@@ -57,6 +63,7 @@ function createSearchBoxHtml(type) {
     </div>
   `;
 }
+
 
 function setupPanelCloseEvents(panel, closePanel, closeBtnId) {
   const closePanelOnOutsideClick = (event) => {
@@ -107,7 +114,7 @@ function createPanel({ id, className, ariaLabelledby, ariaModal = 'true', mainId
     zIndex: 10000,
     minWidth: 'min(90vw, 600px)',
     minHeight: 'min(80vh, 480px)',
-    maxHeight: '85vh',
+    maxHeight: 'min(80vh, 720px)',
     padding: '0',
     borderRadius: '12px',
     boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',

@@ -332,6 +332,51 @@
   }
 } 
 
+/* おすすめパネル用ドロップダウンスタイル */
+.recommend-dropdowns {
+  padding: 16px 24px 12px;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.recommend-dropdowns select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+  background: #fff;
+  color: #374151;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.recommend-dropdowns select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .recommend-dropdowns {
+    background: #111827;
+    color: #d1d5db;
+  }
+  .recommend-dropdowns select {
+    background: #1f2937;
+    color: #e5e7eb;
+    border: 1px solid #374151;
+  }
+  .recommend-dropdowns select:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96,165,250,0.15);
+  }
+}
+
+
 /* 履歴パネルの現代的なスタイル */
 
 .history-panel {
