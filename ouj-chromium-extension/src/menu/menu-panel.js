@@ -98,12 +98,10 @@ function createPanel({ id, className, ariaLabelledby, ariaModal = 'true', mainId
   if (ariaLabelledby) panel.setAttribute('aria-labelledby', ariaLabelledby);
   if (ariaModal) panel.setAttribute('aria-modal', ariaModal);
   const main = document.getElementById(mainId);
-  let mainWidth = '800px';
   let mainFont = '';
   let mainFontSize = '14px';
   if (main) {
     const style = window.getComputedStyle(main);
-    mainWidth = style.width;
     mainFont = style.fontFamily;
     mainFontSize = style.fontSize;
   }
@@ -122,7 +120,7 @@ function createPanel({ id, className, ariaLabelledby, ariaModal = 'true', mainId
     border: '1px solid rgba(255,255,255,0.2)',
     fontFamily: mainFont,
     fontSize: mainFontSize,
-    width: mainWidth,
+    width: 'min(90vw, 800px)',
     transform: 'translate(-50%, -50%) scale(0.95)',
     opacity: '0',
     transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
