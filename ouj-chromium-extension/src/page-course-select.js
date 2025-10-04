@@ -28,20 +28,20 @@ async function addFavoriteButtonsToCategoryList() {
     
     // お気に入りボタン作成
     const favBtn = document.createElement('button');
-  favBtn.className = 'favorite-btn';
-  favBtn.title = 'お気に入り';
-  favBtn.style.display = 'inline-flex';
-  favBtn.style.alignItems = 'center';
-  favBtn.style.justifyContent = 'center';
-  favBtn.style.padding = '2px 16px'; // クリック領域拡大
-  favBtn.style.border = 'none';
-  favBtn.style.background = 'transparent';
-  favBtn.style.cursor = 'pointer';
-  favBtn.style.borderRadius = '8px';
-  favBtn.style.transition = 'background 0.2s';
-  favBtn.style.marginLeft = '8px';
-  favBtn.onmouseover = () => favBtn.style.background = 'rgba(0,0,0,0.07)';
-  favBtn.onmouseout = () => favBtn.style.background = 'transparent';
+    favBtn.className = 'favorite-btn';
+    favBtn.title = 'お気に入り';
+    favBtn.style.display = 'inline-flex';
+    favBtn.style.alignItems = 'center';
+    favBtn.style.justifyContent = 'center';
+    favBtn.style.padding = '2px 16px'; // クリック領域拡大
+    favBtn.style.border = 'none';
+    favBtn.style.background = 'transparent';
+    favBtn.style.cursor = 'pointer';
+    favBtn.style.borderRadius = '8px';
+    favBtn.style.transition = 'background 0.2s';
+    favBtn.style.marginLeft = '8px';
+    favBtn.onmouseover = () => favBtn.style.background = 'rgba(0,0,0,0.07)';
+    favBtn.onmouseout = () => favBtn.style.background = 'transparent';
     
     // お気に入り状態に応じてアイコンを決定
     const isFavorite = window.isFavorite(category.categoryId);
