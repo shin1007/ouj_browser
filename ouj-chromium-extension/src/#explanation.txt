@@ -1,11 +1,19 @@
 【放送大学授業ブラウザ】
 放送大学（The Open University of Japan）の動画視聴や学習を、もっと便利に / 快適にするChrome拡張機能です。
 
+・こちらのページをブックマークしておくと使いやすくなるかと思います。
+https://v.ouj.ac.jp/view/ouj/#/navi/home
+
+・iPhoneの方はOrion Browser by Kagiからご利用ください
+https://apps.apple.com/jp/app/orion-browser-by-kagi/id1484498200
+
+・Androidの方はEdge Canaryからご利用ください（未テスト）
+https://play.google.com/store/apps/details?id=com.microsoft.emmx.canary&hl=ja
+
 https://chromewebstore.google.com/detail/%E6%94%BE%E9%80%81%E5%A4%A7%E5%AD%A6%E6%8E%88%E6%A5%AD%E3%83%96%E3%83%A9%E3%82%A6%E3%82%B6/mjphckgpnhhjfdpgkblomeiehjgeaagb
 
-### 変更点（2025.10.2）
-・シェア機能（シェアボタン）を授業タイトル横に追加
-・ピン止めアイコンの変更
+### 変更点（2025.10.4）
+・おすすめ機能の表示件数をユーザが調整できるように変更
 ・そのほか軽微な修正
 
 ## 現在の機能
@@ -46,6 +54,7 @@ https://chromewebstore.google.com/detail/%E6%94%BE%E9%80%81%E5%A4%A7%E5%AD%A6%E6
 ・動画オープニングのスキップ機能
 ・ラジオ番組の字幕実験対応の方法を改善
 
+
 ## 実装しようとしてあきらめたこと
 【DRM（著作権）の問題で無理そう】
 ・オープニングとエンディングを自動検知してスキップ
@@ -55,9 +64,11 @@ https://chromewebstore.google.com/detail/%E6%94%BE%E9%80%81%E5%A4%A7%E5%AD%A6%E6
 ・キーボードショートカット
 [こういったものを代わりに利用してください](https://chromewebstore.google.com/detail/video-speed-controller/nffaoalbilbmmfgbnbgppjihopabppdk)
 
+
 ## 注意事項
 ・本拡張機能は個人が開発したものであり、放送大学公式のものではありません。
 ・ご利用は自己責任でお願いします。
+
 
 ## 過去の変更点
 ### 変更点（2025.8.14）
@@ -125,5 +136,10 @@ https://chromewebstore.google.com/detail/%E6%94%BE%E9%80%81%E5%A4%A7%E5%AD%A6%E6
 ### 変更点（2025.10.1）
 ・細かい見た目の変更
 ・おすすめ科目のロジック変更（ある程度のランダム性を持たせ、視聴済みの動画が入らないように変更）
+
+### 変更点（2025.10.2）
+・シェア機能（シェアボタン）を授業タイトル横に追加
+・ピン止めアイコンの変更
+・そのほか軽微な修正
 
 https://amzn.to/45AFmxb
