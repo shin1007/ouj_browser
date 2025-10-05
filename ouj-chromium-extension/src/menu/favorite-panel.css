@@ -533,6 +533,7 @@
   }
 }
 
+
 /* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
   .history-panel {
@@ -795,4 +796,9 @@
   .recommend-panel-content::-webkit-scrollbar-thumb:hover {
     background: #9ca3af;
   }
+}
+
+/* 縦画面の時 */
+@media (max-width: 768px) {
+  .recommend-panel-content { padding: 8px 8px 16px 8px; }
 }

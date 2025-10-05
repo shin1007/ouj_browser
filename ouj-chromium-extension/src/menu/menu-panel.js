@@ -105,6 +105,10 @@ function createPanel({ id, className, ariaLabelledby, ariaModal = 'true', mainId
     mainFont = style.fontFamily;
     mainFontSize = style.fontSize;
   }
+  // 縦画面の時は横幅を広げる
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const panelWidth = isPortrait ? 'min(98vw, 800px)' : 'min(90vw, 800px)';
+
   Object.assign(panel.style, {
     position: 'fixed',
     top: '50%',
@@ -120,7 +124,7 @@ function createPanel({ id, className, ariaLabelledby, ariaModal = 'true', mainId
     border: '1px solid rgba(255,255,255,0.2)',
     fontFamily: mainFont,
     fontSize: mainFontSize,
-    width: 'min(90vw, 800px)',
+    width: panelWidth,
     transform: 'translate(-50%, -50%) scale(0.95)',
     opacity: '0',
     transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
@@ -146,9 +150,15 @@ function renderVideoCard({
   sourceLabel = '',
   sourceColor = ''
 }) {
+  const isPortrait = window.innerHeight > window.innerWidth;
+  // 縦画面の場合、タイトル冒頭の"第01回 "等の部分を削除する
+  const newTitle = isPortrait ? title.replace(/^(第[0-9０-９]+回\s*)+/, '') : title;
+  // 縦画面の場合、科目名最後の"（’１８）"等の部分を削除する
+  const newCourseName = isPortrait ? courseName.replace(/（’[0-9０-９]+）/, ''): courseName;
   const cardBg = isDark ? '#232c3a' : '#fff';
-  const cardText = isDark ? '#fff' : '#222';
-  const cardSubText = isDark ? '#b0b8c9' : '#666';
+  const cardTextColor = isDark ? '#fff' : '#222';
+  const cardSubTextColor = isDark ? '#b0b8c9' : '#666';
+  const cardSubTextSize = isPortrait ? '10px' : '12px';
   const barBg = isDark ? '#374151' : '#e5e7eb';
   const barFg = isDark ? '#60a5fa' : '#3b82f6';
   const thumbBg = isDark ? '#444' : '#eee';
@@ -156,9 +166,10 @@ function renderVideoCard({
   const labelColor = isDark ? '#60a5fa' : '#3b82f6';
   const progressPercent = Math.floor(progress * 100);
   const thumb = contentId ? `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/thumbnail/large2` : '';
+  const cardPadding = isPortrait ? '12px 1px' : '16px 20px';
   return `
     <div class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);margin-bottom:8px;padding:0;position:relative;">
-      <a href="https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${contentId}&ct=V&ca=${categoryId || ''}" class="recommend-card-link" style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;text-decoration:none;color:inherit;position:relative;width:100%;">
+      <a href="https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${contentId}&ct=V&ca=${categoryId || ''}" class="recommend-card-link" style="display:flex;align-items:flex-start;gap:16px;padding:${cardPadding};text-decoration:none;color:inherit;position:relative;width:100%;">
         <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;">
           <div style="display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);">
             <img src="${thumb}" alt="サムネイル" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';">
@@ -169,10 +180,10 @@ function renderVideoCard({
         </div>
         <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;">
           <div style="display:flex;align-items:baseline;gap:8px;">
-            <div style="font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;">${title}</div>
-            <div style="font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;">${courseName || ''}</div>
+            <div style="font-size:15px;font-weight:600;color:${cardTextColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;flex-shrink:1;">${newTitle}</div>
+            <div style="font-size:${cardSubTextSize};color:${cardSubTextColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;flex-shrink:2;">${newCourseName || ''}</div>
           </div>
-          <div style="font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;line-height:1.5;">${summary && summary.trim() ? summary.replace(/<[^>]*>/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : 'サマリー情報なし'}</div>
+          <div style="font-size:${cardSubTextSize};color:${cardSubTextColor};margin:2px 0 4px 0;text-align:left;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;line-height:1.5;">${summary && summary.trim() ? summary.replace(/<[^>]*>/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : 'サマリー情報なし'}</div>
           <div style="height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);">
             <div style="width:${progressPercent}%;height:100%;background:${barFg};"></div>
           </div>
