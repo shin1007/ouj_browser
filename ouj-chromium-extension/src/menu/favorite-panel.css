@@ -194,9 +194,8 @@
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
   .favorite-panel {
-    width: 95vw !important;
-    max-width: none !important;
-    margin: 20px;
+    width: 98vw !important;
+    max-width: 98vw !important;
   }
   
   .favorite-panel-header {
@@ -511,9 +510,8 @@
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
   .history-panel {
-    width: 95vw !important;
-    max-width: none !important;
-    margin: 20px;
+    width: 98vw !important;
+    max-width: 98vw !important;
   }
   
   .history-panel-header {
@@ -800,5 +798,9 @@
 
 /* 縦画面の時 */
 @media (max-width: 768px) {
-  .recommend-panel-content { padding: 8px 8px 16px 8px; }
+  .recommend-panel-content,
+  .history-panel-content,
+  .favorite-panel-content {
+    padding: 8px 8px 16px 8px;
+  }
 }
