@@ -29,7 +29,8 @@ async function initializeVideoPlayer() {
   for (const video of videos) {
     if (String(video.contentId) === String(contentId)) {
       // 見つかった
-      videoTitle = video.title;
+      const currentVieo = video;
+      videoTitle = currentVieo.title;
       break;
     }
   }
@@ -51,7 +52,6 @@ async function initializeVideoPlayer() {
   
   // videoタグの出現を監視し、出現した瞬間に設定パネルを挿入
   waitForVideoElementAndInsertPanel();
-  
   // 動画ページのcontentIdを取得し、履歴に追加
   const url = window.location.href;
   const matchCo = url.match(/co=(\d+)/);
@@ -80,6 +80,8 @@ async function initializeVideoPlayer() {
       if (autoPlayEnabled) {
         video.autoplay = true;
       }
+      enableBackgroundPlay(currentVieo);
+
     }  }, { timeout: 3000 });
   window.isInitializingVideo = false; 
 }
@@ -90,6 +92,58 @@ function waitForVideoElementAndInsertPanel() {
     window.addVideoSettingsPanel();
   });
 }
+function 
+enableBackgroundPlay(currentVideo) {
+  /*
+  currentVideoの中身
+      {
+        "contentId": 31765,
+        "categoryId": 30211,
+        "title": "第05回 呼吸器系の構造と働き",
+        "summary": "ヒトは、酸素を身体に取り入れることでエネルギーを得るとともに、生じた二酸化炭素を排出している。この回では、呼吸器系の構造と機能、および運動への適応について概説する。",
+        "detail": "運動と健康（’２２）\n関根　紀子（放送大学教授）\n関根　紀子(放送大学教授)",
+        "alias": "5",
+        "groupIds": [
+            2,
+            343
+        ],
+    },
+
+  */
+  window.waitForElement('video', (video) => {
+    if (!video) return;
+      // iOSや一部のAndroidブラウザで背景再生を可能にする属性を追加
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.setAttribute('x5-playsinline', 'true');
+    video.setAttribute('x5-video-player-type', 'h5');
+    video.setAttribute('x5-video-player-fullscreen', 'true');
+    video.setAttribute('controls', 'true');
+    video.style.backgroundColor = 'black'; // 背景を黒に設定
+    video.style.objectFit = 'contain'; // アスペクト比を維持して表示
+    // videoタグの親要素にもplaysinlineを設定
+    if (video.parentElement) {
+      video.parentElement.setAttribute('playsinline', 'true');
+      video.parentElement.setAttribute('webkit-playsinline', 'true');
+      video.parentElement.setAttribute('x5-playsinline', 'true');
+    }
+    if ('mediaSession' in navigator) {
+      const title = currentVideo.title;
+      const summaries = currentVideo.summary ? currentVideo.summary.split('\n') : [];
+      const courseName = (summaries[0] || '').trimCourseName(courseName);
+      const artists = summaries.slice(1).join(', ') || '';
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+      title: title,
+      album: courseName,
+      artist: artists,
+      artwork: [{ src: 'https://v.ouj.ac.jp/view/ouj/assets/images/webclip/apple-touch-icon.png', sizes: '512x512', type: 'image/jpg' }]
+    });
+  }
+}, { timeout: 3000 });
+//<link rel="apple-touch-icon" href="./assets/images/webclip/apple-touch-icon.png">
+}
+
 
 // 次の動画IDを取得する関数
 async function fetchNextVideoId() {

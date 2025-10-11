@@ -433,6 +433,22 @@ const showInfoNotification = (message, duration = 3000) => {
     return showNotification(message, 'info', duration);
 };
 
+const trimTitle = (title) => {
+    // タイトルの先頭の"第01回 "等の部分を削除
+    title = title.replace(/^(第[0-9０-９]+回\s*)+/, '') 
+    return title;
+};
+
+const trimCourseName = (courseName) => {
+    // 科目名の先頭の"01 "等の部分を削除
+    courseName = courseName.replace(/^[0-9]+\s*/, '');
+    // 科目名の末尾の" 123456a"等の部分を削除
+    courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
+    // 科目名最後の"（’１８）"等の部分を削除する
+    courseName = courseName.replace(/（’[0-9０-９]+）/, '');
+    return courseName;
+}
+
 /**
  * 確認ダイアログを表示する関数
  * @param {string} message - 確認メッセージ
@@ -604,3 +620,5 @@ window.showWarningNotification = showWarningNotification;
 window.showInfoNotification = showInfoNotification;
 window.showConfirmDialog = showConfirmDialog;
 window.createCommonPanelHTML = createCommonPanelHTML;
+window.trimTitle = trimTitle;
+window.trimCourseName = trimCourseName;
