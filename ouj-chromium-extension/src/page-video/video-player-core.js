@@ -24,31 +24,33 @@ async function initializeVideoPlayer() {
     await window.handleHomePageAutoLogin();
     return;
   }
+  // 動画リストから現在の動画IDを利用して動画タイトルを取得
   const videos = await window.getVideoListInCategory(categoryData.categoryId);
-  let videoTitle = ''
   for (const video of videos) {
     if (String(video.contentId) === String(contentId)) {
       // 見つかった
-      const currentVieo = video;
-      videoTitle = currentVieo.title;
+      const currentVideo = video;
+      addFunctionPanel(currentVideo);
       break;
     }
   }
-  if (videoTitle){
-    const titleElement = document.querySelector('#content-detail-area > div.title');
-    if (!titleElement || !titleElement.textContent.includes(videoTitle)) {
-      // タイトルがまだ反映されていない
-      window.isInitializingVideo = false;
-      // 未ログインの場合はログインページに行く
-      pageChange = window.tryPushLoginButton();
-      if (!pageChange){
-        setTimeout(initializeVideoPlayer, 500);
-      }
-      return;
+// タイトルがページ上に存在すれば実行
+}
+async function addFunctionPanel(currentVideo){
+  console.log("addFunctionPanel", currentVideo.title);
+  const titleElement = document.querySelector('#content-detail-area > div.title');
+  if (!titleElement || !titleElement.textContent.includes(currentVideo.title)) {
+    // タイトルがまだ反映されていない
+    window.isInitializingVideo = false;
+    // 未ログインの場合はログインページに行く
+    pageChange = window.tryPushLoginButton();
+    if (!pageChange){
+      setTimeout(addFunctionPanel, 100, currentVideo);
     }
-    addShareButtonAfterVideoTitle();
-
+    return;
   }
+  addShareButtonAfterVideoTitle();
+
   
   // videoタグの出現を監視し、出現した瞬間に設定パネルを挿入
   waitForVideoElementAndInsertPanel();
@@ -80,20 +82,19 @@ async function initializeVideoPlayer() {
       if (autoPlayEnabled) {
         video.autoplay = true;
       }
-      enableBackgroundPlay(currentVieo);
+      enableBackgroundPlay(currentVideo);
 
     }  }, { timeout: 3000 });
   window.isInitializingVideo = false; 
 }
 
-// videoタグの出現を監視し、出現したら設定パネルを挿入する
+// videoタグの出現を監視し、出現したら設定パネルを挿入する関数
 function waitForVideoElementAndInsertPanel() {
   window.waitForElement('video', (video) => {
     window.addVideoSettingsPanel();
   });
 }
-function 
-enableBackgroundPlay(currentVideo) {
+function enableBackgroundPlay(currentVideo) {
   /*
   currentVideoの中身
       {
@@ -112,26 +113,30 @@ enableBackgroundPlay(currentVideo) {
   */
   window.waitForElement('video', (video) => {
     if (!video) return;
-      // iOSや一部のAndroidブラウザで背景再生を可能にする属性を追加
+    // iOSや一部のAndroidブラウザで背景再生を可能にする属性を追加
+    // 2025.10.13で試してみる
     video.setAttribute('playsinline', 'true');
     video.setAttribute('webkit-playsinline', 'true');
-    video.setAttribute('x5-playsinline', 'true');
-    video.setAttribute('x5-video-player-type', 'h5');
-    video.setAttribute('x5-video-player-fullscreen', 'true');
     video.setAttribute('controls', 'true');
+    video.muted = false; // 音声がミュートされないように明示的に設定
     video.style.backgroundColor = 'black'; // 背景を黒に設定
     video.style.objectFit = 'contain'; // アスペクト比を維持して表示
-    // videoタグの親要素にもplaysinlineを設定
+    video.play().catch(e => console.log("Autoplay was prevented.", e));
+
     if (video.parentElement) {
       video.parentElement.setAttribute('playsinline', 'true');
       video.parentElement.setAttribute('webkit-playsinline', 'true');
-      video.parentElement.setAttribute('x5-playsinline', 'true');
     }
     if ('mediaSession' in navigator) {
-      const title = currentVideo.title;
-      const summaries = currentVideo.summary ? currentVideo.summary.split('\n') : [];
-      const courseName = (summaries[0] || '').trimCourseName(courseName);
-      const artists = summaries.slice(1).join(', ') || '';
+      const title = currentVideo?.title || '';
+      const detail = currentVideo?.detail || '';
+      const detailLines = detail.split('\n');
+      
+      // detailの1行目から科目名を取得し、不要な部分を削除
+      const courseName = (detailLines[0] || '')
+        .replace(/（’\d{2}）$/, '') // 末尾の（’XX）を削除
+        .trim();
+      const artists = detailLines.slice(1).join(', ').trim() || '';
 
       navigator.mediaSession.metadata = new MediaMetadata({
       title: title,
