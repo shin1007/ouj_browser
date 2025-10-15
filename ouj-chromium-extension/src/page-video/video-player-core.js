@@ -82,7 +82,8 @@ async function addFunctionPanel(currentVideo){
       if (autoPlayEnabled) {
         video.autoplay = true;
       }
-      enableBackgroundPlay(currentVideo);
+      // 自動再生を試みようとしたけど失敗
+      // enableBackgroundPlay(currentVideo);
 
     }  }, { timeout: 3000 });
   window.isInitializingVideo = false; 
