@@ -147,9 +147,6 @@ async function getVideoListInCategory(categoryId) {
   return list;
 }
 
-async function getCourseNumber(categoryId){
-  
-}
 async function parentCategories() {
   const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
   const cachedData = result[CATEGORIES_STORAGE_KEY];
