@@ -175,6 +175,27 @@ async function getVideoProgress(contentId) {
     return 0;
   }
 }
+async function viewRankings(){
+  console.log("カテゴリ別視聴回数ランキングを取得中...");
+  const categories = await getCategoriesData();
+  if (!(categories && Array.isArray(categories))) return [];
+  console.log(`全${categories.length}カテゴリを取得`);
+  const rankings = [];
+  for(const category of categories){
+    const videoList = await getVideoListInCategory(category.categoryId);
+    if(videoList.length === 0) continue;
+    let totalViewCount = 0;
+    for (const video of videoList){
+      const singleViewCount = video.viewingCount;
+      totalViewCount += singleViewCount;
+    }
+    rankings.push({categoryId: category.categoryId, name: category.name, totalViewCount: totalViewCount});
+  }
+  rankings.sort((a, b) => b.totalViewCount - a.totalViewCount);
+  console.log(rankings);
+}
+// 動画の視聴回数ランキングを使用する場合
+// viewRankings();
 window.getCategoriesData = getCategoriesData;
 window.getChildIds = getChildIds;
 window.getCurrentCategoryId = getCurrentCategoryId;
