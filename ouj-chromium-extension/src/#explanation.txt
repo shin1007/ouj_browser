@@ -13,14 +13,14 @@ https://play.google.com/store/apps/details?id=net.quetta.browser
 Yandex browser
 https://play.google.com/store/apps/details?id=com.yandex.browser
 
-・Androidで以下のブラウザはダメっぽいですがいずれ対応するかも。
+・Androidで以下のブラウザはダメっぽいですが、いずれ対応するかも。
 Microsoft Edge Canary
 https://play.google.com/store/apps/details?id=com.microsoft.emmx.canary&hl=ja
 
 https://chromewebstore.google.com/detail/%E6%94%BE%E9%80%81%E5%A4%A7%E5%AD%A6%E6%8E%88%E6%A5%AD%E3%83%96%E3%83%A9%E3%82%A6%E3%82%B6/mjphckgpnhhjfdpgkblomeiehjgeaagb
 
 ### 変更点（2025.11.1）
-・自動でログイン画面に遷移する機能が勝手に働いてしまうバグが発生しにくい用に変更
+・自動でログイン画面に遷移する機能が勝手に働いてしまうバグが発生しにくいように変更
 
 ## 現在の機能
 【動画再生ページ】
