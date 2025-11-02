@@ -62,18 +62,12 @@ async function isRadioProgram() {
   // 動画IDから現在のカテゴリデータを取得
   const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
   if (!currentCategory) return false;
-  // console.log('isRadioProgram: 現在のカテゴリ', currentCategory);
-  // ラジオ番組の字幕付加実験のカテゴリはテレビ番組扱いとする
-  // const parentCategory = await window.getCategoryData(currentCategory.parentId);
-  // console.log('isRadioProgram: 親カテゴリ', parentCategory ? parentCategory.name : '不明');
-  // if (parentCategory && "ラジオ番組の字幕付加実験" in parentCategory.name) {
-  //   return false;
-  // }
-  if (currentCategory.categoryId === 30636
-    || currentCategory.categoryId === 30637
-    || currentCategory.categoryId === 30638
-    || currentCategory.categoryId === 30725){
-    return false
+  // ラジオ番組の字幕付加実験のカテゴリはテレビ番組扱いとする。
+  // grandParentCategoryNameから判断（parentだと教養学部か大学院になる。）
+  const parentId = currentCategory.parentId;
+  const grandParentCategoryName = await window.getParentCategoryName(parentId);
+  if (grandParentCategoryName.includes('ラジオ番組の字幕付加実験')) {
+    return false;
   }
 
   // summary欄でラジオ番組かどうかを判定
