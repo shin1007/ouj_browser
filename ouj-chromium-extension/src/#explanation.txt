@@ -19,8 +19,8 @@ https://play.google.com/store/apps/details?id=com.microsoft.emmx.canary&hl=ja
 
 https://chromewebstore.google.com/detail/%E6%94%BE%E9%80%81%E5%A4%A7%E5%AD%A6%E6%8E%88%E6%A5%AD%E3%83%96%E3%83%A9%E3%82%A6%E3%82%B6/mjphckgpnhhjfdpgkblomeiehjgeaagb
 
-### 変更点（2025.11.1）
-・自動でログイン画面に遷移する機能が勝手に働いてしまうバグが発生しにくいように変更
+### 変更点（2025.11.2）
+・ラジオ番組の字幕付加実験の対応方法を変更（個別カテゴリ指定でしたが、grandParentカテゴリで判断できるようにしました。）
 
 ## 現在の機能
 【動画再生ページ】
@@ -59,7 +59,6 @@ https://chromewebstore.google.com/detail/%E6%94%BE%E9%80%81%E5%A4%A7%E5%AD%A6%E6
 
 【機能追加など】
 ・動画オープニングのスキップ機能
-・ラジオ番組の字幕実験対応の方法を改善
 ・字幕が表示される際に画面が小さくならないようにする
 
 ## 実装しようとしてあきらめたこと
@@ -166,5 +165,8 @@ https://chromewebstore.google.com/detail/%E6%94%BE%E9%80%81%E5%A4%A7%E5%AD%A6%E6
 
 ### 変更点（2025.10.30）
 ・どうしてロールバックしたのか、開発者が忘れたため再度アップデート。
+
+### 変更点（2025.11.1）
+・自動でログイン画面に遷移する機能が勝手に働いてしまうバグが発生しにくいように変更
 
 https://amzn.to/45AFmxb
