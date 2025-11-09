@@ -1,11 +1,11 @@
 // ログインページのURLをチェック
 function waitForPasswordAndLogin() {
-      // 共通関数の存在をチェック
-  if (typeof window.waitForElement !== 'function') {
-    setTimeout(waitForPasswordAndLogin, 100);
-    return;
-  }
-    
+    // 共通関数の存在をチェック
+    if (typeof window.waitForElement !== 'function') {
+        setTimeout(waitForPasswordAndLogin, 100);
+        return;
+    }
+    console.log('[OUJ拡張] ログインページで自動ログイン処理を開始します。', decodeURLComponentSafe(window.location.href));
     // ログイン要素を待つ
     window.waitForElement('#username', (usernameField) => {
         window.waitForElement('#password', (passwordField) => {
@@ -40,6 +40,23 @@ async function clearCachedCategoriesData() {
     }
 }
 
+function decodeURLComponentSafe(url) {
+    const encodedStr = url.split('=')[1] || '';
+    try {
+        const decodedStr = decodeURIComponent(encodedStr);
+        if (decodedStr.includes('=')) {
+            return decodeURLComponentSafe(decodedStr);
+        }
+        return decodedStr;
+    } catch (error) {
+        console.error("decodeURLComponentSafe: URLデコードに失敗しました:", error);
+        return encodedStr; // デコードに失敗した場合は元の文字列を返す
+    }
+}
+
+
+
 // グローバル関数として公開
 window.waitForPasswordAndLogin = waitForPasswordAndLogin;
 window.clearCachedCategoriesData = clearCachedCategoriesData;
+window.decodeURLComponentSafe = decodeURLComponentSafe;
