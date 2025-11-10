@@ -13,13 +13,13 @@ async function getCategoryDataFromContentId(contentId) {
   if (!videoData || !videoData.categoryId) return null;
   const categories = await getCategoriesData();
   if (!(categories && Array.isArray(categories))) return null;
-  const category = categories.find(cat => cat.categoryId === videoData.categoryId);
+  const category = categories.find(cat => String(cat.categoryId) === String(videoData.categoryId));
   return category || null;
 }
 async function getCategoryData(categoryId){
   const categories = await getCategoriesData();
   if (!(categories && Array.isArray(categories))) return null;
-  const category = categories.find(cat => cat.categoryId === categoryId);
+  const category = categories.find(cat => String(cat.categoryId) === String(categoryId));
   return category || null;
 }
 /**

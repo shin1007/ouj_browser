@@ -12,8 +12,6 @@ async function getRecommendFromHistory(history) {
   const reccomendFromHistoryLength = window.getSetting('history-recommend-level', 2);
   // 返却するおすすめ動画のリスト
   let recommendList = [];
-  // 同じカテゴリから重複して推薦しないように、使用したカテゴリIDを記録
-  let usedCategoryIds = new Set();
   // 同じ動画を重複して推薦しないように、使用したコンテンツIDを記録
   let usedContentIds = new Set();
   // historyをランダムに並べ替え
@@ -34,12 +32,10 @@ async function getRecommendFromHistory(history) {
     // 動画情報を取得
     const video = await window.getVideoData(contentId);
     if (!video || !video.contentId) continue;
-    usedCategoryIds.add(video.categoryId);
-    if (recommendList.length + 1 > reccomendFromHistoryLength*2) continue;
+    if (recommendList.length > reccomendFromHistoryLength*2) continue;
     // パターン1: 視聴が完了していない動画 (進捗率95%未満)
     if (progress < 0.95) {
       // 「続きから見る」おすすめとしてリストに追加
-      console.log('履歴からおすすめ追加', video.progress, video.title);
       recommendList.push({
         ...video,
         progress,
@@ -73,20 +69,26 @@ async function getRecommendFromHistory(history) {
           ...nextVideo,
           progress,
           source: 'history',
-          dateStr: ''
+          dateStr: '',
         });
         // 使用済みIDとして記録
         usedContentIds.add(nextVideo.contentId);
       }
     }
   }
-  console.log(usedCategoryIds);
   // recommendListをランダムに最大件数（reccomendFromHistoryLength）に絞る
   for (let i = recommendList.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [recommendList[i], recommendList[j]] = [recommendList[j], recommendList[i]];
   }
   recommendList = recommendList.slice(0, reccomendFromHistoryLength);
+  // 同じカテゴリから重複して推薦しないように、使用したカテゴリIDを記録
+  let usedCategoryIds = new Set();
+  for (const video of recommendList) {
+    // 使用済みカテゴリIDとして記録
+    usedCategoryIds.add(video.categoryId);
+  }
+
   return { recommendList, usedCategoryIds, usedContentIds };
 }
 
@@ -104,9 +106,26 @@ async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
     const j = Math.floor(Math.random() * (i + 1));
     [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
   }
+  // Aliasのリストを作る（IDが別でも同じエイリアスの同じ科目がある場合に対応する）
+  const allCategories = await window.getCategoriesData();
+  const excludeCategoryAliases = new Set();
+  allCategories.forEach(category => {
+    if (excludeCategoryIds.has(category.categoryId)) {
+      const aliasNum = (category.alias || '').match(/^[0-9]+/);
+      if (aliasNum) {
+        excludeCategoryAliases.add(aliasNum[0]);
+      }
+    }
+  });
+
   for (const categoryId of favorites) {
-    if (usedCategoryIds.has(categoryId)) continue;
-    usedCategoryIds.add(categoryId);
+    // alias（数字のみ）が同じなら見ない
+    const category = await window.getCategoryData(categoryId);
+    if (!category) continue;
+    const aliasNum = (category.alias || '').match(/^[0-9]+/);
+    if (aliasNum && excludeCategoryAliases.has(aliasNum[0])) continue;
+    if (aliasNum === null) continue;
+
     // 長さを超える分はここまで
     if (recommendList.length >= recommendFromFavoritesLength*2) continue;
     const cacheKey = `cachedVodContents_${categoryId}`;
@@ -127,14 +146,18 @@ async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
       }
     }
   }
-  console.log(usedCategoryIds);
   // recommendListをランダムに最大件数（reccomendFromFavoritesLength）に絞る
   for (let i = recommendList.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [recommendList[i], recommendList[j]] = [recommendList[j], recommendList[i]];
   }
   recommendList = recommendList.slice(0, recommendFromFavoritesLength);
-  return { recommendList, usedCategoryIds};
+  // 同じカテゴリから重複して推薦しないように、使用したカテゴリIDを記録
+  for (const video of recommendList) {
+    // 使用済みカテゴリIDとして記録
+    usedCategoryIds.add(video.categoryId);
+  }
+  return { recommendList, usedCategoryIds };
 }
 
 /**
@@ -200,6 +223,7 @@ async function getRecommendFromSimilar(allCategories, excludeCategoryIds) {
   const reccomendFromSimilarLength = window.getSetting('similar-recommend-level', 3);
   if (!Array.isArray(allCategories) || !allCategories.length) return [];
 
+  // 名前は類似度計算で作ってるのでexcludeCategoryNameが必要
   // excludeCategoryAliasを作成
   const excludeCategoryNames = new Set();
   const excludeCategoryAliases = new Set();

@@ -5,9 +5,9 @@ async function main() {
   // 画面種別を判定して処理を分岐
   const pageType = await window.detectOujPageType(window.location.href);
   
-  if (pageType.subdomain === 'sso') {
+  if (pageType.subDomain === 'sso') {
     // ログイン画面の処理
-    window.waitForPasswordAndLogin();
+    await window.waitForPasswordAndLogin();
     // ログイン成功している場合はホームページに遷移
     // HTML内に「ログインしました」があれば成功しているとして扱う
     if (document.body.innerHTML.includes('ログインしました')) {
@@ -15,7 +15,7 @@ async function main() {
     }
     return;
   }
-  if (pageType.subdomain !== 'v') {
+  if (pageType.subDomain !== 'v') {
     // v.ouj.ac.jp以外のサブドメインの場合は何もしない
     return;
   }

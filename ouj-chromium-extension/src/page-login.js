@@ -1,11 +1,11 @@
 // ログインページのURLをチェック
-function waitForPasswordAndLogin() {
+async function waitForPasswordAndLogin() {
     // 共通関数の存在をチェック
     if (typeof window.waitForElement !== 'function') {
         setTimeout(waitForPasswordAndLogin, 100);
         return;
     }
-    const referTo = window.decodeURLComponentSafe(window.location.href);
+    const referTo = await window.detectOujPageType(window.location.href);
     console.log('[OUJ拡張] ログインページで自動ログイン処理を開始します。', referTo);
     // ログイン要素を待つ
     window.waitForElement('#username', (usernameField) => {
@@ -45,4 +45,3 @@ async function clearCachedCategoriesData() {
 // グローバル関数として公開
 window.waitForPasswordAndLogin = waitForPasswordAndLogin;
 window.clearCachedCategoriesData = clearCachedCategoriesData;
-window.decodeURLComponentSafe = decodeURLComponentSafe;
