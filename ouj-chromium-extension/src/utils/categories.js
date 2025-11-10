@@ -65,9 +65,9 @@ async function getChildIds(categoryNum) {
   return filtered.map(item => ({ categoryId: item.categoryId, name: item.name }));
 }
 
-function getCurrentCategoryId() {
-  const hash = window.location.hash;
-  
+function getCurrentCategoryId(url="") {
+  const hash = url ? new URL(url).hash : window.location.hash;
+
   // hashのcaを取得
   const params = hash.split('?')[1];
   if (!params) {
@@ -82,9 +82,9 @@ function getCurrentCategoryId() {
   const categoryId = caMatch[1];
   return parseInt(categoryId, 10);
 }
-function getCurrentContentId() {
-  const hash = window.location.hash;
-  
+function getCurrentContentId(url="") {
+  const hash = url ? new URL(url).hash : window.location.hash;
+
   // hashのcaを取得
   const params = hash.split('?')[1];
   if (!params) {
@@ -147,7 +147,7 @@ async function getVideoListInCategory(categoryId) {
   return list;
 }
 
-async function parentCategories() {
+async function categoriesUsedAsParent() {
   const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
   const cachedData = result[CATEGORIES_STORAGE_KEY];
   const data = cachedData && cachedData.data ? cachedData.data : cachedData;
@@ -200,7 +200,7 @@ window.getCategoriesData = getCategoriesData;
 window.getChildIds = getChildIds;
 window.getCurrentCategoryId = getCurrentCategoryId;
 window.getParentCategoryName = getParentCategoryName;
-window.parentCategories = parentCategories;
+window.categoriesUsedAsParent = categoriesUsedAsParent;
 window.getVideoListInCategory = getVideoListInCategory;
 window.getVideoData = getVideoData;
 window.getCategoryDataFromContentId = getCategoryDataFromContentId;

@@ -608,19 +608,19 @@ const showConfirmDialog = (message, title = '確認', options = {}) => {
 async function detectOujPageType(url) {
   // ログイン画面
   if (url.includes('https://sso.ouj.ac.jp/cas/login')) {
-    return 'login';
+    return {subdomain: 'sso'};
   }
   // ホームページ
   if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/home')) {
-    return 'home';
+    return {subdomain: 'v', page: 'home'};
   }
   // 動画再生画面
   if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/player?co=')) {
-    return 'player';
+    return {subdomain: 'v', page: 'player'};
   }
   // 検索結果
   if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?se=')){
-    return 'search-result';
+    return {subdomain: 'v', page: 'search-result'};
   }
 
   // 怪しい例：
@@ -631,11 +631,11 @@ async function detectOujPageType(url) {
     return '';
   }
 
-  const categoryId = window.getCurrentCategoryId();
+  const categoryId = window.getCurrentCategoryId(url);
   try {
-    const parentIds = await window.parentCategories();
-    if (parentIds.includes(categoryId)) {
-      return 'series-select'; // 科目一覧（科目群選択後）
+    const parentIds = await window.categoriesUsedAsParent(url);
+    if (parentIds.includes()) {
+      return {subdomain: 'v', page: 'series-select', categoryId: categoryId}; // 科目一覧（科目群選択後）
     }
   } catch (e) {
     console.error('[OUJ拡張] parentCategoriesの取得に失敗:', e);
@@ -643,10 +643,10 @@ async function detectOujPageType(url) {
 
   // フォールバック判定: カテゴリIDの範囲で判定
   if (categoryId < 100 || (categoryId > 480 && categoryId < 500)) {
-    return 'series-select';
+    return {subdomain: 'v', page: 'series-select', categoryId: categoryId};
   }
-
-  return 'video-select'; // 動画一覧
+  const contentId = window.getCurrentContentId(url);
+  return {subdomain: 'v', page: 'video-select', categoryId: categoryId, contentId: contentId}; // 動画一覧
 }
 
 function decodeURLComponentSafe(url) {

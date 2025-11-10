@@ -5,7 +5,7 @@ async function main() {
   // 画面種別を判定して処理を分岐
   const pageType = await window.detectOujPageType(window.location.href);
   
-  if (pageType === 'login') {
+  if (pageType.subdomain === 'sso') {
     // ログイン画面の処理
     window.waitForPasswordAndLogin();
     // ログイン成功している場合はホームページに遷移
@@ -15,19 +15,23 @@ async function main() {
     }
     return;
   }
+  if (pageType.subdomain !== 'v') {
+    // v.ouj.ac.jp以外のサブドメインの場合は何もしない
+    return;
+  }
   window.insertLeftMenu();
   window.startMenuOpeningMutationObserver();
-  if (pageType === 'home') {
+  if (pageType.page === 'home') {
     // ホームページの処理を呼び出す
     await window.handleHomePageAutoLogin();
-  } else if (pageType === 'search-result') {
+  } else if (pageType.page === 'search-result') {
     // TODO: 動画進捗の挿入 
-  } else if (pageType === 'player') {
+  } else if (pageType.page === 'player') {
     window.addFavoriteButtonToBreadCrumbs();
     window.initializeVideoPlayer();      
-  } else if (pageType === 'series-select') {
+  } else if (pageType.page === 'series-select') {
     window.waitThenAddFavBtnToCategoryList();
-  } else if (pageType === 'video-select') {
+  } else if (pageType.page === 'video-select') {
     window.addFavoriteButtonToBreadCrumbs();
   } else {
     // その他の処理
@@ -43,7 +47,7 @@ function safeMain() {
   if (typeof window.addFavoriteButtonToBreadCrumbs !== 'function') missing.push('addFavoriteButtonToBreadCrumbs');
   if (typeof window.getCurrentCategoryId !== 'function') missing.push('getCurrentCategoryId');
   if (typeof window.getFavorites !== 'function') missing.push('getFavorites');
-  if (typeof window.parentCategories !== 'function') missing.push('parentCategories');
+  if (typeof window.categoriesUsedAsParent !== 'function') missing.push('parentCategories');
   
   if (missing.length > 0) {
     if (safeMain._warned !== missing.join(',')) {
