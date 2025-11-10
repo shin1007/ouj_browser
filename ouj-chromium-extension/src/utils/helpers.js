@@ -604,6 +604,51 @@ const showConfirmDialog = (message, title = '確認', options = {}) => {
     });
 };
 
+// 画面種別を判定する関数
+async function detectOujPageType(url) {
+  // ログイン画面
+  if (url.includes('https://sso.ouj.ac.jp/cas/login')) {
+    return 'login';
+  }
+  // ホームページ
+  if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/home')) {
+    return 'home';
+  }
+  // 動画再生画面
+  if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/player?co=')) {
+    return 'player';
+  }
+  // 検索結果
+  if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?se=')){
+    return 'search-result';
+  }
+
+  // 怪しい例：
+  // 検索結果からの動画
+  // co=36739&ct=V&se=英語&ca=30648
+  // VOD画面以外はここで終了
+  if (!url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=')) {
+    return '';
+  }
+
+  const categoryId = window.getCurrentCategoryId();
+  try {
+    const parentIds = await window.parentCategories();
+    if (parentIds.includes(categoryId)) {
+      return 'series-select'; // 科目一覧（科目群選択後）
+    }
+  } catch (e) {
+    console.error('[OUJ拡張] parentCategoriesの取得に失敗:', e);
+  }
+
+  // フォールバック判定: カテゴリIDの範囲で判定
+  if (categoryId < 100 || (categoryId > 480 && categoryId < 500)) {
+    return 'series-select';
+  }
+
+  return 'video-select'; // 動画一覧
+}
+
 // グローバル関数として公開
 window.fetchWithCache = fetchWithCache;
 window.waitForElement = waitForElement;
@@ -622,3 +667,4 @@ window.showConfirmDialog = showConfirmDialog;
 window.createCommonPanelHTML = createCommonPanelHTML;
 window.trimTitle = trimTitle;
 window.trimCourseName = trimCourseName;
+window.detectOujPageType = detectOujPageType;
