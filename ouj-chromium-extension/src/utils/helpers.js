@@ -649,6 +649,43 @@ async function detectOujPageType(url) {
   return 'video-select'; // 動画一覧
 }
 
+function decodeURLComponentSafe(url) {
+    const encodedStr = url.split('=')[1] || '';
+    try {
+        const decodedStr = decodeURIComponent(encodedStr);
+        if (decodedStr.includes('=')) {
+            return decodeURLComponentSafe(decodedStr);
+        }
+        return decodedStr;
+    } catch (error) {
+        console.error("decodeURLComponentSafe: URLデコードに失敗しました:", error);
+        return encodedStr; // デコードに失敗した場合は元の文字列を返す
+    }
+}
+
+/*
+システムWAKABA
+https://www.wakaba.ouj.ac.jp/portal/home/home/display?&taglib.html.TOKEN=e6e2f37a40d81eebffa7d2ba4dd08fdc
+印刷教材試し読み
+https://info.ouj.ac.jp/ouj/modules/kyozaipdf/kyozaipdf.html
+WEB通信指導
+https://tsushin.ouj.ac.jp/
+WEB単位認定試験
+https://shiken.ouj.ac.jp/
+過去問
+https://info.ouj.ac.jp/ouj/modules/html/mondai.html
+オンライン授業
+https://online.ouj.ac.jp/
+ライブWEB授業
+https://live.ouj.ac.jp/login/index.php?loginredirect=1
+自己学習サイト
+https://sls.ouj.ac.jp/webclass/?acs_=90f7e8c8
+看護師国家試験対策
+https://nurse.ouj.ac.jp/webclass/login.php
+修士論文
+https://info.ouj.ac.jp/ouj/modules/inronbun/inronbun.html
+**/
+
 // グローバル関数として公開
 window.fetchWithCache = fetchWithCache;
 window.waitForElement = waitForElement;
@@ -668,3 +705,4 @@ window.createCommonPanelHTML = createCommonPanelHTML;
 window.trimTitle = trimTitle;
 window.trimCourseName = trimCourseName;
 window.detectOujPageType = detectOujPageType;
+window.decodeURLComponentSafe = decodeURLComponentSafe;
