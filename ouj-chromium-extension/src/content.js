@@ -1,7 +1,5 @@
 // 画面種別を判定する関数
-async function detectOujPageType() {
-  const url = window.location.href;
-
+async function detectOujPageType(url) {
   // ログイン画面
   if (url.includes('https://sso.ouj.ac.jp/cas/login')) {
     return 'login';
@@ -48,7 +46,7 @@ async function detectOujPageType() {
 async function main() {
   
   // 画面種別を判定して処理を分岐
-  const pageType = await detectOujPageType();
+  const pageType = await detectOujPageType(window.location.href);
   
   if (pageType === 'login') {
     // ログイン画面の処理
