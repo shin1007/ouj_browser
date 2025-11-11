@@ -24,32 +24,37 @@ async function initializeVideoPlayer() {
     await window.handleHomePageAutoLogin();
     return;
   }
+  // 動画リストから現在の動画IDを利用して動画タイトルを取得
   const videos = await window.getVideoListInCategory(categoryData.categoryId);
-  let videoTitle = ''
   for (const video of videos) {
     if (String(video.contentId) === String(contentId)) {
       // 見つかった
-      videoTitle = video.title;
+      const currentVideo = video;
+      addFunctionPanel(currentVideo);
       break;
     }
   }
-  if (videoTitle){
-    const titleElement = document.querySelector('#content-detail-area > div.title');
-    if (!titleElement || !titleElement.textContent.includes(videoTitle)) {
-      // タイトルがまだ反映されていない
-      window.isInitializingVideo = false;
-      // 未ログインの場合はログインページに行く
-      pageChange = window.tryPushLoginButton();
-      if (!pageChange){
-        setTimeout(initializeVideoPlayer, 500);
-      }
-      return;
+// タイトルがページ上に存在すれば実行
+}
+async function addFunctionPanel(currentVideo){
+  console.log("addFunctionPanel", currentVideo.title);
+  const titleElement = document.querySelector('#content-detail-area > div.title');
+  if (!titleElement || !titleElement.textContent.includes(currentVideo.title)) {
+    // タイトルがまだ反映されていない
+    window.isInitializingVideo = false;
+    // 未ログインの場合はログインページに行く
+    pageChange = window.tryPushLoginButton();
+    if (!pageChange){
+      console.log("タイトル未反映、100ms後に再試行");
+      setTimeout(addFunctionPanel, 100, currentVideo);
     }
+    return;
   }
+  addShareButtonAfterVideoTitle();
+
   
   // videoタグの出現を監視し、出現した瞬間に設定パネルを挿入
   waitForVideoElementAndInsertPanel();
-  
   // 動画ページのcontentIdを取得し、履歴に追加
   const url = window.location.href;
   const matchCo = url.match(/co=(\d+)/);
@@ -78,16 +83,74 @@ async function initializeVideoPlayer() {
       if (autoPlayEnabled) {
         video.autoplay = true;
       }
+      // 自動再生を試みようとしたけど失敗
+      // enableBackgroundPlay(currentVideo);
+
     }  }, { timeout: 3000 });
   window.isInitializingVideo = false; 
 }
 
-// videoタグの出現を監視し、出現したら設定パネルを挿入する
+// videoタグの出現を監視し、出現したら設定パネルを挿入する関数
 function waitForVideoElementAndInsertPanel() {
   window.waitForElement('video', (video) => {
     window.addVideoSettingsPanel();
   });
 }
+function enableBackgroundPlay(currentVideo) {
+  /*
+  currentVideoの中身
+      {
+        "contentId": 31765,
+        "categoryId": 30211,
+        "title": "第05回 呼吸器系の構造と働き",
+        "summary": "ヒトは、酸素を身体に取り入れることでエネルギーを得るとともに、生じた二酸化炭素を排出している。この回では、呼吸器系の構造と機能、および運動への適応について概説する。",
+        "detail": "運動と健康（’２２）\n関根　紀子（放送大学教授）\n関根　紀子(放送大学教授)",
+        "alias": "5",
+        "groupIds": [
+            2,
+            343
+        ],
+    },
+
+  */
+  window.waitForElement('video', (video) => {
+    if (!video) return;
+    // iOSや一部のAndroidブラウザで背景再生を可能にする属性を追加
+    // 2025.10.13で試してみる
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.setAttribute('controls', 'true');
+    video.muted = false; // 音声がミュートされないように明示的に設定
+    video.style.backgroundColor = 'black'; // 背景を黒に設定
+    video.style.objectFit = 'contain'; // アスペクト比を維持して表示
+    video.play().catch(e => console.log("Autoplay was prevented.", e));
+
+    if (video.parentElement) {
+      video.parentElement.setAttribute('playsinline', 'true');
+      video.parentElement.setAttribute('webkit-playsinline', 'true');
+    }
+    if ('mediaSession' in navigator) {
+      const title = currentVideo?.title || '';
+      const detail = currentVideo?.detail || '';
+      const detailLines = detail.split('\n');
+      
+      // detailの1行目から科目名を取得し、不要な部分を削除
+      const courseName = (detailLines[0] || '')
+        .replace(/（’\d{2}）$/, '') // 末尾の（’XX）を削除
+        .trim();
+      const artists = detailLines.slice(1).join(', ').trim() || '';
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+      title: title,
+      album: courseName,
+      artist: artists,
+      artwork: [{ src: 'https://v.ouj.ac.jp/view/ouj/assets/images/webclip/apple-touch-icon.png', sizes: '512x512', type: 'image/jpg' }]
+    });
+  }
+}, { timeout: 3000 });
+//<link rel="apple-touch-icon" href="./assets/images/webclip/apple-touch-icon.png">
+}
+
 
 // 次の動画IDを取得する関数
 async function fetchNextVideoId() {
@@ -104,13 +167,13 @@ async function fetchNextVideoId() {
       await fetchNextVideoFromFavorites();
     }
   } else {
-    console.warn('[動画] fetchNextVideoId: URLからコースIDまたは動画IDを取得できません', url);
+    console.warn('[動画] fetchNextVideoId: URLから科目IDまたは動画IDを取得できません', url);
     nextVideoId = null;
     window.nextVideoId = nextVideoId;
   }
 }
 
-// 同じコースの中で次の動画を取得
+// 同じ科目の中で次の動画を取得
 async function fetchNextVideoFromSameCourse(currentCourseId, currentVideoId) {
   try {
     const res = await window.getVideoListInCategory(currentCourseId);
@@ -161,7 +224,7 @@ async function fetchNextVideoFromFavorites() {
       return;
     }
     
-    // 各お気に入りコースの未再生動画を取得
+    // 各お気に入り科目の未再生動画を取得
     const availableVideos = await getAvailableVideosFromFavorites(favorites);
     
     
@@ -222,7 +285,7 @@ async function checkVideoViewingStatus(video, favoriteId) {
   }
 }
 
-// お気に入りコースから未再生動画を取得する関数
+// お気に入り科目から未再生動画を取得する関数
 async function getAvailableVideosFromFavorites(favorites) {
   const availableVideos = [];
   const currentVideoId = getCurrentVideoId();
@@ -230,7 +293,7 @@ async function getAvailableVideosFromFavorites(favorites) {
   for (const favoriteId of favorites) {
     try {
       
-      // コースの動画リストを取得
+      // 科目の動画リストを取得
       const cacheKey = `cachedVodContents_${favoriteId}`;
       const videos = await fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${favoriteId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
       
@@ -305,6 +368,68 @@ async function addHistoryEntry(contentId) {
   }
 }
 
+function addShareButtonAfterVideoTitle() {
+  console.log("addShareButtonAfterVideoTitle");
+  const titleElement = document.querySelector('#content-detail-area > div.title');
+  if (!titleElement) return;
+  const lectureName = document.querySelector('#main > main-player > ion-content > div.scroll-content > player > vod-list-navigator > aside > div > ul > li:nth-child(3) > a')?.textContent.trim() || '';
+  // 以下のように不要な情報を削除
+  // before: 030 幼児教育の指導法（’２２） 1529668a
+  // after: 幼児教育の指導法
+  const trimmedLectureName = lectureName
+    .replace(/^[0-9]{3}\s+/, '') // 先頭の3桁の数字と空白を削除
+    .replace(/\s+[a-zA-Z0-9]{5,}\s*$/, '') // 末尾の7桁以上の英数字と空白を削除
+    .replace(/（.*?）\s*$/, '') // 全角括弧とその中身を削除
+  const videoTitle = titleElement.textContent.trim();
+  // すでに追加されている場合はスキップ
+  if (document.querySelector('.video-share-button')) return;
+  const button = document.createElement('button');
+  button.classList.add('video-share-button');
+  button.style.marginLeft = '2px';
+  button.style.verticalAlign = 'middle';
+
+  button.style.padding = '2px 4px';
+  button.style.fontSize = '12px';
+  button.style.fontWeight = 'bold';
+  button.style.cursor = 'pointer';
+  button.style.border = '1px solid #ccc';
+  button.style.borderRadius = '3px';
+  button.style.backgroundColor = '#f0f0f0';
+  button.innerHTML = getIconHtml('share') + '共有';
+  button.title = '科目名、授業名、URLをクリップボードにコピー';
+  button.addEventListener('click', () => {
+    // 既存のメッセージがあれば削除
+    const existingMessage = button.parentNode.querySelector('.copy-status-message');
+    if (existingMessage) {
+      existingMessage.remove();
+    }
+
+    const showCopyStatusMessage = (message, isSuccess) => {
+      const messageElement = document.createElement('span');
+      messageElement.textContent = message;
+      messageElement.className = 'copy-status-message';
+      messageElement.style.marginLeft = '8px';
+      messageElement.style.padding = '2px 6px';
+      messageElement.style.borderRadius = '3px';
+      messageElement.style.color = 'white';
+      messageElement.style.backgroundColor = isSuccess ? '#4CAF50' : '#F44336'; // 成功時は緑、失敗時は赤
+      messageElement.style.fontSize = '12px';
+      button.parentNode.insertBefore(messageElement, button.nextSibling);
+      setTimeout(() => messageElement.remove(), 2000);
+    };
+
+    const url = window.location.href;
+    const copyText = `\n${trimmedLectureName} ${videoTitle}\n#放送大学\n${url}`;
+    navigator.clipboard.writeText(copyText)
+      .then(() => showCopyStatusMessage('コピーしました', true))
+      .catch(err => {
+        console.error('クリップボードへのコピーに失敗しました:', err);
+        showCopyStatusMessage('コピー失敗', false);
+      });
+  });
+
+  titleElement.appendChild(button, titleElement);
+}
 
 // グローバル関数として公開
 window.getNextVideoId = () => window.nextVideoId;

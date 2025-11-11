@@ -4,9 +4,9 @@ async function handleHomePageAutoLogin() {
     console.warn('[OUJ拡張] chrome.storage.sync が未定義のため、自動でログイン画面に遷移します。');
   } else {
     autoLogin = await new Promise(resolve => chrome.storage.sync.get(['autoLogin'], resolve));
-    if (!autoLogin) {
-      return;
-    }
+    // 情報を取得できない場合などは何もしないで終了
+    if (autoLogin === undefined) return;
+    if (autoLogin.autoLogin === false) return;    
   }
   // ログインボタンが表示されるまで最大10秒待機し、表示されたらクリックする
   let retryCount = 0;

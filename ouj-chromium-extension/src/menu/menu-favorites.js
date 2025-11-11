@@ -1,6 +1,7 @@
 // お気に入り機能（menu.jsから分離）
 // お気に入りリストの描画・データ取得・パネル操作関連
 
+
 function createFavoriteListData() {
   const favorites = window.getSetting('favorites', []);
   return getPanelDataCoursePattern(favorites).then(({ categories, idToName, items: favoriteItemsWithParent }) => {
@@ -23,7 +24,7 @@ function handleFavoritesPanelOpen() {
   window.openPanel({
     id: 'favorite-list-panel',
     className: 'favorite-panel',
-    title: 'お気に入りコース一覧',
+    title: 'お気に入り科目一覧',
     iconHtml: window.getIconHtml('favorite'),
     actionHtml: '',
     searchBoxHtml: window.createSearchBoxHtml('favorite'),
@@ -49,7 +50,7 @@ function removePinnedFavorite(categoryId) {
     if (window.prefetchRecommendListData) window.prefetchRecommendListData();
   }
 }
-// コースパターン（お気に入り）
+// 科目パターン（お気に入り）
 async function getPanelDataCoursePattern(ids) {
   // ids: categoryIdの配列
   let categories = await window.getCategoriesData();
@@ -61,7 +62,7 @@ async function getPanelDataCoursePattern(ids) {
   const items = await Promise.all(ids.map(async (id) => {
     const categoryName = idToName[id];
     const parentCategoryName = await window.getParentCategoryName(id);
-    const displayName = categoryName || `不明なコース (ID: ${id})`;
+    const displayName = categoryName || `不明な科目 (ID: ${id})`;
     return {
       id: id,
       categoryName: displayName,
@@ -69,7 +70,7 @@ async function getPanelDataCoursePattern(ids) {
       hasParent: !!parentCategoryName
     };
   }));
-  if (items[0].categoryName.startsWith('不明なコース')){
+  if (items[0].categoryName.startsWith('不明な科目')){
     return await getPanelDataCoursePatternAgain(ids)
   }
   return { categories, idToName, items };
@@ -85,7 +86,7 @@ async function getPanelDataCoursePatternAgain(ids) {
   const items = await Promise.all(ids.map(async (id) => {
     const categoryName = idToName[id];
     const parentCategoryName = await window.getParentCategoryName(id);
-    const displayName = categoryName || `不明なコース (ID: ${id})`;
+    const displayName = categoryName || `不明な科目 (ID: ${id})`;
     return {
       id: id,
       categoryName: displayName,
@@ -150,7 +151,7 @@ function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idTo
                     <div class="favorite-child-category">${item.categoryName}</div>
                   </div>
                   <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="ピンを外す" title="ピンを外す" style="background:none;border:none;cursor:pointer;padding:0 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="${item.pinned ? '#ffd600' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>
+                    ${getIconHtml('pin', item.pinned)}
                   </button>
                   ${getIconHtml('arrow')}
                 </li>
@@ -171,7 +172,7 @@ function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idTo
               <div class="favorite-child-category">${item.categoryName}</div>
             </div>
             <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="${item.pinned ? 'ピンを外す' : 'ピン止め'}" title="${item.pinned ? 'ピンを外す' : 'ピン止め'}" style="background:none;border:none;cursor:pointer;padding:0 8px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="${item.pinned ? '#ffd600' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M6 3v12l6-3 6 3V3"/></svg>
+              ${getIconHtml('pin', item.pinned)}
             </button>
             ${getIconHtml('arrow')}
             </li>`;

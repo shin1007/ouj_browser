@@ -11,7 +11,7 @@ function renderHistoryListByDate(filteredItems) {
     const dateStr = date.toLocaleDateString('ja-JP', {
       year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
     });
-    const title = item.title || `コース (ID: ${item.categoryId})`;
+    const title = item.title || `科目 (ID: ${item.categoryId})`;
     return `<li class="history-item" data-category-id="${item.categoryId}" tabindex="0" role="button" aria-label="${title}を開く">
       <div class="history-item-content">
         <div class="history-title">${title}</div>
@@ -46,7 +46,7 @@ function renderHistoryListByGroup(filteredItems) {
     const itemsHtml = sortedItems.map((item, index) => {
       const date = new Date(item.date);
       const timeStr = date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-      const title = item.title || `コース (ID: ${item.categoryId})`;
+      const title = item.title || `科目 (ID: ${item.categoryId})`;
       return `<li class="history-item" data-category-id="${item.categoryId}" tabindex="0" role="button" aria-label="${title}を開く">
         <div class="history-item-content">
           <div class="history-title">${title}</div>

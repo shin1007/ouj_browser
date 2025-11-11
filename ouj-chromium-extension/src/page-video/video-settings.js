@@ -66,7 +66,7 @@ function insertSettingsPanel(targetElement) {
           <label for="playback-speed-control-enabled" style="margin-left: 5px; cursor: pointer; color: #333;">再生速度を調整する</label>
         </div>
         <div id="playback-speed-container" style="margin-bottom: 8px; display: flex; align-items: center; ${playbackSpeedControlEnabled ? '' : 'display: none;'}">
-          <label for="playback-speed" style="width: 120px; color: #333;">再生速度</label>
+          <label for="playback-speed" style="width: 250px; color: #333;">再生速度</label>
           <select id="playback-speed" style="flex: 1;">
             ${speedOptions}
           </select>
@@ -95,7 +95,7 @@ function insertSettingsPanel(targetElement) {
 
         <div style="margin-bottom: 8px;">
           <input type="radio" id="same-course" name="next-video" value="same-course" ${nextVideoMode === 'same-course' ? 'checked' : ''}>
-          <label for="same-course" style="margin-left: 5px; cursor: pointer; color: #333;">同じコースの中で次を再生</label>
+          <label for="same-course" style="margin-left: 5px; cursor: pointer; color: #333;">同じ科目の中で次を再生</label>
         </div>
         <div style="margin-bottom: 8px;">
           <input type="radio" id="favorites-random" name="next-video" value="favorites-random" ${nextVideoMode === 'favorites-random' ? 'checked' : ''}>
@@ -104,7 +104,7 @@ function insertSettingsPanel(targetElement) {
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
         <div style="margin-bottom: 8px; display: flex; align-items: center;">
-          <label for="skip-end" style="width: 200px; color: #333;">動画の最後をスキップ</label>
+          <label for="skip-end" style="width: 250px; color: #333;">動画の最後をスキップ</label>
           <select id="skip-end">
             <option value="0" ${skipEnd == 0 ? 'selected' : ''}>なし</option>
             <option value="15" ${skipEnd == 15 ? 'selected' : ''}>15秒</option>
@@ -120,7 +120,7 @@ function insertSettingsPanel(targetElement) {
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
         <div style="margin-bottom: 8px; display: flex; align-items: center;">
-          <label for="playlog-interval" style="width: 200px; color: #333;">再生ログ保存頻度(一瞬止まるかも)</label>
+          <label for="playlog-interval" style="width: 250px; color: #333;">再生ログ保存頻度(一瞬止まるかも)</label>
           <select id="playlog-interval">
             <option value="3" ${playlogIntervalMinutes == 3 ? 'selected' : ''}>3分</option>
             <option value="5" ${playlogIntervalMinutes == 5 ? 'selected' : ''}>5分</option>
@@ -135,11 +135,11 @@ function insertSettingsPanel(targetElement) {
           設定は自動的に保存されます
         </div>
       </div>
-      <!-- 分割バー -->
-      <div style="width: 1px; background: #ccc; height: 100%; min-height: 320px; margin: 0 8px; align-self: stretch;"></div>
-      <!-- 右カラム: キーボードショートカット説明（削除済み） -->
     </div>
   `;
+      //   <!-- 分割バー -->
+      // <div style="width: 1px; background: #ccc; height: 100%; min-height: 320px; margin: 0 8px; align-self: stretch;"></div>
+
   // 追加設定項目のイベントリスナー
   const skipStartSelect = panel.querySelector('#skip-start');
   if (skipStartSelect) {

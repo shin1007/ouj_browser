@@ -13,13 +13,13 @@ async function getCategoryDataFromContentId(contentId) {
   if (!videoData || !videoData.categoryId) return null;
   const categories = await getCategoriesData();
   if (!(categories && Array.isArray(categories))) return null;
-  const category = categories.find(cat => cat.categoryId === videoData.categoryId);
+  const category = categories.find(cat => String(cat.categoryId) === String(videoData.categoryId));
   return category || null;
 }
 async function getCategoryData(categoryId){
   const categories = await getCategoriesData();
   if (!(categories && Array.isArray(categories))) return null;
-  const category = categories.find(cat => cat.categoryId === categoryId);
+  const category = categories.find(cat => String(cat.categoryId) === String(categoryId));
   return category || null;
 }
 /**
@@ -65,9 +65,9 @@ async function getChildIds(categoryNum) {
   return filtered.map(item => ({ categoryId: item.categoryId, name: item.name }));
 }
 
-function getCurrentCategoryId() {
-  const hash = window.location.hash;
-  
+function getCurrentCategoryId(url="") {
+  const hash = url ? new URL(url).hash : window.location.hash;
+
   // hashのcaを取得
   const params = hash.split('?')[1];
   if (!params) {
@@ -82,9 +82,9 @@ function getCurrentCategoryId() {
   const categoryId = caMatch[1];
   return parseInt(categoryId, 10);
 }
-function getCurrentContentId() {
-  const hash = window.location.hash;
-  
+function getCurrentContentId(url="") {
+  const hash = url ? new URL(url).hash : window.location.hash;
+
   // hashのcaを取得
   const params = hash.split('?')[1];
   if (!params) {
@@ -147,10 +147,7 @@ async function getVideoListInCategory(categoryId) {
   return list;
 }
 
-async function getCourseNumber(categoryId){
-  
-}
-async function parentCategories() {
+async function categoriesUsedAsParent() {
   const result = await chrome.storage.local.get([CATEGORIES_STORAGE_KEY]);
   const cachedData = result[CATEGORIES_STORAGE_KEY];
   const data = cachedData && cachedData.data ? cachedData.data : cachedData;
@@ -178,11 +175,32 @@ async function getVideoProgress(contentId) {
     return 0;
   }
 }
+async function viewRankings(){
+  console.log("カテゴリ別視聴回数ランキングを取得中...");
+  const categories = await getCategoriesData();
+  if (!(categories && Array.isArray(categories))) return [];
+  console.log(`全${categories.length}カテゴリを取得`);
+  const rankings = [];
+  for(const category of categories){
+    const videoList = await getVideoListInCategory(category.categoryId);
+    if(videoList.length === 0) continue;
+    let totalViewCount = 0;
+    for (const video of videoList){
+      const singleViewCount = video.viewingCount;
+      totalViewCount += singleViewCount;
+    }
+    rankings.push({categoryId: category.categoryId, name: category.name, totalViewCount: totalViewCount});
+  }
+  rankings.sort((a, b) => b.totalViewCount - a.totalViewCount);
+  console.log(rankings);
+}
+// 動画の視聴回数ランキングを使用する場合
+// viewRankings();
 window.getCategoriesData = getCategoriesData;
 window.getChildIds = getChildIds;
 window.getCurrentCategoryId = getCurrentCategoryId;
 window.getParentCategoryName = getParentCategoryName;
-window.parentCategories = parentCategories;
+window.categoriesUsedAsParent = categoriesUsedAsParent;
 window.getVideoListInCategory = getVideoListInCategory;
 window.getVideoData = getVideoData;
 window.getCategoryDataFromContentId = getCategoryDataFromContentId;

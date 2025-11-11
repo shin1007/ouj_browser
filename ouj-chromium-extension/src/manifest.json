@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "放送大学授業ブラウザ",
-  "version": "2025.9.18",
+  "version": "2025.11.11",
   "description": "放送大学の放送授業での学習を便利にする拡張機能",
   "author": "shin1007",
   "permissions": [
@@ -26,6 +26,7 @@
         "thumbnail-progress.css"
       ],
       "js": [
+        "libraries/kuromoji/build/kuromoji.js",  
         "utils/helpers.js",
         "utils/favorites-helper.js",
         "utils/viewingStatus.js",
@@ -33,8 +34,7 @@
         "utils/categories.js",
         "utils/goToLoginPage.js",
         "utils/thumbnail-progress.js",
-        // "lib/kuromoji.js",
-        // "utils/kuromoji-helper.js",
+        "utils/kuromoji-helper.js",
         "menu/menu-favorites.js",
         "menu/menu-history.js",
         "menu/menu-recommendation.js",
@@ -72,7 +72,7 @@
     {
       "resources": [
         "icons/*",
-        "public/dict/*"
+        "/libraries/kuromoji/dict/*.gz" 
       ],
       "matches": [
         "https://v.ouj.ac.jp/*"

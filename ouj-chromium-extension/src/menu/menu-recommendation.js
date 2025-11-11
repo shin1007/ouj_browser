@@ -2,79 +2,135 @@
 // 履歴・お気に入り・カテゴリからおすすめ動画リストを生成
 
 /**
- * 履歴から最大2件（2コース）を選定
+ * 視聴履歴に基づいて最大2件のおすすめ動画を選定します。
+ * 1. 視聴途中の動画があれば、それを「続きから見る」として推薦します。
+ * 2. 視聴完了した動画があれば、そのコースの次の未視聴動画を推薦します。
+ * @param {Array<Object>} history - 視聴履歴の配列。各要素は { contentId, progress, date } を含みます。
+ * @returns {Promise<Object>} おすすめ動画リスト、使用済みカテゴリIDセット、使用済みコンテンツIDセットを含むオブジェクト。
  */
 async function getRecommendFromHistory(history) {
+  const reccomendFromHistoryLength = window.getSetting('history-recommend-level', 2);
+  // 返却するおすすめ動画のリスト
   let recommendList = [];
-  let usedCategoryIds = new Set();
+  // 同じ動画を重複して推薦しないように、使用したコンテンツIDを記録
   let usedContentIds = new Set();
-  let count = 0;
-  for (let i = 0; i < history.length && count < 2; i++) {
+  // historyをランダムに並べ替え
+  for (let i = history.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [history[i], history[j]] = [history[j], history[i]];
+  }
+
+  // 履歴をループし、最大件数に達するまでおすすめを選定
+  for (let i = 0; i < history.length; i++) {
     const historyItem = history[i];
     const { contentId, progress, date } = historyItem;
+
+    // 不正なデータはスキップ
     if (!contentId) continue;
     if (usedContentIds.has(contentId)) continue;
+
+    // 動画情報を取得
     const video = await window.getVideoData(contentId);
     if (!video || !video.contentId) continue;
+    if (recommendList.length > reccomendFromHistoryLength*2) continue;
+    // パターン1: 視聴が完了していない動画 (進捗率95%未満)
     if (progress < 0.95) {
+      // 「続きから見る」おすすめとしてリストに追加
       recommendList.push({
         ...video,
         progress,
         source: 'history',
         dateStr: new Date(date).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
       });
+      // 使用済みIDとして記録
       usedContentIds.add(contentId);
-      usedCategoryIds.add(video.categoryId);
-      count++;
       continue;
     } else {
+      // パターン2: 視聴完了済みの動画 (進捗率95%以上)
       const categoryId = video.categoryId;
       if (!categoryId) continue;
-      const cacheKey = `cachedVodContents_${categoryId}`;
-      let videos = [];
-      try {
-        if (typeof window.fetchWithCache === 'function') {
-          videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
-        }
-      } catch (e) {}
+
+      // 同じカテゴリ（コース）の動画リストを取得
+      const videos = await window.getVideoListInCategory(categoryId);
       if (!Array.isArray(videos) || !videos.length) continue;
+
+      // 現在の動画のインデックスを探し、次の動画を取得
       const idx = videos.findIndex(v => v.contentId == contentId);
       if (idx !== -1 && idx + 1 < videos.length) {
         const nextVideo = videos[idx + 1];
-        if (nextVideo && !usedContentIds.has(nextVideo.contentId) && !history.some(h => h.contentId == nextVideo.contentId)) {
-          recommendList.push({
-            ...nextVideo,
-            progress: await window.getVideoProgress(nextVideo.contentId) || 0,
-            source: 'history',
-            dateStr: ''
-          });
-          usedContentIds.add(nextVideo.contentId);
-          usedCategoryIds.add(nextVideo.categoryId);
-          count++;
-        }
+        // 次の動画が未視聴であれば、おすすめとしてリストに追加
+        if (!nextVideo) continue;
+        if (usedContentIds.has(nextVideo.contentId)) continue;
+        if (history.some(h => h.contentId == nextVideo.contentId)) continue;
+
+        const progress = await window.getVideoProgress(nextVideo.contentId);
+        if (progress >= 0.95) continue; // 既に視聴済みならスキップ
+        recommendList.push({
+          ...nextVideo,
+          progress,
+          source: 'history',
+          dateStr: '',
+        });
+        // 使用済みIDとして記録
+        usedContentIds.add(nextVideo.contentId);
       }
     }
   }
+  // recommendListをランダムに最大件数（reccomendFromHistoryLength）に絞る
+  for (let i = recommendList.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [recommendList[i], recommendList[j]] = [recommendList[j], recommendList[i]];
+  }
+  recommendList = recommendList.slice(0, reccomendFromHistoryLength);
+  // 同じカテゴリから重複して推薦しないように、使用したカテゴリIDを記録
+  let usedCategoryIds = new Set();
+  for (const video of recommendList) {
+    // 使用済みカテゴリIDとして記録
+    usedCategoryIds.add(video.categoryId);
+  }
+
   return { recommendList, usedCategoryIds, usedContentIds };
 }
 
 /**
- * お気に入りから最大5件（履歴で選ばれた2コースと重複しない5コース）
+ * お気に入りから最大5件（履歴で選ばれた2科目と重複しない5科目）
  */
 async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
+  const recommendFromFavoritesLength = window.getSetting('favorite-recommend-level', 5);
   let recommendList = [];
   let usedCategoryIds = new Set(excludeCategoryIds);
   if (!favorites.length) return { recommendList, usedCategoryIds };
+  // favoritesをシャッフルしてランダムにする
   favorites = favorites.slice();
   for (let i = favorites.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
   }
+  // Aliasのリストを作る（IDが別でも同じエイリアスの同じ科目がある場合に対応する）
+  const allCategories = await window.getCategoriesData();
+  const excludeCategoryAliases = new Set();
+  allCategories.forEach(category => {
+    if (excludeCategoryIds.has(category.categoryId)) {
+      const aliasNum = (category.alias || '').match(/^[0-9]+/);
+      if (aliasNum) {
+        excludeCategoryAliases.add(aliasNum[0]);
+      }
+    }
+  });
+
   for (const categoryId of favorites) {
-    if (recommendList.length >= 5) break;
-    if (usedCategoryIds.has(categoryId)) continue;
+    // alias（数字のみ）が同じなら見ない
+    const category = await window.getCategoryData(categoryId);
+    if (!category) continue;
+    const aliasNum = (category.alias || '').match(/^[0-9]+/);
+    if (aliasNum && excludeCategoryAliases.has(aliasNum[0])) continue;
+    if (aliasNum === null) continue;
+
+    // 長さを超える分はここまで
+    if (recommendList.length >= recommendFromFavoritesLength*2) continue;
     const cacheKey = `cachedVodContents_${categoryId}`;
     let videos = [];
+    // お気に入りの動画リストを取得
     try {
       if (typeof window.fetchWithCache === 'function') {
         videos = await window.fetchWithCache(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents?qt=4&categoryId=${categoryId}&offset=0&limit=30&sortType=1&sortOrder=asc`, cacheKey);
@@ -86,10 +142,20 @@ async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
       const status = await window.getVideoProgress(videos[i].contentId);
       if (status < 0.95) {
         recommendList.push({ ...videos[i], progress: status || 0, source: 'favorites' });
-        usedCategoryIds.add(categoryId);
         break;
       }
     }
+  }
+  // recommendListをランダムに最大件数（reccomendFromFavoritesLength）に絞る
+  for (let i = recommendList.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [recommendList[i], recommendList[j]] = [recommendList[j], recommendList[i]];
+  }
+  recommendList = recommendList.slice(0, recommendFromFavoritesLength);
+  // 同じカテゴリから重複して推薦しないように、使用したカテゴリIDを記録
+  for (const video of recommendList) {
+    // 使用済みカテゴリIDとして記録
+    usedCategoryIds.add(video.categoryId);
   }
   return { recommendList, usedCategoryIds };
 }
@@ -148,13 +214,16 @@ function calculateSimilarity(s1, s2) {
   return (longerLength - levenshteinDistance(longer, shorter)) / parseFloat(longerLength);
 }
 
+
 /**
- * 類似している3件（履歴・お気に入りの合計7コースと重複がない3コース）
- * 履歴やお気に入りのコース名と類似したコースをおすすめする
+ * 類似している3件（履歴・お気に入りの合計7科目と重複がない3科目）
+ * 履歴やお気に入りの科目名と類似した科目をおすすめする
  */
 async function getRecommendFromSimilar(allCategories, excludeCategoryIds) {
+  const reccomendFromSimilarLength = window.getSetting('similar-recommend-level', 3);
   if (!Array.isArray(allCategories) || !allCategories.length) return [];
 
+  // 名前は類似度計算で作ってるのでexcludeCategoryNameが必要
   // excludeCategoryAliasを作成
   const excludeCategoryNames = new Set();
   const excludeCategoryAliases = new Set();
@@ -191,16 +260,23 @@ async function getRecommendFromSimilar(allCategories, excludeCategoryIds) {
     return { ...category, similarity: maxSimilarity };
   }).filter(Boolean);
 
+  // 類似度順に並べ、reccomendFromSimilarLength*2の数までに絞る
   candidates.sort((a, b) => b.similarity - a.similarity);
+  candidates.splice(0, candidates.length - reccomendFromSimilarLength * 2);
 
-  // 
+  // ランダムに並べ替える
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+
+  // 3つに絞る
   let recommendList = [];
   let count = 0;
   const usedContentIds = new Set();
 
   for (const category of candidates) {
-    if (count >= 3) break;
-    if (category.similarity < 0.3) continue;
+    if (count >= reccomendFromSimilarLength) break;
     const videos = await window.getVideoListInCategory(category.categoryId);
     if (!Array.isArray(videos) || !videos.length) continue;
     for (const video of videos) {
@@ -264,13 +340,29 @@ function handleRecommendPanelOpen() {
     title: 'おすすめ動画',
     iconHtml: getIconHtml('recommend'),
     actionHtml: '',
-    searchBoxHtml: '',
+    searchBoxHtml: createDropdownHtml(),
     listHtml: dummyCards,
     closeBtnId: 'close-recommend-list-panel',
     contentClass: 'recommend-panel-content',
     listClass: 'history-list',
     fetchData: async () => {
       // キャッシュがあれば即返す。なければ取得
+      const historyLevel = window.getSetting('history-recommend-level', 2);
+      const favoriteLevel = window.getSetting('favorite-recommend-level', 5);
+      const similarLevel = window.getSetting('similar-recommend-level', 3);
+
+      // ドロップダウンの値を更新
+      const historySelect = document.getElementById('history-recommend-level');
+      if (historySelect) historySelect.value = historyLevel;
+
+      const favoriteSelect = document.getElementById('favorite-recommend-level');
+      if (favoriteSelect) favoriteSelect.value = favoriteLevel;
+
+      const similarSelect = document.getElementById('similar-recommend-level');
+      if (similarSelect) similarSelect.value = similarLevel;
+
+
+
       if (window.oujRecommendCache && window.oujRecommendCache.data) {
         // 裏で再取得も走らせておく
         prefetchRecommendListData();
@@ -281,7 +373,24 @@ function handleRecommendPanelOpen() {
         return data;
       }
     },
-    renderList: renderRecommendListHtml
+    renderList: renderRecommendListHtml,
+    setupExtraEventListeners: (panel, closePanel) => {
+      const setupDropdownListener = (id, settingKey) => {
+        const dropdown = panel.querySelector(`#${id}`);
+        if (dropdown) {
+          dropdown.addEventListener('change', (event) => {
+            window.saveSetting(settingKey, parseInt(event.target.value, 10));
+            // おすすめリストを再取得して再描画
+            createRecommendListData().then(recommendList => {
+              renderRecommendListHtml(panel, closePanel, recommendList);
+            });
+          });
+        }
+      };
+      setupDropdownListener('history-recommend-level', 'history-recommend-level');
+      setupDropdownListener('favorite-recommend-level', 'favorite-recommend-level');
+      setupDropdownListener('similar-recommend-level', 'similar-recommend-level');
+    }
   });
 }
 
@@ -364,6 +473,47 @@ function renderRecommendListHtml(panel, closePanel, recommendList) {
       }
     });
   }
+}
+
+function createDropdownHtml() {
+  // おすすめ機能用に3つのドロップダウンを生成。
+  // 1つ目：履歴、2つ目：お気に入り、3つ目：類似
+  // それぞれ整数で1~10までの値を取り、10が一番多く表示される。
+  const historyLevel = window.getSetting('history-recommend-level', 2);
+  const favoriteLevel = window.getSetting('favorite-recommend-level', 5);
+  const similarLevel = window.getSetting('similar-recommend-level', 3);
+
+  const createOptions = (selectedValue) => {
+    let options = '';
+    for (let i = 0; i <= 10; i++) {
+      options += `<option value="${i}" ${i === selectedValue ? 'selected' : ''}>${i}</option>`;
+    }
+    return options;
+  };
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const historyLabel = isPortrait ? '履歴' : '履歴から';
+  const favoriteLabel = isPortrait ? '気入' : 'お気に入りから';
+  const similarLabel = isPortrait ? '類似' : '類似から';
+  const ken = isPortrait ? '' : '件';
+  return `
+    <div class="recommend-dropdowns">
+      <label for="history-recommend-level">${historyLabel}</label>
+      <select id="history-recommend-level" title="履歴からのおすすめ表示数">
+      ${createOptions(historyLevel)}
+      </select>
+      <span>${ken} </span>
+      <label for="favorite-recommend-level">${favoriteLabel}</label>
+      <select id="favorite-recommend-level" title="お気に入りからのおすすめ表示数">
+      ${createOptions(favoriteLevel)}
+      </select>
+      <span>${ken} </span>
+      <label for="similar-recommend-level">${similarLabel}</label>
+      <select id="similar-recommend-level" title="類似からのおすすめ表示数">
+      ${createOptions(similarLevel)}
+      </select>
+      <span>${ken}</span>
+    </div>
+`;
 }
 window.oujRecommendCache = {
   data: null,

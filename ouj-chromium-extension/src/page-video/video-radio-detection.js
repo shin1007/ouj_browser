@@ -62,18 +62,12 @@ async function isRadioProgram() {
   // 動画IDから現在のカテゴリデータを取得
   const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
   if (!currentCategory) return false;
-  // console.log('isRadioProgram: 現在のカテゴリ', currentCategory);
-  // ラジオ番組の字幕付加実験のカテゴリはテレビ番組扱いとする
-  // const parentCategory = await window.getCategoryData(currentCategory.parentId);
-  // console.log('isRadioProgram: 親カテゴリ', parentCategory ? parentCategory.name : '不明');
-  // if (parentCategory && "ラジオ番組の字幕付加実験" in parentCategory.name) {
-  //   return false;
-  // }
-  if (currentCategory.categoryId === 30636
-    || currentCategory.categoryId === 30637
-    || currentCategory.categoryId === 30638
-    || currentCategory.categoryId === 30725){
-    return false
+  // ラジオ番組の字幕付加実験のカテゴリはテレビ番組扱いとする。
+  // grandParentCategoryNameから判断（parentだと教養学部か大学院になる。）
+  const parentId = currentCategory.parentId;
+  const grandParentCategoryName = await window.getParentCategoryName(parentId);
+  if (grandParentCategoryName.includes('ラジオ番組の字幕付加実験')) {
+    return false;
   }
 
   // summary欄でラジオ番組かどうかを判定
@@ -127,19 +121,18 @@ function showRadioProgramUI() {
   }
   
   window.waitForElement('video', (video) => {
-    
     // ラジオ番組用のUI要素を作成
     const radioUI = document.createElement('div');
     radioUI.id = 'radio-program-ui';
     radioUI.style.cssText = `
       position: absolute;
-      top: 37%;
+      top: 35%;
       left: 50%;
       transform: translate(-50%, -50%);
       background: rgba(0, 0, 0, 0.8);
       color: white;
-      padding: 3px;
-      border-radius: 10px;
+      padding: 1px;
+      border-radius: 5px;
       text-align: center;
       z-index: 1000;
       font-family: 'Arial', sans-serif;
@@ -148,12 +141,28 @@ function showRadioProgramUI() {
     
     (async () => {
       const captionAvailable = await isCaptionAvailable();
+      const inner = "rgb(1,116,193)";
+      // const outer = "rgb(234,246,255)";
+      const outer = "rgb(1,116,193, 0.7)";
+      const outerPixel = "0.5px";
       radioUI.innerHTML = `
-        <div style="font-size: 26px; font-weight: bold; margin-bottom: 5px; color: rgb(234,246,255);">♫</div>
+        <div style="font-size: 28px; 
+        margin-bottom: 5px; 
+        color: ${inner}; 
+        text-shadow:
+          ${outerPixel} ${outerPixel} 1px ${outer},   /* 右下 */
+          -${outerPixel} ${outerPixel} 1px ${outer},  /* 左下 */
+          ${outerPixel} -${outerPixel} 1px ${outer},  /* 右上 */
+          -${outerPixel} -${outerPixel} 1px ${outer}, /* 左上 */
+          ${outerPixel} 0px 1px ${outer},   /* 右 */
+          -${outerPixel} 0px 1px ${outer},  /* 左 */
+          0px -${outerPixel} 1px ${outer};  /* 上 */;
+        ">♬</div>
         <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">ラジオ番組</div>
         <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">${await captionAvailable ? captionUi : noCaptionUi}</div>
       `;
     })();
+          // 0px ${outerPixel} 1px ${outer},   /* 下 */
     
     // 動画要素の親要素に挿入
     const videoContainer = video.parentElement;

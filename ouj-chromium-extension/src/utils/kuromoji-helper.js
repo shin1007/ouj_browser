@@ -1,14 +1,14 @@
 // kuromoji-helper.js
 
-let tokenizer = null;
+window.tokenizer = null;
 
 /**
  * kuromoji.jsのTokenizerをシングルトンとして取得する
  * @returns {Promise<object>} Tokenizerインスタンス
  */
 async function getTokenizer() {
-  if (tokenizer) {
-    return tokenizer;
+  if (window.tokenizer) {
+    return window.tokenizer;
   }
 
   return new Promise((resolve, reject) => {
@@ -16,13 +16,17 @@ async function getTokenizer() {
       // kuromoji.jsがロードされていない場合はエラー
       return reject(new Error('kuromoji.js is not loaded.'));
     }
-
-    kuromoji.builder({ dicPath: '/public/dict/' }).build((err, builtTokenizer) => {
+    // return;
+    // 拡張機能内の辞書ファイルへのパスを解決する
+    // スラッシュから始めることが肝要っぽい
+    // https://qiita.com/ara1yu81/items/d803d1c0623777788182
+    const dicPath = '/libraries/kuromoji/dict';
+    const chromeDicPath = chrome.runtime.getURL(dicPath);
+    kuromoji.builder({ dicPath: chromeDicPath }).build((err, builtTokenizer) => { // こっちが正しそう
       if (err) {
         return reject(err);
       }
-      tokenizer = builtTokenizer;
-      resolve(tokenizer);
+      resolve(builtTokenizer);
     });
   });
 }

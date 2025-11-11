@@ -1,58 +1,13 @@
-// 画面種別を判定する関数
-async function detectOujPageType() {
-  const url = window.location.href;
 
-  // ログイン画面
-  if (url.includes('https://sso.ouj.ac.jp/cas/login')) {
-    return 'login';
-  }
-  // ホームページ
-  if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/home')) {
-    return 'home';
-  }
-  // 動画再生画面
-  if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/player?co=')) {
-    return 'player';
-  }
-  // 検索結果
-  if (url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?se=')){
-    return 'search-result';
-  }
-
-  // 怪しい例：
-  // 検索結果からの動画
-  // co=36739&ct=V&se=英語&ca=30648
-  // VOD画面以外はここで終了
-  if (!url.includes('https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=')) {
-    return '';
-  }
-
-  const categoryId = window.getCurrentCategoryId();
-  try {
-    const parentIds = await window.parentCategories();
-    if (parentIds.includes(categoryId)) {
-      return 'series-select'; // コース一覧（科目群選択後）
-    }
-  } catch (e) {
-    console.error('[OUJ拡張] parentCategoriesの取得に失敗:', e);
-  }
-
-  // フォールバック判定: カテゴリIDの範囲で判定
-  if (categoryId < 100 || (categoryId > 480 && categoryId < 500)) {
-    return 'series-select';
-  }
-
-  return 'video-select'; // 動画一覧
-}
 
 async function main() {
   
   // 画面種別を判定して処理を分岐
-  const pageType = await detectOujPageType();
+  const pageType = await window.detectOujPageType(window.location.href);
   
-  if (pageType === 'login') {
+  if (pageType.subDomain === 'sso') {
     // ログイン画面の処理
-    window.waitForPasswordAndLogin();
+    await window.waitForPasswordAndLogin();
     // ログイン成功している場合はホームページに遷移
     // HTML内に「ログインしました」があれば成功しているとして扱う
     if (document.body.innerHTML.includes('ログインしました')) {
@@ -60,19 +15,23 @@ async function main() {
     }
     return;
   }
+  if (pageType.subDomain !== 'v') {
+    // v.ouj.ac.jp以外のサブドメインの場合は何もしない
+    return;
+  }
   window.insertLeftMenu();
   window.startMenuOpeningMutationObserver();
-  if (pageType === 'home') {
+  if (pageType.page === 'home') {
     // ホームページの処理を呼び出す
     await window.handleHomePageAutoLogin();
-  } else if (pageType === 'search-result') {
+  } else if (pageType.page === 'search-result') {
     // TODO: 動画進捗の挿入 
-  } else if (pageType === 'player') {
+  } else if (pageType.page === 'player') {
     window.addFavoriteButtonToBreadCrumbs();
     window.initializeVideoPlayer();      
-  } else if (pageType === 'series-select') {
+  } else if (pageType.page === 'series-select') {
     window.waitThenAddFavBtnToCategoryList();
-  } else if (pageType === 'video-select') {
+  } else if (pageType.page === 'video-select') {
     window.addFavoriteButtonToBreadCrumbs();
   } else {
     // その他の処理
@@ -88,7 +47,7 @@ function safeMain() {
   if (typeof window.addFavoriteButtonToBreadCrumbs !== 'function') missing.push('addFavoriteButtonToBreadCrumbs');
   if (typeof window.getCurrentCategoryId !== 'function') missing.push('getCurrentCategoryId');
   if (typeof window.getFavorites !== 'function') missing.push('getFavorites');
-  if (typeof window.parentCategories !== 'function') missing.push('parentCategories');
+  if (typeof window.categoriesUsedAsParent !== 'function') missing.push('parentCategories');
   
   if (missing.length > 0) {
     if (safeMain._warned !== missing.join(',')) {
@@ -102,9 +61,7 @@ function safeMain() {
   main();
 }
 
-
 // safeMain()を一度だけ呼ぶ仕組み
-
 window.oujLastMainTime = 0;
 function callSafeMainOnce() {
   const now = Date.now();
@@ -113,16 +70,23 @@ function callSafeMainOnce() {
     safeMain();
   }
 }
-
-if (document.readyState === "complete" || document.readyState === "interactive") {
+if (!window.location.href.includes('ouj.ac.jp')) {
+// 'ouj.ac.jp'をURLに含まない場合は動作をしない
+// ほかのサイトで動作をしてしまう不具合があったので念のために入れている
+} else if (document.readyState === "complete" || document.readyState === "interactive") {
+  console.log("[OUJ拡張 DEBUG] DOM is already loaded");
   callSafeMainOnce();
 } else {
+  console.log("[OUJ拡張 DEBUG] Waiting for DOM to be loaded");
   document.addEventListener("DOMContentLoaded", callSafeMainOnce);
 }
 
 // SPA対応: URL変化を監視してsafeMain()を再実行
-
-if (!window.__ouj_url_listener_added) {
+if (!window.location.href.includes('ouj.ac.jp')) {
+// 'ouj.ac.jp'をURLに含まない場合は動作をしない
+// ほかのサイトで動作をしてしまう不具合があったので念のために入れている
+} else if (!window.__ouj_url_listener_added) {
+  console.log("[OUJ拡張 DEBUG] URL listener added");
   window.__ouj_url_listener_added = true;
   (function() {
     let lastUrl = location.href;
