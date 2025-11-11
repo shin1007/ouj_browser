@@ -1,8 +1,5 @@
 // --- 追加: 前後動画リンク挿入関数 ---
 async function insertPrevNextLinks(titleElement) {
-  // 既存のリンクがあれば一度消す
-  const old = document.getElementById('prev-next-links');
-  if (old) old.remove();
   // データがなければ何もしない
   const categoryId = window.getCurrentCategoryId();
   const list = await window.getVideoListInCategory(categoryId);
@@ -150,6 +147,10 @@ async function insertPrevNextLinks(titleElement) {
     emptyDiv.style.cssText = 'flex: 1; min-width: 0;';
     container.appendChild(emptyDiv);
   }
+  // 既存のリンクがあれば一度消す
+  const old = document.getElementById('prev-next-links');
+  if (old) old.remove();
+
   // タイトル要素の直後に挿入
   if (titleElement.nextSibling) {
     titleElement.parentNode.insertBefore(container, titleElement.nextSibling);

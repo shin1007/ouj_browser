@@ -673,11 +673,13 @@ async function detectOujPageType(url) {
             return {subDomain: 'v', page: 'home'};
         }
         // 動画再生画面
-        if (url.includes('://v.ouj.ac.jp/view/ouj/#/navi/player?co=')) {
+        if (url.includes('://v.ouj.ac.jp/view/ouj/#/navi/player?co=')
+            || url.includes('://v.ouj.ac.jp/view/ouj/#/navi/player&co=')) {
             return {subDomain: 'v', page: 'player'};
         }
         // 検索結果
-        if (url.includes('://v.ouj.ac.jp/view/ouj/#/navi/vod?se=')){
+        if (url.includes('://v.ouj.ac.jp/view/ouj/#/navi/vod?se=')
+            || url.includes('://v.ouj.ac.jp/view/ouj/#/navi/vod&se=')) {
             return {subDomain: 'v', page: 'search-result'};
         }
 
@@ -685,7 +687,8 @@ async function detectOujPageType(url) {
         // 検索結果からの動画
         // co=36739&ct=V&se=英語&ca=30648
         // VOD画面以外はここで終了
-        if (!url.includes('://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=')) {
+        if (!url.includes('://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=')
+            && !url.includes('://v.ouj.ac.jp/view/ouj/#/navi/vod&ca=')) {
             return {subDomain: 'v', page: 'other'};
         }
 
@@ -710,16 +713,15 @@ async function detectOujPageType(url) {
 }
 
 function decodeURLComponentSafe(url) {
-    const encodedStr = url.split('=')[1] || '';
+    const stringtoDelete = url.split('=')[0] + '=';
+    const encodedStr = url.replace(stringtoDelete, '');
     try {
         const decodedStr = decodeURIComponent(encodedStr);
-        if (decodedStr.includes('=')) {
+        if (decodedStr.includes('%')) {
             return decodeURLComponentSafe(decodedStr);
         }
-        console.log("decodeURLComponentSafe: デコード成功:", decodedStr);
         return decodedStr;
     } catch (error) {
-        console.error("decodeURLComponentSafe: URLデコードに失敗しました:", error);
         return encodedStr; // デコードに失敗した場合は元の文字列を返す
     }
 }
