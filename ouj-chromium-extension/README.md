@@ -1,19 +1,21 @@
 ##【放送大学授業ブラウザ】
 
-放送大学（The Open University of Japan）の動画視聴や学習を、もっと便利に / 快適にするChrome拡張機能です。[ChromeのWebストアページ](https://chromewebstore.google.com/detail/%E6%94%BE%E9%80%81%E5%A4%A7%E5%AD%A6%E6%8E%88%E6%A5%AD%E3%83%96%E3%83%A9%E3%82%A6%E3%82%B6/mjphckgpnhhjfdpgkblomeiehjgeaagb), [GitHub](https://github.com/shin1007/ouj_browser)
-
+放送大学（The Open University of Japan）の動画視聴や学習を、もっと便利に / 快適にするChrome拡張機能です。
 
 ・[こちらのページ](https://v.ouj.ac.jp/view/ouj/#/navi/home)をブックマークしておくと使いやすくなるかと思います。
 
 
-・iPhoneの方は以下を試してみてください
+- [ChromeのWebストアページ](https://chromewebstore.google.com/detail/%E6%94%BE%E9%80%81%E5%A4%A7%E5%AD%A6%E6%8E%88%E6%A5%AD%E3%83%96%E3%83%A9%E3%82%A6%E3%82%B6/mjphckgpnhhjfdpgkblomeiehjgeaagb)
+- [GitHub](https://github.com/shin1007/ouj_browser/tree/main/ouj-chromium-extension)
+
+・iPhoneの方は以下のブラウザでインストールを試みてください。
 - [Orion Browser by Kagi](https://apps.apple.com/jp/app/orion-browser-by-kagi/id1484498200)
 
-・Androidの方は以下を試してみてください（未テストなので動作報告いただけると嬉しいです）
+・Androidの方は以下のブラウザでインストールを試みてください（未テストなので動作報告いただけると嬉しいです）
 - [Quettaブラウザ](https://play.google.com/store/apps/details?id=net.quetta.browser)
 - [Yandex browser](https://play.google.com/store/apps/details?id=com.yandex.browser)
 
-・Androidで以下のブラウザはダメっぽいですが、いずれ対応するかも。
+・Androidで以下のブラウザはダメっぽいですが、いずれ対応するかもしれません。
 - [Microsoft Edge Canary](https://play.google.com/store/apps/details?id=com.microsoft.emmx.canary&hl=ja)
 
 
