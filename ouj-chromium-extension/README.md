@@ -19,8 +19,8 @@
 - [Microsoft Edge Canary](https://play.google.com/store/apps/details?id=com.microsoft.emmx.canary&hl=ja)
 
 
-### 変更点（2025.11.12）
-- iPhone（Orion Browser）だと動画ページでの動作がうまくいかなくなったので微調整
+### 変更点（2025.11.14）
+- 再生速度の選択肢を変更
 
 
 ## 現在の機能
@@ -181,5 +181,8 @@
 ### 変更点（2025.11.11）
 - ログインページで遷移先が分かるようにしました。
 - おすすめ機能で動画の重複が見られたため、回避できるような措置を講じました。
+
+### 変更点（2025.11.12）
+- iPhone（Orion Browser）だと動画ページでの動作がうまくいかなくなったので微調整
 
 https://amzn.to/45AFmxb
