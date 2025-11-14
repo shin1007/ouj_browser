@@ -14,7 +14,10 @@ async function insertPrevNextLinks(titleElement) {
   if (!prev && !next) {
     return;
   }
-  
+  // 既存のリンクがあれば一度消す
+  const old = document.getElementById('prev-next-links');
+  if (old) old.remove();
+
   // リンク用要素生成
   const container = document.createElement('div');
   container.id = 'prev-next-links';
@@ -147,9 +150,6 @@ async function insertPrevNextLinks(titleElement) {
     emptyDiv.style.cssText = 'flex: 1; min-width: 0;';
     container.appendChild(emptyDiv);
   }
-  // 既存のリンクがあれば一度消す
-  const old = document.getElementById('prev-next-links');
-  if (old) old.remove();
 
   // タイトル要素の直後に挿入
   if (titleElement.nextSibling) {

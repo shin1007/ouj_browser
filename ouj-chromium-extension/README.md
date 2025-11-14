@@ -1,25 +1,26 @@
 ##【放送大学授業ブラウザ】
 
-放送大学（The Open University of Japan）の動画視聴や学習を、もっと便利に / 快適にするChrome拡張機能です。[ChromeのWebストアページ](https://chromewebstore.google.com/detail/%E6%94%BE%E9%80%81%E5%A4%A7%E5%AD%A6%E6%8E%88%E6%A5%AD%E3%83%96%E3%83%A9%E3%82%A6%E3%82%B6/mjphckgpnhhjfdpgkblomeiehjgeaagb), [GitHub](https://github.com/shin1007/ouj_browser)
-
+放送大学（The Open University of Japan）の動画視聴や学習を、もっと便利に / 快適にするChrome拡張機能です。
 
 ・[こちらのページ](https://v.ouj.ac.jp/view/ouj/#/navi/home)をブックマークしておくと使いやすくなるかと思います。
 
 
-・iPhoneの方は以下を試してみてください
+- [ChromeのWebストアページ](https://chromewebstore.google.com/detail/%E6%94%BE%E9%80%81%E5%A4%A7%E5%AD%A6%E6%8E%88%E6%A5%AD%E3%83%96%E3%83%A9%E3%82%A6%E3%82%B6/mjphckgpnhhjfdpgkblomeiehjgeaagb)
+- [GitHub](https://github.com/shin1007/ouj_browser/tree/main/ouj-chromium-extension)
+
+・iPhoneの方は以下のブラウザでインストールを試みてください。
 - [Orion Browser by Kagi](https://apps.apple.com/jp/app/orion-browser-by-kagi/id1484498200)
 
-・Androidの方は以下を試してみてください（未テストなので動作報告いただけると嬉しいです）
+・Androidの方は以下のブラウザでインストールを試みてください（未テストなので動作報告いただけると嬉しいです）
 - [Quettaブラウザ](https://play.google.com/store/apps/details?id=net.quetta.browser)
 - [Yandex browser](https://play.google.com/store/apps/details?id=com.yandex.browser)
 
-・Androidで以下のブラウザはダメっぽいですが、いずれ対応するかも。
+・Androidで以下のブラウザはダメっぽいですが、いずれ対応するかもしれません。
 - [Microsoft Edge Canary](https://play.google.com/store/apps/details?id=com.microsoft.emmx.canary&hl=ja)
 
 
-### 変更点（2025.11.11）
-- ログインページで遷移先が分かるようにしました。
-- おすすめ機能で動画の重複が見られたため、回避できるような措置を講じました。
+### 変更点（2025.11.14）
+- 再生速度の選択肢を変更
 
 
 ## 現在の機能
@@ -33,7 +34,7 @@
 - お気に入りボタン（科目を追加）
 - 検索で飛んできたときにも動画の上に科目を表示
 - 動画の自動再生（失敗することが多いです）
-- 再生状況を逐次保存（ほんの少し一時停止するので、徳にスマホだと違和感が出るかもしれません。）
+- 再生状況を逐次保存（ほんの少し一時停止するので、特にスマホだと違和感が出るかもしれません。）
 - 動画後半の自動スキップ機能
 - ログインを要求されたときにログインページに自動遷移
 - 視聴動画のシェア機能（科目名、授業名、ハッシュタグ、URLがコピーされます）
@@ -176,5 +177,12 @@
 
 ### 変更点（2025.11.2）
 - ラジオ番組の字幕付加実験の対応方法を変更（個別カテゴリ指定でしたが、grandParentカテゴリで判断できるようにしました。）
+
+### 変更点（2025.11.11）
+- ログインページで遷移先が分かるようにしました。
+- おすすめ機能で動画の重複が見られたため、回避できるような措置を講じました。
+
+### 変更点（2025.11.12）
+- iPhone（Orion Browser）だと動画ページでの動作がうまくいかなくなったので微調整
 
 https://amzn.to/45AFmxb

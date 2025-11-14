@@ -50,10 +50,11 @@ function insertSettingsPanel(targetElement) {
 
   // 再生速度の選択肢を生成
   let speedOptions = '';
-  for (let i = 0.5; i <= 1.6; i += 0.1) {
-    const speedValue = i.toFixed(1);
+  const speeds = [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.75, 2.0, 2.5, 3.0];
+  for (const speed of speeds) {
+    const speedValue = speed.toFixed(1);
     // 浮動小数点数の比較誤差を考慮
-    const selected = Math.abs(playbackSpeed - i) < 0.01 ? 'selected' : '';
+    const selected = Math.abs(playbackSpeed - speed) < 0.01 ? 'selected' : '';
     speedOptions += `<option value="${speedValue}" ${selected}>${speedValue}x</option>`;
   }
 
