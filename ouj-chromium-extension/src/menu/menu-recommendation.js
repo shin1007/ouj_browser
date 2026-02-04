@@ -107,7 +107,8 @@ async function getRecommendFromFavorites(favorites, excludeCategoryIds) {
     [favorites[i], favorites[j]] = [favorites[j], favorites[i]];
   }
   // Aliasのリストを作る（IDが別でも同じエイリアスの同じ科目がある場合に対応する）
-  const allCategories = await window.getCategoriesData();
+  let allCategories = await window.getCategoriesData();
+  if (!Array.isArray(allCategories)) allCategories = [];
   const excludeCategoryAliases = new Set();
   allCategories.forEach(category => {
     if (excludeCategoryIds.has(category.categoryId)) {
