@@ -14,12 +14,21 @@ async function waitForPasswordAndLogin() {
                 usernameField.focus();
 
                 // 入力を監視
+                let autoLoginEnabled = true;
                 const interval = setInterval(() => {
-                    if (passwordField.value.length > 0) {
+                    const len = passwordField.value.length;
+                    // 1文字以上入力された場合は自動ログインをオフ
+                    if (len > 0 && len <= 7) {
+                        autoLoginEnabled = false;
+                        clearInterval(interval);
+                        return;
+                    }
+                    // 8文字以上で自動ログイン有効時のみ自動クリック
+                    if (len > 0 && autoLoginEnabled && len > 7) {
                         clearInterval(interval);
                         loginButton.click();
                     }
-                }, 200);
+                }, 100);
 
                 // 3分で監視終了
                 setTimeout(() => {
