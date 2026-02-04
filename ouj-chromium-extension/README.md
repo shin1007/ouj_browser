@@ -19,8 +19,8 @@
 - [Microsoft Edge Canary](https://play.google.com/store/apps/details?id=com.microsoft.emmx.canary&hl=ja)
 
 
-### 変更点（2025.11.14）
-- 再生速度の選択肢を変更
+### 変更点（2026.2.4）
+- パスワードを手入力している場合に自動でログインボタンをクリックする機能を無効化
 
 
 ## 現在の機能
@@ -184,5 +184,8 @@
 
 ### 変更点（2025.11.12）
 - iPhone（Orion Browser）だと動画ページでの動作がうまくいかなくなったので微調整
+
+### 変更点（2025.11.14）
+- 再生速度の選択肢を変更
 
 https://amzn.to/45AFmxb
