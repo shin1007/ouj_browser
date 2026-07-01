@@ -236,7 +236,7 @@
   .recommend-panel-close {
     color: #9ca3af;
   }
-  
+
   .favorite-panel-close:hover,
   .history-panel-close:hover,
   .recommend-panel-close:hover {
@@ -578,7 +578,7 @@
     border-color: #6b7280;
     color: #9ca3af;
   }
-} 
+}
 
 /* 履歴グループのスタイル */
 .history-group {

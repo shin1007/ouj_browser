@@ -4,7 +4,8 @@ const MENU_CONFIG = {
   items: [
     { id: "favorites", text: "お気に入り", icon: "star" },
     { id: "history", text: "履歴", icon: "time" },
-    { id: "recommend", text: "おすすめ動画", icon: "play" }
+    { id: "recommend", text: "おすすめ動画", icon: "play" },
+    { id: "year", text: "年度別", icon: "calendar" }
   ]
 };
 const LEFT_SELECTOR = '#menu > menu-navi > ion-content > div.scroll-content > ion-content > div.scroll-content > ion-list:nth-child(3)';
@@ -173,6 +174,10 @@ function createMenuList() {
   const recommendItem = menuList.querySelector('#recommend-menu-item');
   if (recommendItem) {
     recommendItem.addEventListener('click', window.handleRecommendPanelOpen);
+  }
+  const yearItem = menuList.querySelector('#year-menu-item');
+  if (yearItem) {
+    yearItem.addEventListener('click', window.handleYearMenuOpen);
   }
   return menuList;
 }

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(curl -s -o /tmp/ouj.css \"https://v.ouj.ac.jp/module/classtream_viewer3/assets/css/tenant/ouj.css\" -w \"size=%{size_download} code=%{http_code}\\\\n\")",
+      "Read(//tmp/**)"
+    ]
+  }
+}
