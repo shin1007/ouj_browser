@@ -22,7 +22,6 @@
         "*://*.ouj.ac.jp/*"
       ],
       "css": [
-        "menu/favorite-panel.css",
         "thumbnail-progress.css"
       ],
       "js": [
@@ -35,11 +34,11 @@
         "utils/goToLoginPage.js",
         "utils/thumbnail-progress.js",
         "utils/kuromoji-helper.js",
+        "menu/menu-native-shell.js",
         "menu/menu-favorites.js",
         "menu/menu-history.js",
         "menu/menu-recommendation.js",
         "menu/menu-year.js",
-        "menu/menu-panel.js",
         "menu/menu.js",
         "page-video/video-ending.js",
         "page-video/video-playback-management.js",

@@ -309,181 +309,15 @@ async function createRecommendListData() {
   return [...historyList, ...favoriteList, ...similarList];
 }
 
-function handleRecommendPanelOpen() {
-  // ダミーカードHTML生成は従来通り
-  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const cardBg = isDark ? '#232c3a' : '#fff';
-  const cardText = isDark ? '#fff' : '#222';
-  const cardSubText = isDark ? '#b0b8c9' : '#666';
-  const barBg = isDark ? '#374151' : '#e5e7eb';
-  const thumbBg = isDark ? '#444' : '#eee';
-  const dummyCards = Array.from({ length: 5 }, (_, i) => `
-    <div class="recommend-card" style="display:block;width:100%;background:${cardBg};border-radius:14px;box-shadow:0 2px 8px rgba(30,40,60,0.10);margin-bottom:8px;padding:0;opacity:0.7;">
-      <div style="display:flex;align-items:flex-start;gap:16px;padding:16px 20px;">
-        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:110px;">
-          <div style="display:block;width:110px;height:62px;background:${thumbBg};border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(30,40,60,0.10);animation:pulse 1.5s ease-in-out infinite;"></div>
-          <div style="font-size:10px;color:${isDark ? '#60a5fa' : '#3b82f6'};background:${isDark ? '#60a5fa20' : '#3b82f620'};padding:2px 6px;border-radius:4px;text-align:center;font-weight:500;width:fit-content;margin:0 auto;animation:pulse 1.5s ease-in-out infinite;">取得中</div>
-        </div>
-        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;justify-content:center;">
-          <div style="display:flex;align-items:baseline;gap:8px;">
-            <div style="font-size:15px;font-weight:600;color:${cardText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:18px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
-            <div style="font-size:12px;color:${cardSubText};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;height:14px;background:${barBg};border-radius:4px;width:80px;animation:pulse 1.5s ease-in-out infinite;"></div>
-          </div>
-          <div style="font-size:12px;color:${cardSubText};margin:2px 0 4px 0;text-align:left;height:36px;background:${barBg};border-radius:4px;animation:pulse 1.5s ease-in-out infinite;"></div>
-          <div style="height:7px;background:${barBg};border-radius:4px;overflow:hidden;width:100%;margin-top:4px;box-shadow:0 1px 2px rgba(30,40,60,0.08);animation:pulse 1.5s ease-in-out infinite;"></div>
-        </div>
-      </div>
-    </div>
-  `).join('');
-  window.openPanel({
-    id: 'recommend-list-panel',
-    className: 'recommend-panel',
-    title: 'おすすめ動画',
-    iconHtml: getIconHtml('recommend'),
-    actionHtml: '',
-    searchBoxHtml: createDropdownHtml(),
-    listHtml: dummyCards,
-    closeBtnId: 'close-recommend-list-panel',
-    contentClass: 'recommend-panel-content',
-    listClass: 'history-list',
-    fetchData: async () => {
-      // キャッシュがあれば即返す。なければ取得
-      const historyLevel = window.getSetting('history-recommend-level', 2);
-      const favoriteLevel = window.getSetting('favorite-recommend-level', 5);
-      const similarLevel = window.getSetting('similar-recommend-level', 3);
+// ここからネイティブな動画一覧ページ（右ペイン）と同じ見た目の表示部分
+// オーバーレイの共通基盤はmenu-native-shell.jsを利用する
 
-      // ドロップダウンの値を更新
-      const historySelect = document.getElementById('history-recommend-level');
-      if (historySelect) historySelect.value = historyLevel;
-
-      const favoriteSelect = document.getElementById('favorite-recommend-level');
-      if (favoriteSelect) favoriteSelect.value = favoriteLevel;
-
-      const similarSelect = document.getElementById('similar-recommend-level');
-      if (similarSelect) similarSelect.value = similarLevel;
-
-
-
-      if (window.oujRecommendCache && window.oujRecommendCache.data) {
-        // 裏で再取得も走らせておく
-        prefetchRecommendListData();
-        return window.oujRecommendCache.data;
-      } else {
-        const data = await createRecommendListData();
-        window.oujRecommendCache = { data, lastFetched: Date.now() };
-        return data;
-      }
-    },
-    renderList: renderRecommendListHtml,
-    setupExtraEventListeners: (panel, closePanel) => {
-      const setupDropdownListener = (id, settingKey) => {
-        const dropdown = panel.querySelector(`#${id}`);
-        if (dropdown) {
-          dropdown.addEventListener('change', (event) => {
-            window.saveSetting(settingKey, parseInt(event.target.value, 10));
-            // おすすめリストを再取得して再描画
-            createRecommendListData().then(recommendList => {
-              renderRecommendListHtml(panel, closePanel, recommendList);
-            });
-          });
-        }
-      };
-      setupDropdownListener('history-recommend-level', 'history-recommend-level');
-      setupDropdownListener('favorite-recommend-level', 'favorite-recommend-level');
-      setupDropdownListener('similar-recommend-level', 'similar-recommend-level');
-    }
-  });
-}
-
-function renderRecommendListHtml(panel, closePanel, recommendList) {
-  let categories = [];
-  if (typeof window.getCategoriesData === 'function') {
-    window.getCategoriesData().then(cats => { categories = cats; render(); });
-  } else {
-    render();
-  }
-  function render() {
-    let isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    let listHtml = recommendList.map(item => {
-      let thumb = '';
-      if (item.contentId) {
-        thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail/large2`;
-      }
-      if (!thumb) {
-        thumb = item.thumbnailUrl || item.imageUrl || '';
-      }
-      if (!thumb && item.contentId) {
-        thumb = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${item.contentId}/thumbnail`;
-      }
-      let courseName = '';
-      if (Array.isArray(categories) && item.categoryId) {
-        const cat = categories.find(c => c.categoryId == item.categoryId);
-        courseName = cat ? cat.name : '';
-        courseName = courseName.replace(/^[0-9]+\s*/, '');
-        courseName = courseName.replace(/\s[0-9]+[A-Za-z０-９ａ-ｚＡ-Ｚ]*$/, '');
-      }
-      let sourceLabel = '', sourceColor = '';
-      if (item.source === 'history') {
-        sourceLabel = '履歴';
-        sourceColor = isDark ? '#60a5fa' : '#3b82f6';
-      } else if (item.source === 'favorites') {
-        sourceLabel = 'お気に入り';
-        sourceColor = isDark ? '#fbbf24' : '#f59e0b';
-      } else if (item.source === 'similar') {
-        sourceLabel = '類似';
-        sourceColor = isDark ? '#10b981' : '#059669';
-      }
-      const summary = item.summary || '';
-      let progress = item.progress || 0;
-      const dateStr = item.dateStr || '';
-      return window.renderVideoCard({
-        contentId: item.contentId,
-        categoryId: item.categoryId,
-        title: item.title,
-        courseName,
-        summary,
-        progress,
-        dateStr,
-        showDelete: false,
-        cardType: 'recommend',
-        isDark,
-        sourceLabel,
-        sourceColor
-      });
-    }).join('');
-    if (!listHtml) listHtml = `<div class=\"history-empty\" style=\"color:${isDark ? '#fff' : '#222'};padding:16px;text-align:center;\">おすすめ動画はありません（全て再生済み）</div>`;
-    panel.querySelector('.recommend-panel-content').innerHTML = `<div class=\"history-list\">${listHtml}</div>`;
-    // setupListItemEventsで共通化
-    window.setupListItemEvents(panel, '.recommend-card', {
-      onClick: (event, item) => {
-        closePanel();
-      },
-      onKeydown: (event, item, index, items) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          item.click();
-        } else if (event.key === 'ArrowDown') {
-          event.preventDefault();
-          const nextItem = items[index + 1];
-          if (nextItem) nextItem.focus();
-        } else if (event.key === 'ArrowUp') {
-          event.preventDefault();
-          const prevItem = items[index - 1];
-          if (prevItem) prevItem.focus();
-        }
-      }
-    });
-  }
-}
-
-function createDropdownHtml() {
-  // おすすめ機能用に3つのドロップダウンを生成。
-  // 1つ目：履歴、2つ目：お気に入り、3つ目：類似
-  // それぞれ整数で1~10までの値を取り、10が一番多く表示される。
+// 履歴・お気に入り・類似それぞれの表示件数を選ぶドロップダウン（ネイティブの
+// 並び順選択ion-item.sortの位置を再利用する）
+function buildRecommendTopHtml() {
   const historyLevel = window.getSetting('history-recommend-level', 2);
   const favoriteLevel = window.getSetting('favorite-recommend-level', 5);
   const similarLevel = window.getSetting('similar-recommend-level', 3);
-
   const createOptions = (selectedValue) => {
     let options = '';
     for (let i = 0; i <= 10; i++) {
@@ -491,31 +325,129 @@ function createDropdownHtml() {
     }
     return options;
   };
-  const isPortrait = window.innerHeight > window.innerWidth;
-  const historyLabel = isPortrait ? '履歴' : '履歴から';
-  const favoriteLabel = isPortrait ? '気入' : 'お気に入りから';
-  const similarLabel = isPortrait ? '類似' : '類似から';
-  const ken = isPortrait ? '' : '件';
   return `
-    <div class="recommend-dropdowns">
-      <label for="history-recommend-level">${historyLabel}</label>
-      <select id="history-recommend-level" title="履歴からのおすすめ表示数">
-      ${createOptions(historyLevel)}
-      </select>
-      <span>${ken} </span>
-      <label for="favorite-recommend-level">${favoriteLabel}</label>
-      <select id="favorite-recommend-level" title="お気に入りからのおすすめ表示数">
-      ${createOptions(favoriteLevel)}
-      </select>
-      <span>${ken} </span>
-      <label for="similar-recommend-level">${similarLabel}</label>
-      <select id="similar-recommend-level" title="類似からのおすすめ表示数">
-      ${createOptions(similarLevel)}
-      </select>
-      <span>${ken}</span>
-    </div>
-`;
+    <ion-item class="sort item item-block item-md">
+      <div class="item-inner">
+        <div class="input-wrapper">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;width:100%;font-size:14px;color:#374151;">
+            <label for="history-recommend-level">履歴から</label>
+            <select id="history-recommend-level" title="履歴からのおすすめ表示数">${createOptions(historyLevel)}</select>
+            <span>件</span>
+            <label for="favorite-recommend-level">お気に入りから</label>
+            <select id="favorite-recommend-level" title="お気に入りからのおすすめ表示数">${createOptions(favoriteLevel)}</select>
+            <span>件</span>
+            <label for="similar-recommend-level">類似から</label>
+            <select id="similar-recommend-level" title="類似からのおすすめ表示数">${createOptions(similarLevel)}</select>
+            <span>件</span>
+          </div>
+        </div>
+      </div>
+    </ion-item>
+  `;
 }
+
+function buildRecommendItemHtml(item, categories) {
+  const categoryPath = window.buildCategoryPathText(categories, item.categoryId);
+  let sourceLabel = '';
+  let sourceColor = '';
+  if (item.source === 'history') {
+    sourceLabel = '履歴';
+    sourceColor = '#3b82f6';
+  } else if (item.source === 'favorites') {
+    sourceLabel = 'お気に入り';
+    sourceColor = '#f59e0b';
+  } else if (item.source === 'similar') {
+    sourceLabel = '類似';
+    sourceColor = '#059669';
+  }
+  const badgeHtml = sourceLabel
+    ? `<span style="display:inline-block;font-size:11px;color:${sourceColor};background:${sourceColor}20;padding:2px 8px;border-radius:4px;font-weight:500;">${sourceLabel}</span>`
+    : '';
+  return window.buildNativeVideoItemHtml({
+    contentId: item.contentId,
+    categoryId: item.categoryId,
+    title: item.title,
+    summary: item.summary,
+    categoryPath,
+    rightAreaHtml: badgeHtml,
+    progressPercent: Math.floor((item.progress || 0) * 100)
+  });
+}
+
+function handleRecommendPanelOpen() {
+  window.openNativeOverlay((overlay) => {
+    let categories = [];
+
+    function wireItemEvents() {
+      overlay.querySelectorAll('.native-video-button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          // おすすめ動画はその動画自体の再生ページへ直接遷移する
+          const contentId = btn.getAttribute('data-content-id');
+          const categoryId = btn.getAttribute('data-category-id');
+          if (contentId) {
+            window.removeNativeOverlay();
+            window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${contentId}&ct=V&ca=${categoryId || ''}`;
+          }
+        });
+      });
+    }
+
+    function renderList(recommendList) {
+      const listEl = overlay.querySelector('#common-list-content');
+      if (listEl) {
+        listEl.innerHTML = recommendList.length
+          ? recommendList.map((item) => buildRecommendItemHtml(item, categories)).join('')
+          : '<div style="padding:16px;color:#666;">おすすめ動画はありません（全て再生済み）</div>';
+      }
+      wireItemEvents();
+    }
+
+    const refresh = () => {
+      createRecommendListData().then((recommendList) => {
+        window.oujRecommendCache = { data: recommendList, lastFetched: Date.now() };
+        if (!document.body.contains(overlay)) return;
+        renderList(recommendList);
+      });
+    };
+
+    function wireDropdowns() {
+      const setupDropdownListener = (id, settingKey) => {
+        const dropdown = overlay.querySelector(`#${id}`);
+        if (dropdown) {
+          dropdown.addEventListener('change', (event) => {
+            window.saveSetting(settingKey, parseInt(event.target.value, 10));
+            refresh();
+          });
+        }
+      };
+      setupDropdownListener('history-recommend-level', 'history-recommend-level');
+      setupDropdownListener('favorite-recommend-level', 'favorite-recommend-level');
+      setupDropdownListener('similar-recommend-level', 'similar-recommend-level');
+    }
+
+    overlay.innerHTML = window.renderNativeShellHtml({
+      breadcrumbHtml: window.buildNativeBreadcrumbHtml([{ text: 'おすすめ動画' }]),
+      mainHtml: window.renderNativeVideoListMainHtml({
+        topHtml: buildRecommendTopHtml(),
+        itemsHtml: '<div style="padding:16px;color:#666;">読み込み中...</div>'
+      })
+    });
+    wireDropdowns();
+
+    window.getCategoriesData().then((cats) => {
+      if (!document.body.contains(overlay)) return;
+      categories = cats;
+      if (window.oujRecommendCache && window.oujRecommendCache.data) {
+        renderList(window.oujRecommendCache.data);
+        // 裏で再取得も走らせておく（表示中の一覧はすぐには更新しない）
+        prefetchRecommendListData();
+      } else {
+        refresh();
+      }
+    });
+  });
+}
+
 window.oujRecommendCache = {
   data: null,
   lastFetched: 0

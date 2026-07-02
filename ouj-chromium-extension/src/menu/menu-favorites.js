@@ -1,256 +1,180 @@
 // お気に入り機能（menu.jsから分離）
-// お気に入りリストの描画・データ取得・パネル操作関連
+// ネイティブなカテゴリー一覧ページ（右ペイン）と同じ見た目で科目一覧を表示する
+// オーバーレイの共通基盤はmenu-native-shell.jsを利用する
 
-
-function createFavoriteListData() {
-  const favorites = window.getSetting('favorites', []);
-  return getPanelDataCoursePattern(favorites).then(({ categories, idToName, items: favoriteItemsWithParent }) => {
-    function getPinnedFavorites() {
-      try {
-        return window.getSetting('pinnedFavorites', []);
-      } catch (e) {
-        return [];
-      }
-    }
-    const pinnedFavorites = getPinnedFavorites();
-    favoriteItemsWithParent.forEach(item => {
-      item.pinned = pinnedFavorites.includes(item.id);
-    });
-    return { favorites, categories, idToName, favoriteItemsWithParent };
+async function fetchFavoriteItems(favorites, categories) {
+  const idToCategory = {};
+  (Array.isArray(categories) ? categories : []).forEach((cat) => {
+    idToCategory[cat.categoryId] = cat;
+    idToCategory[cat.categoryId.toString()] = cat;
   });
+  const pinned = window.getSetting('pinnedFavorites', []);
+  return Promise.all(favorites.map(async (id) => {
+    const category = idToCategory[id];
+    const parentCategoryName = await window.getParentCategoryName(id);
+    return {
+      id,
+      name: category ? category.name : `不明な科目 (ID: ${id})`,
+      summary: category ? category.summary : '',
+      parentCategoryName: parentCategoryName || 'その他',
+      pinned: pinned.includes(id)
+    };
+  }));
+}
+
+async function createFavoriteListData() {
+  const favorites = window.getSetting('favorites', []);
+  if (!favorites.length) return [];
+  const categories = await window.getCategoriesData();
+  let items = await fetchFavoriteItems(favorites, categories);
+  // キャッシュが古く科目名が引けなかった場合は強制的に再取得して1回だけ再試行する
+  if (items[0] && items[0].name.startsWith('不明な科目')) {
+    const freshCategories = await window.getCategoriesData(0);
+    items = await fetchFavoriteItems(favorites, freshCategories);
+  }
+  return items;
+}
+
+function groupFavoriteItems(items) {
+  const pinnedItems = items.filter((item) => item.pinned);
+  const unpinnedItems = items.filter((item) => !item.pinned);
+  const grouped = {};
+  unpinnedItems.forEach((item) => {
+    const key = item.parentCategoryName;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(item);
+  });
+  const sortedNames = Object.keys(grouped).sort((a, b) => {
+    const aNum = parseInt((a.match(/^[0-9]+/) || ['0'])[0], 10);
+    const bNum = parseInt((b.match(/^[0-9]+/) || ['0'])[0], 10);
+    return aNum - bNum;
+  });
+  return { pinnedItems, groups: sortedNames.map((name) => ({ name, items: grouped[name] })) };
+}
+
+function buildFavoriteItemHtml(item) {
+  const extraHtml = window.buildPinToggleHtml(item.id, item.pinned) + window.buildFavoriteToggleHtml(item.id, true);
+  return window.buildNativeCategoryItemHtml({
+    text: item.name,
+    buttonClass: 'favorite-course-button',
+    dataAttrs: { 'category-id': item.id },
+    extraHtml,
+    subText: item.summary || ''
+  });
+}
+
+function buildFavoriteListHtml(items) {
+  if (!items.length) {
+    return '<div style="padding:16px;color:#666;">該当するお気に入りはありません</div>';
+  }
+  const { pinnedItems, groups } = groupFavoriteItems(items);
+  let html = '';
+  if (pinnedItems.length) {
+    html += window.buildNativeSectionHeaderHtml('ピン止め');
+    html += pinnedItems.map(buildFavoriteItemHtml).join('');
+  }
+  groups.forEach((group) => {
+    html += window.buildNativeSectionHeaderHtml(group.name);
+    html += group.items.map(buildFavoriteItemHtml).join('');
+  });
+  return html;
 }
 
 function handleFavoritesPanelOpen() {
-  window.openPanel({
-    id: 'favorite-list-panel',
-    className: 'favorite-panel',
-    title: 'お気に入り科目一覧',
-    iconHtml: window.getIconHtml('favorite'),
-    actionHtml: '',
-    searchBoxHtml: window.createSearchBoxHtml('favorite'),
-    listHtml: '',
-    closeBtnId: 'close-favorite-list-panel',
-    contentClass: 'favorite-panel-content',
-    listClass: 'favorite-list',
-    fetchData: createFavoriteListData,
-    renderList: renderFavoriteListHtml
-  });
-}
+  window.openNativeOverlay((overlay) => {
+    let allItems = [];
+    let filterValue = '';
 
-function removePinnedFavorite(categoryId) {
-  let pinned = window.getSetting('pinnedFavorites', []);
-  pinned = pinned.filter(id => id !== categoryId);
-  window.saveSetting('pinnedFavorites', pinned);
-  let saveResult = window.saveSetting('pinnedFavorites', pinned);
-  if (saveResult && typeof saveResult.then === 'function') {
-    saveResult.then(() => {
-      if (window.prefetchRecommendListData) window.prefetchRecommendListData();
-    });
-  } else {
-    if (window.prefetchRecommendListData) window.prefetchRecommendListData();
-  }
-}
-// 科目パターン（お気に入り）
-async function getPanelDataCoursePattern(ids) {
-  // ids: categoryIdの配列
-  let categories = await window.getCategoriesData();
-  const idToName = {};
-  categories.forEach(cat => {
-    idToName[cat.categoryId] = cat.name;
-    idToName[cat.categoryId.toString()] = cat.name;
-  });
-  const items = await Promise.all(ids.map(async (id) => {
-    const categoryName = idToName[id];
-    const parentCategoryName = await window.getParentCategoryName(id);
-    const displayName = categoryName || `不明な科目 (ID: ${id})`;
-    return {
-      id: id,
-      categoryName: displayName,
-      parentCategoryName: parentCategoryName || 'その他',
-      hasParent: !!parentCategoryName
-    };
-  }));
-  if (items[0].categoryName.startsWith('不明な科目')){
-    return await getPanelDataCoursePatternAgain(ids)
-  }
-  return { categories, idToName, items };
-}
-async function getPanelDataCoursePatternAgain(ids) {
-  // ids: categoryIdの配列
-  let categories = await window.getCategoriesData(minute=0);
-  const idToName = {};
-  categories.forEach(cat => {
-    idToName[cat.categoryId] = cat.name;
-    idToName[cat.categoryId.toString()] = cat.name;
-  });
-  const items = await Promise.all(ids.map(async (id) => {
-    const categoryName = idToName[id];
-    const parentCategoryName = await window.getParentCategoryName(id);
-    const displayName = categoryName || `不明な科目 (ID: ${id})`;
-    return {
-      id: id,
-      categoryName: displayName,
-      parentCategoryName: parentCategoryName || 'その他',
-      hasParent: !!parentCategoryName
-    };
-  }));
-  return { categories, idToName, items };
-}
-
-function renderFavoriteListHtml(panel, closePanel, { favorites, categories, idToName, favoriteItemsWithParent }) {
-  let searchValue = '';
-  function getPinnedFavorites() {
-    try {
-      return window.getSetting('pinnedFavorites', []);
-    } catch (e) {
-      return [];
-    }
-  }
-  function setPinnedFavorites(pinned) {
-    window.saveSetting('pinnedFavorites', pinned);
-  }
-  async function renderFavoriteList(filter = '') {
-    const pinnedFavorites = getPinnedFavorites();
-    // 毎回最新のpinned状態を反映
-    favoriteItemsWithParent.forEach(item => {
-      item.pinned = pinnedFavorites.includes(item.id);
-    });
-    let listHtml = '';
-    if (favorites.length) {
-      const filteredItems = filter.trim() ? favoriteItemsWithParent.filter(item => {
-        const keyword = filter.trim().toLowerCase();
-        return item.categoryName.toLowerCase().includes(keyword) || item.parentCategoryName.toLowerCase().includes(keyword);
-      }) : favoriteItemsWithParent;
-      const pinnedItems = filteredItems.filter(item => item.pinned);
-      const unpinnedItems = filteredItems.filter(item => !item.pinned);
-      const groupedFavorites = {};
-      unpinnedItems.forEach(item => {
-        const parentKey = item.parentCategoryName;
-        if (!groupedFavorites[parentKey]) {
-          groupedFavorites[parentKey] = [];
-        }
-        groupedFavorites[parentKey].push(item);
-      });
-      const sortedGroups = Object.entries(groupedFavorites).sort(([aName], [bName]) => {
-        const aNum = parseInt(aName.match(/^[0-9]+/)?.[0] || '0', 10);
-        const bNum = parseInt(bName.match(/^[0-9]+/)?.[0] || '0', 10);
-        return aNum - bNum;
-      });
-      let pinnedHtml = '';
-      if (pinnedItems.length) {
-        pinnedHtml = `
-          <div class="favorite-group">
-            <div class="favorite-group-header" style="display:flex;align-items:center;gap:6px;">
-              ${getIconHtml('pin')}
-              ピン止め
-            </div>
-            <ul class="favorite-group-list">
-              ${pinnedItems.map(item => `
-                <li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${item.categoryName}を開く">
-                  <div class="favorite-item-content">
-                    <div class="favorite-child-category">${item.categoryName}</div>
-                  </div>
-                  <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="ピンを外す" title="ピンを外す" style="background:none;border:none;cursor:pointer;padding:0 8px;">
-                    ${getIconHtml('pin', item.pinned)}
-                  </button>
-                  ${getIconHtml('arrow')}
-                </li>
-              `).join('')}
-            </ul>
-          </div>
-        `;
-      }
-      const groupHtmls = sortedGroups.map(([parentName, items]) => {
-        const sortedItems = items.sort((a, b) => {
-          const aNum = parseInt(a.categoryName.match(/^[0-9]+/)?.[0] || '0', 10);
-          const bNum = parseInt(b.categoryName.match(/^[0-9]+/)?.[0] || '0', 10);
-          return aNum - bNum;
-        });
-        const itemsHtml = sortedItems.map(item => {
-          return `<li class="favorite-item" data-category-id="${item.id}" tabindex="0" role="button" aria-label="${parentName}の${item.categoryName}を開く">
-            <div class="favorite-item-content">
-              <div class="favorite-child-category">${item.categoryName}</div>
-            </div>
-            <button class="favorite-pin-btn" data-category-id="${item.id}" aria-label="${item.pinned ? 'ピンを外す' : 'ピン止め'}" title="${item.pinned ? 'ピンを外す' : 'ピン止め'}" style="background:none;border:none;cursor:pointer;padding:0 8px;">
-              ${getIconHtml('pin', item.pinned)}
-            </button>
-            ${getIconHtml('arrow')}
-            </li>`;
-        }).join('');
-        return `
-          <div class="favorite-group">
-            <div class="favorite-group-header">${parentName}</div>
-            <ul class="favorite-group-list">${itemsHtml}</ul>
-          </div>
-        `;
-      });
-      listHtml = pinnedHtml + groupHtmls.join('');
-      if (!filteredItems.length) {
-        listHtml = '<li class="favorite-empty">該当するお気に入りはありません</li>';
-      }
-    } else {
-      listHtml = '<li class="favorite-empty">お気に入りはありません</li>';
-    }
-    const listContainer = panel.querySelector('.favorite-list');
-    if (listContainer) {
-      listContainer.innerHTML = listHtml;
-    }
-    // setupListItemEventsで共通化
-    window.setupListItemEvents(panel, '.favorite-item', {
-      onClick: (event, item) => {
-        event.preventDefault();
-        const categoryId = item.getAttribute('data-category-id');
-        if (categoryId) {
-          closePanel();
-          setTimeout(() => {
+    // お気に入り星・ピン止めボタンは表示を更新するたびに作り直すので、
+    // イベントリスナーもその都度再登録する
+    function wireListEvents() {
+      overlay.querySelectorAll('.favorite-course-button').forEach((btn) => {
+        btn.addEventListener('click', (event) => {
+          if (event.target.closest('.favorite-btn') || event.target.closest('.pin-btn')) return;
+          const categoryId = btn.getAttribute('data-category-id');
+          if (categoryId) {
+            window.removeNativeOverlay();
             window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=${categoryId}`;
-          }, 200);
-        }
-      },
-      onKeydown: (event, item, index, items) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          item.click();
-        } else if (event.key === 'ArrowDown') {
-          event.preventDefault();
-          const nextItem = items[index + 1];
-          if (nextItem) nextItem.focus();
-        } else if (event.key === 'ArrowUp') {
-          event.preventDefault();
-          const prevItem = items[index - 1];
-          if (prevItem) prevItem.focus();
-        }
-      }
-    });
-    attachPinButtonListeners();
-  }
-  function attachPinButtonListeners() {
-    const pinButtons = panel.querySelectorAll('.favorite-pin-btn');
-    pinButtons.forEach(button => {
-      button.addEventListener('click', (event) => {
-        event.stopPropagation();
-        const categoryId = button.getAttribute('data-category-id');
-        let pinned = getPinnedFavorites();
-        if (pinned.includes(categoryId)) {
-          pinned = pinned.filter(id => id !== categoryId);
-        } else {
-          pinned.push(categoryId);
-        }
-        setPinnedFavorites(pinned);
-        renderFavoriteList(searchValue);
+          }
+        });
       });
+      overlay.querySelectorAll('.favorite-btn').forEach((favBtn) => {
+        const toggle = async (event) => {
+          event.stopPropagation();
+          event.preventDefault();
+          if (favBtn.dataset.busy === '1') return;
+          favBtn.dataset.busy = '1';
+          const categoryId = favBtn.getAttribute('data-category-id');
+          await window.toggleFavorite(categoryId);
+          allItems = await createFavoriteListData();
+          renderList();
+        };
+        favBtn.addEventListener('click', toggle);
+        favBtn.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            toggle(event);
+          }
+        });
+      });
+      overlay.querySelectorAll('.pin-btn').forEach((pinBtn) => {
+        const togglePin = async (event) => {
+          event.stopPropagation();
+          event.preventDefault();
+          if (pinBtn.dataset.busy === '1') return;
+          pinBtn.dataset.busy = '1';
+          const categoryId = pinBtn.getAttribute('data-category-id');
+          let pinned = window.getSetting('pinnedFavorites', []);
+          pinned = pinned.includes(categoryId) ? pinned.filter((id) => id !== categoryId) : [...pinned, categoryId];
+          window.saveSetting('pinnedFavorites', pinned);
+          allItems = await createFavoriteListData();
+          renderList();
+        };
+        pinBtn.addEventListener('click', togglePin);
+        pinBtn.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            togglePin(event);
+          }
+        });
+      });
+    }
+
+    // 検索ボックスは全体を再描画すると入力中にフォーカスが切れてしまうため、
+    // リスト部分（#favorite-native-list）だけを差し替える
+    function renderList() {
+      const keyword = filterValue.trim().toLowerCase();
+      const filtered = keyword
+        ? allItems.filter((item) => item.name.toLowerCase().includes(keyword) || item.parentCategoryName.toLowerCase().includes(keyword))
+        : allItems;
+      const listEl = overlay.querySelector('#favorite-native-list');
+      if (listEl) listEl.innerHTML = buildFavoriteListHtml(filtered);
+      wireListEvents();
+    }
+
+    overlay.innerHTML = window.renderNativeShellHtml({
+      breadcrumbHtml: window.buildNativeBreadcrumbHtml([{ text: 'お気に入り' }]),
+      extraAsideHtml: window.buildNativeSearchBoxHtml({ id: 'favorite-native-search', placeholder: '科目名・親カテゴリ名で検索' }),
+      asideListHtml: '<div id="favorite-native-list" style="padding:16px;color:#666;">読み込み中...</div>'
     });
-  }
-  // 検索ボックスイベント
-  const searchInput = panel.querySelector('#favorite-search-input');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      searchValue = e.target.value;
-      renderFavoriteList(searchValue);
+
+    const searchInput = overlay.querySelector('#favorite-native-search');
+    if (searchInput) {
+      searchInput.addEventListener('input', (event) => {
+        filterValue = event.target.value;
+        renderList();
+      });
+    }
+
+    createFavoriteListData().then((items) => {
+      // オーバーレイが（ナビゲーション等で）既に閉じられていれば描画しない
+      if (!document.body.contains(overlay)) return;
+      allItems = items;
+      renderList();
     });
-  }
-  renderFavoriteList('');
+  });
 }
+
+// グローバルwindowに関数を公開
 window.createFavoriteListData = createFavoriteListData;
 window.handleFavoritesPanelOpen = handleFavoritesPanelOpen;
-window.removePinnedFavorite = removePinnedFavorite;
