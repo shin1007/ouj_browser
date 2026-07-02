@@ -3,10 +3,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     {
       name: 'この拡張機能 (ouj-chromium-extension)',
       path: 'popup/licenses/LICENSE_this_extension.txt'
-    },
-    {
-      name: 'kuromoji.js',
-      path: 'popup/licenses/LICENSE_kuromoji.js.txt'
     }
     // 他のライブラリがあればここに追加
   ];

@@ -20,6 +20,7 @@ async function main() {
     return;
   }
   window.insertLeftMenu();
+  window.insertHeaderDarkModeToggle();
   window.startMenuOpeningMutationObserver();
   if (pageType.page === 'home') {
     // ホームページの処理を呼び出す

@@ -40,24 +40,8 @@
   box-shadow: 0 0 6px rgba(255, 0, 0, 0.7);
 }
 
-/* ダークモード対応 */
-@media (prefers-color-scheme: dark) {
-  .progress-bar-container {
-    background: rgba(255, 255, 255, 0.2);
-  }
-  
-  .progress-bar {
-    background: linear-gradient(90deg, #ff4444, #ff6666);
-  }
-  
-  .thumb-main:hover .progress-bar-container {
-    background: rgba(255, 255, 255, 0.3);
-  }
-  
-  .thumb-main:hover .progress-bar {
-    background: linear-gradient(90deg, #ff6666, #ff8888);
-  }
-}
+/* ダークモード対応はutils/dark-mode.cssの反転フィルターで一括対応するため、
+   ここでは個別のprefers-color-scheme分岐は行わない（二重に色が変化するのを防ぐため） */
 
 /* レスポンシブ対応 */
 @media (max-width: 768px) {

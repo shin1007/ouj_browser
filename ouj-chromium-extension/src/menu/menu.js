@@ -5,7 +5,8 @@ const MENU_CONFIG = {
     { id: "favorites", text: "お気に入り", icon: "star" },
     { id: "history", text: "履歴", icon: "time" },
     { id: "recommend", text: "おすすめ動画", icon: "play" },
-    { id: "year", text: "年度別", icon: "calendar" }
+    { id: "year", text: "年度別", icon: "calendar" },
+    { id: "darkmode", text: "ダークモード", icon: "moon" }
   ]
 };
 const LEFT_SELECTOR = '#menu > menu-navi > ion-content > div.scroll-content > ion-content > div.scroll-content > ion-list:nth-child(3)';
@@ -43,7 +44,7 @@ function createMenuHTML() {
                   </ion-icon>
                 </div>
                 <div class="text-area">
-                  ${item.text}
+                  ${item.text}${item.id === 'darkmode' ? ' <span class="ouj-darkmode-current-label"></span>' : ''}
                 </div>
               </div>
             </button>
@@ -179,7 +180,33 @@ function createMenuList() {
   if (yearItem) {
     yearItem.addEventListener('click', window.handleYearMenuOpen);
   }
+  const darkModeItem = menuList.querySelector('#darkmode-menu-item');
+  if (darkModeItem) {
+    updateDarkModeMenuLabel(darkModeItem);
+    darkModeItem.addEventListener('click', () => {
+      if (typeof window.cycleOujDarkModeSetting === 'function') {
+        window.cycleOujDarkModeSetting((next) => updateDarkModeMenuLabel(darkModeItem, next));
+      }
+    });
+  }
   return menuList;
+}
+
+// ヘッダー（拡張機能メニュー）内の「ダークモード」項目に、現在の設定値
+// （自動／ライト／ダーク）をラベルとして表示する
+function updateDarkModeMenuLabel(menuItemEl, settingValue) {
+  const labelEl = menuItemEl.querySelector('.ouj-darkmode-current-label');
+  if (!labelEl) return;
+  const labels = window.OUJ_DARK_MODE_LABELS || { auto: '自動', light: 'ライト', dark: 'ダーク' };
+  if (settingValue) {
+    labelEl.textContent = `（${labels[settingValue] || labels.auto}）`;
+    return;
+  }
+  if (typeof window.getOujDarkModeSetting === 'function') {
+    window.getOujDarkModeSetting((setting) => {
+      labelEl.textContent = `（${labels[setting] || labels.auto}）`;
+    });
+  }
 }
 
 // =========================
@@ -200,6 +227,84 @@ function createMenuList() {
 // =========================
 window.prefetchRecommendListData();
 
+
+// =========================
+// ヘッダー（画面上部のツールバー）への表示テーマ切替ボタン設置
+// ロゴ画像(img.logo-img)を目印にツールバーを特定し、検索ボックスの右側に
+// トグルボタンを挿入する。ロゴはinsertLeftMenuでも待機に使っている、
+// 常に存在する信頼できるアンカー要素。
+// =========================
+const HEADER_DARKMODE_TOGGLE_CLASS = 'ouj-header-darkmode-toggle';
+const HEADER_DARKMODE_ICONS = { auto: '🌓', light: '☀️', dark: '🌙' };
+
+function insertHeaderDarkModeToggle() {
+  if (typeof window.waitForElement !== 'function') {
+    setTimeout(insertHeaderDarkModeToggle, 100);
+    return;
+  }
+  window.waitForElement('img.logo-img[src="./assets/images/icon_logo.png"]', (logo) => {
+    const toolbarContent = logo.closest('.toolbar-content');
+    if (!toolbarContent) return;
+    // 重複挿入防止
+    if (toolbarContent.querySelector(`.${HEADER_DARKMODE_TOGGLE_CLASS}`)) return;
+
+    // .vod-list-searchはflexで残り幅いっぱいに広がるため、その外側(afterend)に
+    // 置くと折り返されてしまう。検索ボタン等と同じ行に収まるよう、内側の
+    // .search-area（検索欄・検索ボタンを横並びにしているコンテナ）の末尾に入れる。
+    const searchArea = toolbarContent.querySelector('.vod-list-search .search-area');
+
+    const toggle = document.createElement('span');
+    toggle.className = HEADER_DARKMODE_TOGGLE_CLASS;
+    toggle.setAttribute('role', 'button');
+    toggle.setAttribute('tabindex', '0');
+    Object.assign(toggle.style, {
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '32px',
+      height: '32px',
+      marginLeft: '8px',
+      flexShrink: '0',
+      cursor: 'pointer',
+      borderRadius: '50%',
+      fontSize: '18px',
+      lineHeight: '1',
+      userSelect: 'none'
+    });
+
+    const applyLabel = (setting) => {
+      const labels = window.OUJ_DARK_MODE_LABELS || { auto: '自動', light: 'ライト', dark: 'ダーク' };
+      toggle.textContent = HEADER_DARKMODE_ICONS[setting] || HEADER_DARKMODE_ICONS.auto;
+      toggle.title = `表示テーマ: ${labels[setting] || labels.auto}（クリックで切替）`;
+    };
+
+    if (typeof window.getOujDarkModeSetting === 'function') {
+      window.getOujDarkModeSetting(applyLabel);
+    } else {
+      applyLabel('auto');
+    }
+
+    const handleToggle = () => {
+      if (typeof window.cycleOujDarkModeSetting === 'function') {
+        window.cycleOujDarkModeSetting(applyLabel);
+      }
+    };
+    toggle.addEventListener('click', handleToggle);
+    toggle.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        handleToggle();
+      }
+    });
+
+    if (searchArea) {
+      searchArea.appendChild(toggle);
+    } else {
+      toolbarContent.appendChild(toggle);
+    }
+  });
+}
+window.insertHeaderDarkModeToggle = insertHeaderDarkModeToggle;
 
 // アイコンやSVGのHTMLを共通化
 function getIconHtml(type, filled = false) {

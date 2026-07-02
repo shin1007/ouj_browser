@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>放送大学授業ブラウザ</title>
     <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" href="../utils/dark-mode.css">
 </head>
 <body>
     <div id="popup-container">
         <h1>放送大学授業ブラウザ</h1>
-        
+
         <!-- 大きな放送大学ページボタン -->
         <div id="ouj-home-section">
             <button id="open-ouj-home" class="ouj-home-button">
@@ -17,7 +18,7 @@
                 <span class="button-text">放送授業のインターネット配信ページ</span>
             </button>
         </div>
-        
+
         <!-- 自動ログイン設定 -->
         <div id="auto-login-section">
             <label for="auto-login-checkbox" class="auto-login-label">
@@ -25,7 +26,19 @@
                 <span class="checkbox-text">未ログインの場合に自動でログイン画面を表示</span>
             </label>
         </div>
-        
+
+        <!-- 表示テーマ設定 -->
+        <div id="theme-section">
+            <label for="theme-select" class="theme-label">
+                <span class="checkbox-text">表示テーマ（放送大学サイト全体に適用）</span>
+            </label>
+            <select id="theme-select">
+                <option value="auto">自動（OSの設定に従う）</option>
+                <option value="light">ライト</option>
+                <option value="dark">ダーク</option>
+            </select>
+        </div>
+
         <!-- TODO: ポップアップやメニューのデザイン統一感を向上させる。UI/UXの一貫性や見た目の調整を検討すること。 -->
 
         <!-- OSSライセンス -->
@@ -40,6 +53,7 @@
         </div>
 
     </div>
+    <script src="../utils/dark-mode.js"></script>
     <script src="popup.js"></script>
     <script src="licenses.js"></script>
 </body>

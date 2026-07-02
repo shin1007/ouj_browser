@@ -4,17 +4,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 自動ログインのチェックボックス
     const autoLoginCheckbox = document.getElementById('auto-login-checkbox');
-    
+
+    // 表示テーマの選択欄
+    const themeSelect = document.getElementById('theme-select');
+
     // ポップアップが開いた際にボタンにフォーカスを当てる
     openOujHomeButton.focus();
-    
+
     // 保存された自動ログイン設定を読み込む
     chrome.storage.sync.get(['autoLogin'], function(result) {
         if (result.autoLogin !== undefined) {
             autoLoginCheckbox.checked = result.autoLogin;
         }
     });
-    
+
     // 自動ログイン設定の変更を保存
     autoLoginCheckbox.addEventListener('change', function() {
         chrome.storage.sync.set({
@@ -22,7 +25,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }, function() {
         });
     });
-    
+
+    // 保存された表示テーマ設定を読み込む（未設定時は自動＝OS追従）
+    chrome.storage.sync.get(['darkMode'], function(result) {
+        themeSelect.value = result.darkMode || 'auto';
+    });
+
+    // 表示テーマ設定の変更を保存
+    themeSelect.addEventListener('change', function() {
+        chrome.storage.sync.set({
+            darkMode: themeSelect.value
+        });
+    });
+
     // 放送大学ホームページを開く
     openOujHomeButton.addEventListener('click', function() {
         const targetUrl = "https://v.ouj.ac.jp/view/ouj/#/navi/home";
