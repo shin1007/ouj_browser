@@ -1,0 +1,74 @@
+/* 字幕表示時に動画が縮小されないようにする（設定でON/OFF可能） */
+/* html.ouj-caption-no-shrinkはvideo-subtitle-size.jsが設定に応じて付け外しする */
+
+/* 通常時: 動画は<video>にstyle="height:62%"のようなインラインスタイルを付けて
+   縮小し、その下に字幕パネル(.cls-sami-display)がスペースを取る形で表示される。
+   ここでは動画を常に本来のアスペクト比のまま表示し、字幕パネルは動画の下に
+   普通のブロックとして並べる。プレイヤー全体の高さ(#player-area)は
+   video-subtitle-size.jsが動画＋字幕の実測サイズに合わせて広げる。 */
+html.ouj-caption-no-shrink .theoplayer-container video {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* サイト側のCSSで #player-area に max-height: calc(100vh - 6em) が指定されており、
+   video-subtitle-size.jsでheightを!importantで広げても、この上限に阻まれて
+   実際の表示サイズは広がらないままだった(中身だけ計算通りの大きさになり、
+   後ろの要素にあふれて重なって見えていた)。字幕ぶん広げる以上、ビューポート
+   の高さを超えてもよいので、この上限を無効化する。 */
+html.ouj-caption-no-shrink #player-area {
+  max-height: none !important;
+}
+
+html.ouj-caption-no-shrink .theoplayer-container .cls-sami-display,
+html.ouj-caption-no-shrink .theoplayer-container .cls-sami-display-div,
+html.ouj-caption-no-shrink .theoplayer-container .cls-text-track-sami-cue {
+  position: static !important;
+  height: auto !important;
+}
+
+/* .cls-sami-displayのmin-height/max-heightはvideo-subtitle-size.jsが
+   実測の字幕画像の高さから直接設定する。ここでは、その確保した高さの中で
+   字幕を中央寄せにし、はみ出したぶんは表示しないようにする。 */
+html.ouj-caption-no-shrink .theoplayer-container .cls-sami-display {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  /* 字幕の横幅が確保した幅より狭いと、中央寄せの左右に隙間ができる。
+     背景色を指定していないと透明になり、後ろの要素の色が透けて見えて
+     しまう(ダークモードだと特に目立つ)ため、黒背景を明示しておく。 */
+  background-color: #000 !important;
+}
+
+html.ouj-caption-no-shrink .theoplayer-container .cls-text-track-sami-cue img {
+  height: auto !important;
+  width: auto !important;
+  max-width: 100% !important;
+}
+
+/* ダークモード対応: dark-mode.cssはページ全体をfilter:invert(1)で反転させ、
+   img/videoだけ個別に反転を打ち消して元の色に戻している。字幕の黒背景
+   (<div style="background-color:#000000">など、imgではない普通のdiv)は
+   打ち消し対象に入っておらず、白く反転してしまうため、字幕エリア全体に
+   打ち消しの反転をかける。ただし中の<img>は既にdark-mode.css側で
+   個別に打ち消されているので、ここでもかけると二重反転になってしまう。
+   そのためimgだけは反転を無効化する。 */
+html.ouj-dark-mode .cls-sami-display {
+  filter: invert(1) hue-rotate(180deg);
+}
+html.ouj-dark-mode .cls-sami-display img {
+  filter: none;
+}
+
+/* コントロールバーは字幕(黒背景)の上に重ねて表示されるため、アイコンが
+   見やすいよう白にする。アイコンはcolorを継承するアイコンフォント/
+   fill="currentColor"のSVGなので、color指定だけで反映される。 */
+html.ouj-caption-no-shrink .theoplayer-container .vjs-control-bar:not(.theo-top-controlbar) {
+  color: #fff !important;
+}
+/* ダークモードだとページ全体の反転で#fffが黒に戻ってしまうため、
+   コントロールバーにも打ち消しの反転をかけて白を保つ。 */
+html.ouj-dark-mode.ouj-caption-no-shrink .theoplayer-container .vjs-control-bar:not(.theo-top-controlbar) {
+  filter: invert(1) hue-rotate(180deg);
+}

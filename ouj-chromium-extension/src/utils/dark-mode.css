@@ -22,6 +22,14 @@ html.ouj-dark-mode object {
   filter: invert(1) hue-rotate(180deg);
 }
 
+/* 動画プレイヤー（THEOplayer）の再生前サムネイルは<img>ではなく
+   .theoplayer-posterのbackground-imageで描画されているため、上のimg等の
+   ルールでは対象外になり、写真がそのまま反転された不気味な色で表示されて
+   しまっていた。背景画像を使う要素なので、同様に反転を打ち消す。 */
+html.ouj-dark-mode .theoplayer-poster {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 /* ヘッダーロゴ(icon_logo.png)は動画サムネイル等の写真と違い、透過PNGの
    ロゴマーク（黒文字＋青グラフィック）。上のimg除外ルールをそのまま当てると
    二重反転で黒文字が黒のまま戻ってしまい、暗い背景の上で読めなくなるため、
@@ -30,14 +38,20 @@ html.ouj-dark-mode img.logo-img {
   filter: none;
 }
 
-/* 起動時のローディングスピナー(#loading)はbackground-image:url(loading.gif)
+/* 起動時のローディング画面(#loading)はbackground-image:url(loading.gif)
    で描画されているが、フィルターの反転量を計算で調整してもgif自体の実際の
-   色が分からず狙った見た目にならなかったため、ダークモード時はgifを非表示に
-   し、代わりに色を完全に指定できる自前のCSSリングスピナーに置き換える。
-   #loadingは position: fixed でビューポート全体を覆っているので、
-   その中心に white 系のリングを重ねて表示する。 */
+   色が分からず狙った見た目にならないため、ダークモード時はgifを非表示にし、
+   代わりに色を完全に指定できる自前のCSSリングスピナーに置き換える。
+   注意: `filter: none` を指定しても親要素(html)にかかったinvertは打ち消せない
+   （filterは要素とその子孫をまとめてレンダリングした結果に適用されるため、
+   子孫側だけfilter:noneにしても祖先のfilterからは逃れられない）。そのため
+   以前は#loadingの背景が透けて白いまま反転もされず表示されてしまっていた。
+   img/videoの反転打ち消しと同じ要領で、#loading自身にもinvert(1)を
+   もう一度かけて祖先の反転を打ち消し、そのうえで狙った色（暗い背景+白いリング）
+   を直接指定する。 */
 html.ouj-dark-mode #loading {
-  filter: none;
+  filter: invert(1) hue-rotate(180deg) !important;
+  background-color: #121212 !important;
   background-image: none !important;
 }
 html.ouj-dark-mode #loading::after {

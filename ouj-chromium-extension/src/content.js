@@ -21,6 +21,7 @@ async function main() {
   }
   window.insertLeftMenu();
   window.insertHeaderDarkModeToggle();
+  window.insertHeaderCollapseToggle();
   window.startMenuOpeningMutationObserver();
   if (pageType.page === 'home') {
     // ホームページの処理を呼び出す

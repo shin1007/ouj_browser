@@ -34,7 +34,8 @@
         "*://*.ouj.ac.jp/*"
       ],
       "css": [
-        "thumbnail-progress.css"
+        "thumbnail-progress.css",
+        "page-video/video-subtitle-size.css"
       ],
       "js": [
         "utils/helpers.js",
@@ -57,6 +58,7 @@
         "page-video/video-radio-detection.js",
         "page-video/video-settings.js",
         "page-video/video-show-subtitle.js",
+        "page-video/video-subtitle-size.js",
         "page-login.js",
         "page-course-select.js",
         "content.js"

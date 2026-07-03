@@ -47,6 +47,8 @@ function insertSettingsPanel(targetElement) {
   // 再生速度設定の取得
   const playbackSpeedControlEnabled = window.getBooleanSetting('playbackSpeedControlEnabled', true);
   const playbackSpeed = Number(window.getSetting('playbackSpeed', 1.0));
+  // 字幕表示時に画面が縮小しないようにする設定の取得
+  const preventCaptionShrink = window.getBooleanSetting('preventCaptionShrink', true);
 
   // 再生速度の選択肢を生成
   let speedOptions = '';
@@ -81,6 +83,10 @@ function insertSettingsPanel(targetElement) {
         <div style='margin-bottom: 8px;'>
           <input type="checkbox" id="auto-caption-radio" ${autoCaptionEnabledRadio ? 'checked' : ''}>
           <label for="auto-caption-radio" style="margin-left: 5px; cursor: pointer; color: #333;">字幕を表示する（ラジオ番組）</label>
+        </div>
+        <div style='margin-bottom: 8px;'>
+          <input type="checkbox" id="prevent-caption-shrink" ${preventCaptionShrink ? 'checked' : ''}>
+          <label for="prevent-caption-shrink" style="margin-left: 5px; cursor: pointer; color: #333;">字幕表示時に画面を縮小しない</label>
         </div>
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
@@ -259,6 +265,17 @@ function insertSettingsPanel(targetElement) {
     });
   }
   window.showCaptionAccordingToSetting();
+
+  // 字幕表示時に画面を縮小しない設定のイベントリスナー
+  const preventCaptionShrinkCheckbox = panel.querySelector('#prevent-caption-shrink');
+  if (preventCaptionShrinkCheckbox) {
+    preventCaptionShrinkCheckbox.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      window.saveSetting('preventCaptionShrink', enabled);
+      window.applyCaptionShrinkFix(enabled);
+    });
+  }
+  window.applyCaptionShrinkFix(preventCaptionShrink);
 
   // 設定パネルは前後リンクの後に来るように挿入
   if (targetElement.nextSibling && targetElement.nextSibling.id === 'prev-next-links') {
