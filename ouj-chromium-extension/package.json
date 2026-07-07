@@ -1,0 +1,15 @@
+{
+  "name": "ouj-chromium-extension",
+  "private": true,
+  "version": "1.0.0",
+  "description": "放送大学授業ブラウザ拡張機能の表示テスト（Playwright視覚回帰テスト）",
+  "scripts": {
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots",
+    "test:visual:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "dotenv": "^16.4.5"
+  }
+}
