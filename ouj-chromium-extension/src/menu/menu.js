@@ -105,16 +105,20 @@ function insertLeftMenu() {
   window.isLeftMenuInProgress = true;
   
   // ロゴの存在確認
-  window.waitForElement('img.logo-img[src="./assets/images/icon_logo.png"]', (logo) => {    
-    // 既にメニューが存在する場合はスキップ（aria-labelで検索）
-    insertMenu(LEFT_SELECTOR)
-    // 挿入処理完了フラグをリセット
-    window.isLeftMenuInProgress = false;
+  window.waitForElement('img.logo-img[src="./assets/images/icon_logo.png"]', (logo) => {
+    try {
+      // 既にメニューが存在する場合はスキップ（aria-labelで検索）
+      insertMenu(LEFT_SELECTOR)
+    } finally {
+      // 挿入処理完了フラグをリセット（途中で例外が発生してもフラグを必ず戻す）
+      window.isLeftMenuInProgress = false;
+    }
   });
 }
 function insertMenu(selector){
   // 既にメニューが存在する場合はスキップ（aria-labelで検索）
-  const isMenuInserted = document.querySelector(selector).getAttribute('aria-label') === '拡張機能';
+  const existing = document.querySelector(selector);
+  const isMenuInserted = existing && existing.getAttribute('aria-label') === '拡張機能';
   if (isMenuInserted) return;
   // メニュー要素を作成
   const menuList = createMenuList();
