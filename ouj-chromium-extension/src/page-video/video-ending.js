@@ -4,27 +4,24 @@ function startVideoEndMonitoring() {
     setTimeout(startVideoEndMonitoring, 100);
     return;
   }
-  window.waitForElement('video', (v) => {
-    video = v;
+  window.waitForElement('video', (video) => {
+    // 動画終了時に次の動画へスキップ
+    // 2秒間通知を出した後に次の動画に移る
+    const handleVideoEnded = () => {
+      const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
+      if (!autoNextVideoEnabled) {
+        return;
+      }
+      if (window.nextVideoId) {
+        showVideoEndNotification();
+        setTimeout(() => {
+          window.skipToNextVideo();
+        }, 2000);
+      } else {
+      }
+    };
+    video.addEventListener('ended', handleVideoEnded);
   });
-
-  // 動画終了時に次の動画へスキップ
-  // 2秒間通知を出した後に次の動画に移る
-  const handleVideoEnded = () => {
-    const autoNextVideoEnabled = window.getBooleanSetting('autoNextVideoEnabled', true);
-    if (!autoNextVideoEnabled) {
-      return;
-    }
-    if (window.nextVideoId) {
-      showVideoEndNotification();
-      setTimeout(() => {
-        window.skipToNextVideo();
-      }, 2000);
-    } else {
-    }
-  };
-  video.removeEventListener('ended', handleVideoEnded);
-  video.addEventListener('ended', handleVideoEnded);
 }
 
 // 動画終了時の通知を表示

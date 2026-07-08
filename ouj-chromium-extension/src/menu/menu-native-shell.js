@@ -6,10 +6,19 @@
 const NATIVE_OVERLAY_ID = 'ouj-native-overlay';
 
 let oujNativeOverlayCleanup = null;
+let oujNativeOverlayOutsideClickTimeout = null;
 
 function removeNativeOverlay() {
   const overlay = document.getElementById(NATIVE_OVERLAY_ID);
   if (overlay) overlay.remove();
+  // 前のオーバーレイ用に予約されていた「外側クリック監視の設定」がまだ
+  // 実行されていなければキャンセルする。これをしないと、100ms以内に
+  // 別のオーバーレイを開いた場合、古いオーバーレイ用のクリックハンドラが
+  // 新しいオーバーレイ表示後に登録され、直後のクリックで誤って閉じてしまう。
+  if (oujNativeOverlayOutsideClickTimeout) {
+    clearTimeout(oujNativeOverlayOutsideClickTimeout);
+    oujNativeOverlayOutsideClickTimeout = null;
+  }
   if (oujNativeOverlayCleanup) {
     oujNativeOverlayCleanup();
     oujNativeOverlayCleanup = null;
@@ -59,7 +68,8 @@ function openNativeOverlay(render) {
     const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
     if (!path.includes(overlay)) removeNativeOverlay();
   };
-  setTimeout(() => {
+  oujNativeOverlayOutsideClickTimeout = setTimeout(() => {
+    oujNativeOverlayOutsideClickTimeout = null;
     document.addEventListener('click', closeOnOutsideClick);
   }, 100);
 
