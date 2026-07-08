@@ -48,6 +48,12 @@ function insertSettingsPanel(targetElement) {
   const playbackSpeed = Number(window.getSetting('playbackSpeed', 1.0));
   // 字幕表示時に画面が縮小しないようにする設定の取得
   const preventCaptionShrink = window.getBooleanSetting('preventCaptionShrink', true);
+  // 画面の自動ロック防止設定の取得
+  const screenWakeLockEnabled = window.getBooleanSetting('screenWakeLockEnabled', true);
+  // 音量正規化設定の取得
+  const volumeNormalizationEnabled = window.getBooleanSetting('volumeNormalizationEnabled', false);
+  // スリープタイマーの残り時間（分）
+  const sleepTimerRemainingMinutes = window.getSleepTimerRemainingMinutes ? window.getSleepTimerRemainingMinutes() : 0;
 
   // 再生速度の選択肢を生成
   let speedOptions = '';
@@ -86,6 +92,10 @@ function insertSettingsPanel(targetElement) {
         <div style='margin-bottom: 8px;'>
           <input type="checkbox" id="prevent-caption-shrink" ${preventCaptionShrink ? 'checked' : ''}>
           <label for="prevent-caption-shrink" style="margin-left: 5px; cursor: pointer; color: #333;">字幕表示時に画面を縮小しない</label>
+        </div>
+        <div style='margin-bottom: 8px;'>
+          <input type="checkbox" id="volume-normalization" ${volumeNormalizationEnabled ? 'checked' : ''}>
+          <label for="volume-normalization" style="margin-left: 5px; cursor: pointer; color: #333;">番組間の音量差を自動で抑える（音量正規化）</label>
         </div>
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
@@ -136,7 +146,28 @@ function insertSettingsPanel(targetElement) {
         </div>
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
-        
+        <div style='margin-bottom: 8px;'>
+          <input type="checkbox" id="screen-wake-lock" ${screenWakeLockEnabled ? 'checked' : ''}>
+          <label for="screen-wake-lock" style="margin-left: 5px; cursor: pointer; color: #333;">再生中に画面が自動でロックされないようにする</label>
+        </div>
+        <div style="margin-bottom: 8px; display: flex; align-items: center;">
+          <label for="sleep-timer" style="width: 250px; color: #333;">スリープタイマー</label>
+          <select id="sleep-timer">
+            <option value="0">オフ</option>
+            <option value="15">15分</option>
+            <option value="30">30分</option>
+            <option value="45">45分</option>
+            <option value="60">60分</option>
+            <option value="90">90分</option>
+          </select>
+        </div>
+        ${sleepTimerRemainingMinutes > 0 ? `
+        <div style="margin-bottom: 8px; font-size: 12px; color: #666;">
+          残り約${sleepTimerRemainingMinutes}分で自動的に一時停止します
+        </div>` : ''}
+        <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+
+
         <div style="margin-top: 10px; font-size: 12px; color: #666;">
           設定は自動的に保存されます
         </div>
@@ -219,7 +250,6 @@ function insertSettingsPanel(targetElement) {
       window.saveSetting('autoPlayEnabled', enabled);
     });
   }
-  // チェックボックスのイベントリスナーを追加（auto-next-video, volume-normalizationのみ）
   const autoNextVideoCheckbox = panel.querySelector('#auto-next-video');
   if (autoNextVideoCheckbox) {
     autoNextVideoCheckbox.addEventListener('change', (event) => {
@@ -257,6 +287,45 @@ function insertSettingsPanel(targetElement) {
     });
   }
   window.applyCaptionShrinkFix(preventCaptionShrink);
+
+  // 音量正規化設定のイベントリスナー
+  const volumeNormalizationCheckbox = panel.querySelector('#volume-normalization');
+  if (volumeNormalizationCheckbox) {
+    volumeNormalizationCheckbox.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      window.saveSetting('volumeNormalizationEnabled', enabled);
+      if (typeof window.applyVolumeNormalizationSetting === 'function') {
+        window.applyVolumeNormalizationSetting(enabled);
+      }
+    });
+  }
+
+  // 画面の自動ロック防止設定のイベントリスナー
+  const screenWakeLockCheckbox = panel.querySelector('#screen-wake-lock');
+  if (screenWakeLockCheckbox) {
+    screenWakeLockCheckbox.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      window.saveSetting('screenWakeLockEnabled', enabled);
+      if (enabled) {
+        window.startWakeLockManagement();
+      } else if (typeof window.releaseVideoWakeLock === 'function') {
+        window.releaseVideoWakeLock();
+      }
+    });
+  }
+
+  // スリープタイマーのイベントリスナー
+  const sleepTimerSelect = panel.querySelector('#sleep-timer');
+  if (sleepTimerSelect) {
+    sleepTimerSelect.addEventListener('change', (event) => {
+      const minutes = Number(event.target.value);
+      if (minutes > 0 && typeof window.armSleepTimer === 'function') {
+        window.armSleepTimer(minutes);
+      } else if (typeof window.clearSleepTimer === 'function') {
+        window.clearSleepTimer();
+      }
+    });
+  }
 
   // 設定パネルは前後リンクの後に来るように挿入
   if (targetElement.nextSibling && targetElement.nextSibling.id === 'prev-next-links') {

@@ -68,9 +68,15 @@ async function addFunctionPanel(currentVideo){
   // 次の動画IDを取得
   await fetchNextVideoId();
   window.startVideoEndMonitoring();
-  
+
   // エンディング検出、動画の最初と最後のスキップ機能を開始
-  window.StartPlaybackManagement(); 
+  window.StartPlaybackManagement();
+
+  // 再生中に画面が自動ロックされないようにする
+  window.startWakeLockManagement();
+
+  // 番組間の音量差を抑える音量正規化の音声グラフを準備する
+  window.startVolumeNormalizationManagement();
 
   // 動画自動再生設定の取得
   const autoPlayEnabled = window.getBooleanSetting ? window.getBooleanSetting('autoPlayEnabled', false) : false;
