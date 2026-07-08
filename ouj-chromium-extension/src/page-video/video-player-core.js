@@ -43,7 +43,7 @@ async function addFunctionPanel(currentVideo){
     // タイトルがまだ反映されていない
     window.isInitializingVideo = false;
     // 未ログインの場合はログインページに行く
-    pageChange = window.tryPushLoginButton();
+    const pageChange = window.tryPushLoginButton();
     if (!pageChange){
       console.log("タイトル未反映、100ms後に再試行");
       setTimeout(addFunctionPanel, 100, currentVideo);

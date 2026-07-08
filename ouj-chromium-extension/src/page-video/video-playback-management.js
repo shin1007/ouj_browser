@@ -4,7 +4,7 @@ let currentPlaybackInterval = null;
 
 // 再生速度を設定するグローバル関数
 function setPlaybackSpeed() {
-  speed = window.getSetting('playbackSpeed', 1.0)
+  const speed = window.getSetting('playbackSpeed', 1.0)
   if (managedVideo) {
     const speedControlEnabled = window.getBooleanSetting('playbackSpeedControlEnabled', true);
     managedVideo.playbackRate = speedControlEnabled ? speed : 1.0;

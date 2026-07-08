@@ -3,7 +3,7 @@ async function handleHomePageAutoLogin() {
   if (!chrome.storage || !chrome.storage.sync) {
     console.warn('[OUJ拡張] chrome.storage.sync が未定義のため、自動でログイン画面に遷移します。');
   } else {
-    autoLogin = await new Promise(resolve => chrome.storage.sync.get(['autoLogin'], resolve));
+    const autoLogin = await new Promise(resolve => chrome.storage.sync.get(['autoLogin'], resolve));
     // 情報を取得できない場合などは何もしないで終了
     if (autoLogin === undefined) return;
     if (autoLogin.autoLogin === false) return;    
@@ -32,7 +32,7 @@ function tryPushLoginButton(){
   // ログインボタンが見つかった場合
   if (themeColorButton && themeColorButton.textContent.includes('ログイン')) {
     // currentUrlから最初のhttps://v.ouj.ac.jp/view/ouj/#/navi/を削除
-    rightUrl = currentUrl.replace(/^https:\/\/v\.ouj\.ac\.jp\/view\/ouj\/#\/navi\//, '');
+    let rightUrl = currentUrl.replace(/^https:\/\/v\.ouj\.ac\.jp\/view\/ouj\/#\/navi\//, '');
     // ?を%26に変更
     // rightUrl = rightUrl.replace(/\?/g, '%3F');
     rightUrl = rightUrl.replace(/\?/g, '%26');
@@ -40,7 +40,7 @@ function tryPushLoginButton(){
     rightUrl = rightUrl.replace(/=/g, '%3D');
     // &を%26に変更
     rightUrl = rightUrl.replace(/&/g, '%26');
-    newUrl = `https://sso.ouj.ac.jp/cas/login?service=https%3A%2F%2Fv.ouj.ac.jp%2Fv1%2Ftenants%2F1%2Flogin%2Fcas%3FredirectUrl%3Dhttps%253A%252F%252Fv.ouj.ac.jp%252Fview%252Fouj%252F%2523%252Fnavi%252F${rightUrl}`;
+    const newUrl = `https://sso.ouj.ac.jp/cas/login?service=https%3A%2F%2Fv.ouj.ac.jp%2Fv1%2Ftenants%2F1%2Flogin%2Fcas%3FredirectUrl%3Dhttps%253A%252F%252Fv.ouj.ac.jp%252Fview%252Fouj%252F%2523%252Fnavi%252F${rightUrl}`;
     console.log('newUrl =', newUrl);
     window.location.href = newUrl
     return true;

@@ -41,7 +41,6 @@ function insertSettingsPanel(targetElement) {
   const autoPlayEnabled = window.getBooleanSetting('autoPlayEnabled', false);
 
   // 新規追加設定の取得
-  const skipStart = window.getSetting('skipStartSeconds', 0);
   const skipEnd = Number(window.getSetting('skipEndSeconds', 0));
   const playlogIntervalMinutes = Number(window.getSetting('playlogIntervalMinutes', 3));
   // 再生速度設定の取得
@@ -148,28 +147,10 @@ function insertSettingsPanel(targetElement) {
       // <div style="width: 1px; background: #ccc; height: 100%; min-height: 320px; margin: 0 8px; align-self: stretch;"></div>
 
   // 追加設定項目のイベントリスナー
-  const skipStartSelect = panel.querySelector('#skip-start');
-  if (skipStartSelect) {
-    skipStartSelect.addEventListener('change', (event) => {
-      window.saveSetting('skipStartSeconds', Number(event.target.value));
-    });
-  }
-  const fadeInStartSelect = panel.querySelector('#fadein-start');
-  if (fadeInStartSelect) {
-    fadeInStartSelect.addEventListener('change', (event) => {
-      window.saveSetting('fadeInStartSeconds', Number(event.target.value));
-    });
-  }
   const skipEndSelect = panel.querySelector('#skip-end');
   if (skipEndSelect) {
     skipEndSelect.addEventListener('change', (event) => {
       window.saveSetting('skipEndSeconds', Number(event.target.value));
-    });
-  }
-  const fadeOutEndSelect = panel.querySelector('#fadeout-end');
-  if (fadeOutEndSelect) {
-    fadeOutEndSelect.addEventListener('change', (event) => {
-      window.saveSetting('fadeOutEndSeconds', Number(event.target.value));
     });
   }
   const playlogIntervalSelect = panel.querySelector('#playlog-interval');
