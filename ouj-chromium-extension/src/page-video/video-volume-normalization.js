@@ -1,5 +1,10 @@
-// 音量正規化機能。Web Audio APIのDynamicsCompressorNodeで、ラジオ番組と
-// テレビ番組の音量差など、大きな音量差を抑える。
+// 音量正規化機能。Web Audio APIのDynamicsCompressorNodeで、同じ番組の中での
+// セリフの大小など音量の起伏を抑える(番組ごとに固定の音量差を付けるのではなく、
+// 常に今流れている音声そのものに反応するリアルタイム処理のため、結果的に
+// 番組間の音量差も縮まるが、主目的は番組内の音量ムラを均す方)。
+// コンプレッサーだけでは大きい部分を抑えるだけで静かな部分は持ち上がらないため、
+// 圧縮後にメイクアップゲインで底上げし、さらにその後段にリミッターを挟んで
+// クリッピングを防ぐ(コンプレッサー→メイクアップゲイン→リミッター→出力)。
 // (DRM保護された動画でもcreateMediaElementSourceによる音声処理が問題なく
 // 機能することは実際のDRM動画で検証済み)
 //
@@ -17,6 +22,8 @@
 let oujVolumeNormAudioContext = null;
 let oujVolumeNormSource = null;
 let oujVolumeNormCompressor = null;
+let oujVolumeNormMakeupGain = null;
+let oujVolumeNormLimiter = null;
 let oujVolumeNormVideoEl = null;
 let oujVolumeNormPendingVideo = null;
 let oujVolumeNormGestureListenerAdded = false;
@@ -38,10 +45,10 @@ function applyVolumeNormalizationSetting(enabled) {
     oujVolumeNormAudioContext.resume().catch(() => {});
   }
   oujVolumeNormSource.disconnect();
-  oujVolumeNormCompressor.disconnect();
+  oujVolumeNormLimiter.disconnect();
   if (enabled) {
     oujVolumeNormSource.connect(oujVolumeNormCompressor);
-    oujVolumeNormCompressor.connect(oujVolumeNormAudioContext.destination);
+    oujVolumeNormLimiter.connect(oujVolumeNormAudioContext.destination);
   } else {
     oujVolumeNormSource.connect(oujVolumeNormAudioContext.destination);
   }
@@ -57,6 +64,8 @@ function buildAudioGraphIfNeeded(video) {
   oujVolumeNormAudioContext = null;
   oujVolumeNormSource = null;
   oujVolumeNormCompressor = null;
+  oujVolumeNormMakeupGain = null;
+  oujVolumeNormLimiter = null;
   oujVolumeNormVideoEl = video;
 
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -65,25 +74,47 @@ function buildAudioGraphIfNeeded(video) {
   try {
     const ctx = new AudioCtx();
     const source = ctx.createMediaElementSource(video);
+
+    // 主圧縮: セリフの大小など、音量の起伏を抑える
     const compressor = ctx.createDynamicsCompressor();
-    // 静かな部分を持ち上げ、大きい部分を抑えることで番組間の音量差を縮める設定値
-    compressor.threshold.value = -30;
+    compressor.threshold.value = -35;
     compressor.knee.value = 20;
     compressor.ratio.value = 6;
     compressor.attack.value = 0.02;
     compressor.release.value = 0.3;
-    source.connect(compressor);
-    compressor.connect(ctx.destination);
+
+    // メイクアップゲイン: 圧縮で下がった全体音量を底上げし、静かな部分を
+    // 実際に聞き取りやすくする(コンプレッサー単体では大きい部分を抑えるだけで
+    // 静かな部分は持ち上がらないため)
+    const makeupGain = ctx.createGain();
+    makeupGain.gain.value = 2.0; // 約+6dB
+
+    // リミッター: メイクアップゲインで底上げした結果、瞬間的な大きい音が
+    // クリッピングしないよう安全弁として挟む
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -1;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.1;
+
+    compressor.connect(makeupGain);
+    makeupGain.connect(limiter);
+    limiter.connect(ctx.destination);
 
     oujVolumeNormAudioContext = ctx;
     oujVolumeNormSource = source;
     oujVolumeNormCompressor = compressor;
+    oujVolumeNormMakeupGain = makeupGain;
+    oujVolumeNormLimiter = limiter;
     ctx.resume().catch(() => {});
   } catch (e) {
     console.warn('[OUJ拡張] 音量正規化用の音声グラフを構築できませんでした:', e);
     oujVolumeNormAudioContext = null;
     oujVolumeNormSource = null;
     oujVolumeNormCompressor = null;
+    oujVolumeNormMakeupGain = null;
+    oujVolumeNormLimiter = null;
   }
 }
 

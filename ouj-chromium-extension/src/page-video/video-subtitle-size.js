@@ -36,6 +36,10 @@
       captionEl.style.removeProperty('min-height');
       captionEl.style.removeProperty('max-height');
     }
+    const posterEl = container.querySelector('.theoplayer-poster');
+    if (posterEl) {
+      posterEl.style.removeProperty('height');
+    }
   }
 
   // これまで観測した字幕画像の高さの中の最大値を確保する高さとして採用する
@@ -95,6 +99,10 @@
         captionEl.style.removeProperty('min-height');
         captionEl.style.removeProperty('max-height');
       }
+      const posterElNoCue = theoContainer.querySelector('.theoplayer-poster');
+      if (posterElNoCue) {
+        posterElNoCue.style.removeProperty('height');
+      }
       container.style.setProperty('height', Math.round(videoHeight) + 'px', 'important');
       return;
     }
@@ -105,6 +113,10 @@
 
     const rawCaptionHeight = captionContent.getBoundingClientRect().height;
     if (!rawCaptionHeight || rawCaptionHeight < 4) {
+      const posterElNoHeight = theoContainer.querySelector('.theoplayer-poster');
+      if (posterElNoHeight) {
+        posterElNoHeight.style.removeProperty('height');
+      }
       container.style.setProperty('height', Math.round(videoHeight) + 'px', 'important');
       return;
     }
@@ -123,6 +135,16 @@
 
     captionEl.style.setProperty('min-height', Math.round(cappedCaptionHeight) + 'px', 'important');
     captionEl.style.setProperty('max-height', Math.round(cappedCaptionHeight) + 'px', 'important');
+
+    // .theoplayer-posterは#player-areaからのheight:100%継承で、動画ではなく
+    // コンテナ全体(動画+字幕ぶん)の高さまで引き伸ばされてしまう。ポスター画像は
+    // background-size:containのため、動画の高さを超えたぶんは画像の上下に
+    // 黒い余白として表示されてしまう(字幕表示中に動画部分が間延びして見える
+    // 不具合の原因)。ポスターの高さは動画の高さだけに明示的に合わせる。
+    const posterEl = theoContainer.querySelector('.theoplayer-poster');
+    if (posterEl) {
+      posterEl.style.setProperty('height', Math.round(videoHeight) + 'px', 'important');
+    }
 
     // コントロールバーは動画の時と同じくposition:absolute;bottom:0で
     // 一番下に重ねて表示させる(画面の高さを節約するため、専用のスペースは確保しない)
