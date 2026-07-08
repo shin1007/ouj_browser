@@ -49,20 +49,53 @@
   }
 
   function syncCaptionLayout() {
-    if (!enabled) return;
     const container = document.querySelector(PLAYER_AREA_SELECTOR);
     if (!container) return;
 
     const theoContainer = container.querySelector('.theoplayer-container');
     const video = theoContainer ? getVisibleVideo(theoContainer) : null;
+    if (!theoContainer || !video) {
+      resetLayout(container);
+      return;
+    }
+
+    // サイト側は#player-areaの高さをJSで一度だけ実測pxで設定し、.theoplayer-container/
+    // <video>はそれをheight:100%で継承する作りになっている。しかし#player-areaの
+    // height(=containerの外側で決まる値)自体は「無効」設定にしていても、この
+    // 拡張機能が一度でも#player-areaのheightに触れる(resetLayout等)と、サイト側の
+    // 一度きりの計算結果が失われて#player-areaのheightが再設定されなくなり、CSSの
+    // min-height(200px)まで潰れてしまう(そのmin-heightを子のheight:100%が継承する
+    // ため、動画自体も0pxになる)。
+    // <video>.getBoundingClientRect()で動画の実測高さを取ろうとしても、同じ理由で
+    // height:100%の連鎖がここで壊れていると0が返ってきてしまう(循環参照)。
+    // そのため、動画の内在サイズ(videoWidth/videoHeight)とコンテナの実測幅から
+    // 高さを直接計算する。これは「字幕表示時に画面を縮小しない」設定のON/OFFに
+    // 関わらず必要(ONの場合はvideo-subtitle-size.cssが<video>にheight:auto!importantを
+    // 強制しているため元々この方法でも正しい値になるが、OFFの場合は上記の理由で
+    // これが唯一の頼れる高さ取得手段になる)。
+    const containerWidth = theoContainer.getBoundingClientRect().width;
+    const videoHeight = (video.videoWidth && video.videoHeight && containerWidth)
+      ? containerWidth * (video.videoHeight / video.videoWidth)
+      : 0;
+    if (!videoHeight) {
+      resetLayout(container);
+      return;
+    }
+
     const captionEl = container.querySelector('.cls-sami-display');
     // 字幕を包んでいる要素。話者ごとに[start]要素が同時に複数並ぶことがあるため、
     // 個々の画像ではなく、それらをまとめて包むこの要素全体の高さを測る。
-    const captionContent = captionEl ? captionEl.querySelector('.cls-sami-display-div') : null;
+    // 「字幕表示時に画面を縮小しない」設定が無効なときは、字幕ぶんの高さ確保はせず
+    // 動画の高さだけを#player-areaに反映する(字幕は従来通りサイトの挙動に任せる)。
+    const captionContent = enabled && captionEl ? captionEl.querySelector('.cls-sami-display-div') : null;
     const hasActiveCue = captionContent ? !!captionContent.querySelector('[start]') : false;
 
-    if (!theoContainer || !video || !captionContent || !hasActiveCue) {
-      resetLayout(container);
+    if (!captionContent || !hasActiveCue) {
+      if (captionEl) {
+        captionEl.style.removeProperty('min-height');
+        captionEl.style.removeProperty('max-height');
+      }
+      container.style.setProperty('height', Math.round(videoHeight) + 'px', 'important');
       return;
     }
 
@@ -70,10 +103,9 @@
     captionEl.style.removeProperty('min-height');
     captionEl.style.removeProperty('max-height');
 
-    const videoHeight = video.getBoundingClientRect().height;
     const rawCaptionHeight = captionContent.getBoundingClientRect().height;
-    if (!videoHeight || !rawCaptionHeight || rawCaptionHeight < 4) {
-      resetLayout(container);
+    if (!rawCaptionHeight || rawCaptionHeight < 4) {
+      container.style.setProperty('height', Math.round(videoHeight) + 'px', 'important');
       return;
     }
 
@@ -109,7 +141,6 @@
 
   function startObserving() {
     window.waitForElement(PLAYER_AREA_SELECTOR, (container) => {
-      if (!enabled) return;
       if (observer) observer.disconnect();
       observer = new MutationObserver(scheduleSync);
       // 属性(style/class)は監視しない: 自分自身がheight/min-height/max-heightを
@@ -124,22 +155,28 @@
     if (!resizeListenerAdded) {
       resizeListenerAdded = true;
       window.addEventListener('resize', scheduleSync);
+      // <video>のloadedmetadata/resizeはbubbleしないイベントなので、captureフェーズで
+      // documentに仕掛けておく。動画要素が後から生成/差し替えされても、要素を
+      // 個別に追跡しなくてもここで拾える。メタデータ読み込み前は動画の実寸が
+      // 取れず高さがブレるため、読み込み完了時に必ず再計算する。
+      document.addEventListener('loadedmetadata', scheduleSync, true);
+      document.addEventListener('resize', scheduleSync, true);
+      document.addEventListener('playing', scheduleSync, true);
     }
   }
 
   function applyCaptionShrinkFix(isEnabled) {
     enabled = isEnabled;
     document.documentElement.classList.toggle('ouj-caption-no-shrink', enabled);
-
-    if (observer) {
-      observer.disconnect();
-      observer = null;
-    }
-    resetLayout(document.querySelector(PLAYER_AREA_SELECTOR));
     // 動画が変わると字幕画像のスケールも変わりうるので、記録した最大値をリセットする
     maxObservedCaptionRatio = 0;
 
-    if (enabled) startObserving();
+    // #player-areaの高さ追従はON/OFFに関わらず常時必要(syncCaptionLayout内のコメント
+    // 参照)。ここで観測を止めてしまうと、無効化した瞬間の高さがサイト側から
+    // 引き継がれずに再設定されなくなり、#player-areaがCSSのmin-height(200px)まで
+    // 潰れて動画が後続要素と重なって見えるようになる。
+    startObserving();
+    scheduleSync();
   }
 
   // グローバル関数として公開
