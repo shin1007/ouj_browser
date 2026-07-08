@@ -66,7 +66,7 @@ async function isRadioProgram() {
   // grandParentCategoryNameから判断（parentだと教養学部か大学院になる。）
   const parentId = currentCategory.parentId;
   const grandParentCategoryName = await window.getParentCategoryName(parentId);
-  if (grandParentCategoryName.includes('ラジオ番組の字幕付加実験')) {
+  if (grandParentCategoryName && grandParentCategoryName.includes('ラジオ番組の字幕付加実験')) {
     return false;
   }
 

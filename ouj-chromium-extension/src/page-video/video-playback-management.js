@@ -1,5 +1,6 @@
 let managedVideo = null;
 let initialPosition = 0;
+let currentPlaybackInterval = null;
 
 // 再生速度を設定するグローバル関数
 function setPlaybackSpeed() {
@@ -11,7 +12,13 @@ function setPlaybackSpeed() {
 }
 
 // 動画の再生管理機能
-function StartPlaybackManagement() {  
+function StartPlaybackManagement() {
+  // 動画切り替え時に前の監視が残らないよう、既存のタイマーを止めてから開始する
+  if (currentPlaybackInterval) {
+    clearInterval(currentPlaybackInterval);
+    currentPlaybackInterval = null;
+  }
+
   window.waitForElement('video', (v) => {
     managedVideo = v;
 
@@ -21,11 +28,17 @@ function StartPlaybackManagement() {
   // TODO: オープニングスキップがうまくいかない
   // skipOpening(managedVideo);
 
-  i = 0;  
-  const interval = setInterval(() => {
+  let i = 0;
+  currentPlaybackInterval = setInterval(() => {
     // 再生ボタンを押したときに再生速度がx1.0になるっぽいので、その対策。
     // 本来は毎秒やる必要はないが、再生速度を適用する。
     setPlaybackSpeed();
+
+    if (!managedVideo) {
+      i++;
+      return;
+    }
+
     // 定期的に動画を一時停止してから再生することで、再生ログを残せるようにする
     const playlogIntervalMinutes = window.getSetting('playlogIntervalMinutes', 3);
     const playlogIntervalSeconds = playlogIntervalMinutes * 60;
@@ -34,15 +47,12 @@ function StartPlaybackManagement() {
       i = 0; // カウンタをリセット
     }
 
-    if (!managedVideo) {
-      return;
-    }
-
     let skipEnd = window.getSetting ? window.getSetting('skipEndSeconds', 0) : 0;
     // エンディングのスキップ
     if (managedVideo.currentTime > managedVideo.duration - skipEnd) {
       // 再生ボタンが押されてから5秒以上が経過している場合のみ
       if (managedVideo.currentTime - initialPosition < 5) {
+        i++;
         return;
       }
       // 動画が再生中の場合のみ
@@ -50,13 +60,14 @@ function StartPlaybackManagement() {
         skipToNextVideo();
       }
     }
-    
+
     i++;
   }, 1000); // 1秒ごとにチェック
-  
+
   // 監視を停止する関数を返す
   return () => {
-    clearInterval(interval);
+    clearInterval(currentPlaybackInterval);
+    currentPlaybackInterval = null;
   };
 }
 

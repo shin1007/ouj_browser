@@ -657,7 +657,7 @@ async function detectOujPageType(url) {
         const categoryId = window.getCurrentCategoryId(url);
         try {
             const parentIds = await window.categoriesUsedAsParent(url);
-            if (parentIds.includes()) {
+            if (parentIds.includes(categoryId)) {
             return {subDomain: 'v', page: 'series-select', categoryId: categoryId}; // 科目一覧（科目群選択後）
             }
         } catch (e) {
