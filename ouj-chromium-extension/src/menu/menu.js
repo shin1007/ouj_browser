@@ -44,7 +44,7 @@ function createMenuHTML() {
                   </ion-icon>
                 </div>
                 <div class="text-area">
-                  ${item.text}${item.id === 'darkmode' ? ' <span class="ouj-darkmode-current-label"></span>' : ''}
+                  ${item.text}${item.id === 'darkmode' ? '<span class="ouj-darkmode-current-label" style="display:block;font-size:11px;font-weight:normal;opacity:0.7;"></span>' : ''}
                 </div>
               </div>
             </button>

@@ -44,10 +44,13 @@ async function createYearListData() {
     buckets[year].push(category);
   });
 
-  const yearBuckets = years.map((year) => ({
-    year,
-    courses: buckets[year].sort((a, b) => a.name.localeCompare(b.name, 'ja'))
-  }));
+  // 講義が1件もない年度はタップしても何も出せず無駄なフォルダになるため一覧から除外する
+  const yearBuckets = years
+    .map((year) => ({
+      year,
+      courses: buckets[year].sort((a, b) => a.name.localeCompare(b.name, 'ja'))
+    }))
+    .filter((bucket) => bucket.courses.length > 0);
 
   return { yearBuckets };
 }
