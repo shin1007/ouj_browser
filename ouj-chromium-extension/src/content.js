@@ -27,7 +27,7 @@ async function main() {
     // ホームページの処理を呼び出す
     await window.handleHomePageAutoLogin();
   } else if (pageType.page === 'search-result') {
-    // TODO: 動画進捗の挿入 
+    window.startSearchResultDedupObserver();
   } else if (pageType.page === 'player') {
     window.addFavoriteButtonToBreadCrumbs();
     window.initializeVideoPlayer();      

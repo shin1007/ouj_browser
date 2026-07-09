@@ -64,6 +64,7 @@
         "page-video/video-subtitle-size.js",
         "page-login.js",
         "page-course-select.js",
+        "page-search-result.js",
         "content.js"
       ],
       "run_at": "document_end"
