@@ -22,6 +22,19 @@ function extractYearFromCategoryName(name) {
 }
 
 /**
+ * カテゴリのalias（例:「1570390a」）先頭の数字部分を取り出す
+ * 同じ講義が複数カテゴリ（学部の異なるコース等）に重複登録されている場合、
+ * 末尾のアルファベット違いで別カテゴリIDになっているだけのことが多い。
+ * menu-recommendation.jsのおすすめ動画重複回避と同じ判定基準。
+ * @param {Object} category
+ * @returns {string|null}
+ */
+function extractCategoryAliasNumber(category) {
+  const match = (category.alias || '').match(/^[0-9]+/);
+  return match ? match[0] : null;
+}
+
+/**
  * 年度別のフォルダデータ（各年度に属する科目一覧）を生成する
  */
 async function createYearListData() {
@@ -36,11 +49,18 @@ async function createYearListData() {
   const buckets = {};
   years.forEach((year) => { buckets[year] = []; });
 
+  // 同じ講義が複数カテゴリに重複登録されている場合、片方だけを表示する
+  const usedAliasNumbers = new Set();
   categories.forEach((category) => {
     // 親として使われているカテゴリはフォルダであり、科目そのものではないので除外
     if (parentIdSet.has(category.categoryId)) return;
     const year = extractYearFromCategoryName(category.name);
     if (year === null || !buckets[year]) return;
+    const aliasNum = extractCategoryAliasNumber(category);
+    if (aliasNum) {
+      if (usedAliasNumbers.has(aliasNum)) return;
+      usedAliasNumbers.add(aliasNum);
+    }
     buckets[year].push(category);
   });
 
