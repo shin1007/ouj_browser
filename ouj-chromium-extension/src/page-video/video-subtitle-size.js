@@ -82,7 +82,13 @@
       ? containerWidth * (video.videoHeight / video.videoWidth)
       : 0;
     if (!videoHeight) {
-      resetLayout(container);
+      // メタデータ読み込み前(グレーの読み込み中表示+再生ボタンの状態)はvideoWidth/
+      // videoHeightがまだ0で高さを計算できない。ここでresetLayoutすると、上のコメント
+      // の通り#player-areaの高さがCSSのmin-height(200px)まで潰れてしまい、
+      // loadedmetadata後に正しい高さへ戻る際に動画部分が上下にガクつく
+      // (読み込み中に動画が上にずれて見える不具合の原因)。
+      // 高さには触れずに待機し、loadedmetadataイベント(下のリスナー参照)で
+      // 改めてsyncCaptionLayoutが呼ばれた時に正しい高さを設定する。
       return;
     }
 
