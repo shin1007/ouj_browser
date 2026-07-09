@@ -361,17 +361,10 @@ async function addHistoryEntry(contentId) {
   history.unshift(entry);
   // 最大30件まで
   if (history.length > 30) history = history.slice(0, 30);
-  let saveResult = window.saveSetting('history', history);
+  // ★おすすめリストのプリフェッチはsaveSettingのラッパー（menu.js）内で
+  //   historyキー保存時に自動実行されるため、ここでの明示呼び出しは不要
+  window.saveSetting('history', history);
   window.saveSetting(lastHistoryKey, now);
-  // ★履歴追加時におすすめリストをプリフェッチ
-  // TODO: 反映タイミングをより早くする改善の余地あり
-  if (saveResult && typeof saveResult.then === 'function') {
-    saveResult.then(() => {
-      window.prefetchRecommendListData();
-    });
-  } else {
-    window.prefetchRecommendListData();
-  }
 }
 
 function addShareButtonAfterVideoTitle() {

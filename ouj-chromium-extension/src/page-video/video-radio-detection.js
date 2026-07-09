@@ -3,25 +3,6 @@ const noCaptionUi = "字幕なし"
 
 async function isTvSize(){
   const title = await new Promise(resolve => window.waitForElement('#content-detail-area > div.title', resolve, { timeout: 3000 }));
-  // TODO: ラジオ番組にもかかわらず動画として読み込まれるものに対処したいが、まだうまくできていない
-  // const vjsVideo3 = await new Promise(resolve => window.waitForElement('#vjs_video_3', resolve, { timeout: 3000 }));
-  // // vjsVideo3のクラスにvjs-user-inactiveが出るまで最大3秒待機
-  // await new Promise(resolve => {
-  //   const start = Date.now();
-  //   const check = () => {
-  //     if (vjsVideo3.classList.contains('vjs-user-inactive')) {
-  //       console.log('vjs-user-inactive発見')
-  //       resolve();
-  //     } else if (Date.now() - start > 3000) {
-  //       console.log('vjs-user-inactiveが見つからなかった')
-  //       resolve();
-  //     } else {
-  //       setTimeout(check, 100);
-  //     }
-  //   };
-  //   check();
-  // });
-  
 
   const styleElement = await new Promise(resolve => window.waitForElement('style.vjs-styles-dimensions', resolve, { timeout: 3000 }));
     
@@ -52,13 +33,10 @@ async function isTvSize(){
   return true;
 }
 async function isRadioProgram() {
-  // 動画用のサイズであればFalseを返す
-  if (await isTvSize()) return false;
-
   // 現在の動画IDを取得
   const currentVideoId = window.getCurrentContentId();
   if (!currentVideoId) return false;
-  
+
   // 動画IDから現在のカテゴリデータを取得
   const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
   if (!currentCategory) return false;
@@ -70,11 +48,14 @@ async function isRadioProgram() {
     return false;
   }
 
-  // summary欄でラジオ番組かどうかを判定
-  const isRadio = currentCategory.summary && (
-    currentCategory.summary.startsWith('(ラジオ')
-  );
-  return isRadio;
+  // summary欄の情報はカテゴリメタデータであり、動画プレイヤーのサイズより信頼できるため優先する
+  // （まれにラジオ番組でも通常の動画サイズで読み込まれることがあり、サイズだけで判定すると誤判定になるため）
+  if (currentCategory.summary && currentCategory.summary.startsWith('(ラジオ')) {
+    return true;
+  }
+
+  // summaryにラジオの記載がない場合は、動画用サイズでなければラジオとみなす
+  return !(await isTvSize());
 }
 async function isCaptionAvailable() {
     // 現在の動画IDを取得
