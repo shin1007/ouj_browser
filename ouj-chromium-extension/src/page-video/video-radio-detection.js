@@ -31,9 +31,11 @@ async function isTvSize(){
 
 // video-src/v3のレスポンスをキャッシュ付きで取得する。contentTypeやexistsSamiFile
 // (実字幕の有無。画像字幕を含む)など、カテゴリの説明文より確実な判定材料が含まれている。
-// DRMチケット発行を伴うエンドポイントで、かつこのページでは動画再生のためにサイト自身が
-// 既に同じエンドポイントを呼んでいるため、再生中の動画に限って使う(検索結果一覧など
-// 大量の項目を判定する呼び出しでは使わない)。
+// DRMチケット発行を伴うエンドポイントのため、isCaptionAvailable(検索結果一覧の「字幕あり
+// のみ」フィルタ含む)でのみ使う。isRadioProgramの検索結果一覧向け判定(explicit contentId)
+// では使わない。動画要素の実解像度という確実な代替判定材料があるisTvSize()と違い、
+// video-src/v3のcontentTypeがラジオ/テレビをどう区別しているか未確認のため、誤った判定を
+// 出すよりは既存の(精度が劣ることは分かっている)カテゴリ説明文判定に留める判断。
 async function getVideoSrcInfo(contentId) {
   if (!contentId || typeof window.fetchWithCache !== 'function') return null;
   try {
@@ -84,17 +86,16 @@ async function isCaptionAvailable(contentId) {
     const currentVideoId = isExplicitContentId ? contentId : window.getCurrentContentId();
     if (!currentVideoId) return false;
 
-    // 再生中のページでは実字幕(SAMIファイル。画像字幕を含む)の有無を優先する。
-    // getVideoSrcInfoはDRMチケット発行を伴うため、検索結果一覧など大量の項目を
-    // 判定する呼び出し(contentId明示指定)では使わない。
-    if (!isExplicitContentId) {
-      const videoSrcInfo = await getVideoSrcInfo(currentVideoId);
-      if (videoSrcInfo && typeof videoSrcInfo.existsSamiFile === 'boolean') {
-        return videoSrcInfo.existsSamiFile;
-      }
+    // 実字幕(SAMIファイル。画像字幕を含む)の有無を優先する。検索結果一覧の「字幕ありのみ」
+    // フィルタ(contentId明示指定)でも使う。DRMチケット発行を伴うが、page-search-result-filters.js
+    // 側で画面内に入った項目だけ・同時実行数を制限して呼ばれるため、既存のgetVideoViewingStatus
+    // (視聴状況取得)と同程度の負荷増加に収まる。
+    const videoSrcInfo = await getVideoSrcInfo(currentVideoId);
+    if (videoSrcInfo && typeof videoSrcInfo.existsSamiFile === 'boolean') {
+      return videoSrcInfo.existsSamiFile;
     }
 
-    // 動画IDから現在のカテゴリデータを取得(フォールバック、または検索結果一覧からの呼び出し)
+    // API取得に失敗した場合のフォールバック
     const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
     if (!currentCategory) return false;
 

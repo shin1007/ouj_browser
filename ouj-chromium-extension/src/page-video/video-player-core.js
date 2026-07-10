@@ -95,8 +95,8 @@ async function addFunctionPanel(currentVideo){
       // 自動再生を試みようとしたけど失敗
       // enableBackgroundPlay(currentVideo);
 
-    }  }, { timeout: 3000 });
-  window.isInitializingVideo = false; 
+    }  }, 100, 30); // 100ms間隔で最大30回(約3秒)試行
+  window.isInitializingVideo = false;
 }
 
 // videoタグの出現を監視し、出現したら設定パネルを挿入する関数
@@ -156,7 +156,7 @@ function enableBackgroundPlay(currentVideo) {
       artwork: [{ src: 'https://v.ouj.ac.jp/view/ouj/assets/images/webclip/apple-touch-icon.png', sizes: '512x512', type: 'image/jpg' }]
     });
   }
-}, { timeout: 3000 });
+}, 100, 30); // 100ms間隔で最大30回(約3秒)試行
 //<link rel="apple-touch-icon" href="./assets/images/webclip/apple-touch-icon.png">
 }
 
