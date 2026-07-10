@@ -32,9 +32,11 @@ async function isTvSize(){
   } 
   return true;
 }
-async function isRadioProgram() {
-  // 現在の動画IDを取得
-  const currentVideoId = window.getCurrentContentId();
+// contentIdを省略した場合は現在再生中の動画を対象にする（従来通りの挙動）。
+// 検索結果一覧など、プレイヤー以外のページから任意の動画を判定したい場合はcontentIdを明示的に渡す。
+async function isRadioProgram(contentId) {
+  const isExplicitContentId = contentId !== undefined && contentId !== null;
+  const currentVideoId = isExplicitContentId ? contentId : window.getCurrentContentId();
   if (!currentVideoId) return false;
 
   // 動画IDから現在のカテゴリデータを取得
@@ -54,18 +56,25 @@ async function isRadioProgram() {
     return true;
   }
 
+  // isTvSize()は動画プレイヤーページ専用のDOM(#content-detail-area, vjs-styles-dimensions)を
+  // 最大3秒待つ処理のため、他の動画のcontentIdを明示的に指定した呼び出し（検索結果一覧など）
+  // では使わず、summaryに記載がなければテレビ番組として扱う。
+  if (isExplicitContentId) {
+    return false;
+  }
+
   // summaryにラジオの記載がない場合は、動画用サイズでなければラジオとみなす
   return !(await isTvSize());
 }
-async function isCaptionAvailable() {
-    // 現在の動画IDを取得
-    const currentVideoId = window.getCurrentContentId();
+async function isCaptionAvailable(contentId) {
+    // 現在の動画IDを取得（contentId省略時は現在再生中の動画）
+    const currentVideoId = (contentId !== undefined && contentId !== null) ? contentId : window.getCurrentContentId();
     if (!currentVideoId) return false;
-    
+
     // 動画IDから現在のカテゴリデータを取得
     const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
     if (!currentCategory) return false;
-    
+
     // summary欄でラジオ番組かどうかを判定
     const isCaptionAvailable = currentCategory.summary && (
       currentCategory.summary.startsWith('(ラジオ・字幕')
@@ -161,3 +170,4 @@ function showRadioProgramUI() {
 window.checkIfRadioProgram = checkIfRadioProgram;
 window.showRadioProgramUI = showRadioProgramUI;
 window.isRadioProgram = isRadioProgram;
+window.isCaptionAvailable = isCaptionAvailable;

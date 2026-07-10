@@ -13,8 +13,9 @@ function addVideoSettingsPanel() {
     setTimeout(addVideoSettingsPanel, 100);
     return;
   }
-  window.waitForElement('#content-detail-area > div.title', (targetElement) => {
-    window.insertPrevNextLinks(targetElement);
+  window.waitForElement('#content-detail-area > div.title', async (targetElement) => {
+    await window.insertPrevNextLinks(targetElement);
+    await window.insertEpisodeListMenu(targetElement);
     insertSettingsPanel(targetElement);
   });
 }
@@ -327,17 +328,17 @@ function insertSettingsPanel(targetElement) {
     });
   }
 
-  // 設定パネルは前後リンクの後に来るように挿入
-  if (targetElement.nextSibling && targetElement.nextSibling.id === 'prev-next-links') {
-    // 既に前後リンクがある場合、その後ろにパネルを挿入
-    targetElement.parentNode.insertBefore(panel, targetElement.nextSibling.nextSibling);
+  // 設定パネルは前後リンク・回一覧メニューなど、タイトル直後に挿入される
+  // 他の拡張機能UIの後ろに来るように挿入する
+  const skippableIds = new Set(['prev-next-links', 'episode-list-menu']);
+  let insertionPoint = targetElement.nextSibling;
+  while (insertionPoint && skippableIds.has(insertionPoint.id)) {
+    insertionPoint = insertionPoint.nextSibling;
+  }
+  if (insertionPoint) {
+    targetElement.parentNode.insertBefore(panel, insertionPoint);
   } else {
-    // 通常はタイトルの直後にパネルを挿入
-    if (targetElement.nextSibling) {
-      targetElement.parentNode.insertBefore(panel, targetElement.nextSibling);
-    } else {
-      targetElement.parentNode.appendChild(panel);
-    }
+    targetElement.parentNode.appendChild(panel);
   }
 }
 

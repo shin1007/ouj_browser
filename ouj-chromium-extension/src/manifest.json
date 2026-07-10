@@ -58,13 +58,16 @@
         "page-video/video-playback-management.js",
         "page-video/video-player-core.js",
         "page-video/video-prev-next.js",
+        "page-video/video-episode-list.js",
         "page-video/video-radio-detection.js",
         "page-video/video-settings.js",
         "page-video/video-show-subtitle.js",
         "page-video/video-subtitle-size.js",
         "page-login.js",
         "page-course-select.js",
+        "page-course-select-progress.js",
         "page-search-result.js",
+        "page-search-result-filters.js",
         "content.js"
       ],
       "run_at": "document_end"

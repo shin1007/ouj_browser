@@ -21,19 +21,33 @@ function getSearchResultDedupKey(item) {
     return `${aliasMatch[1]}::${title}`;
 }
 
+// 重複排除機能と絞り込みチップ機能(page-search-result-filters.js)がどちらも
+// item.style.displayを直接書き換えると、互いの非表示状態を上書きしてしまう。
+// そのため各機能はdataset(oujDupHidden/oujFilterHidden)に自分の判定結果だけを
+// 記録し、最終的な表示切り替えはこの共通関数に一本化する。
+function updateSearchResultItemVisibility(item) {
+    const hidden = item.dataset.oujDupHidden === 'true' || item.dataset.oujFilterHidden === 'true';
+    item.style.display = hidden ? 'none' : '';
+}
+
 function hideDuplicateSearchResults() {
     const list = document.querySelector(SEARCH_RESULT_LIST_SELECTOR);
     if (!list) return;
     const seenKeys = new Set();
     list.querySelectorAll(':scope > ion-item[role="listitem"]').forEach((item) => {
         const key = getSearchResultDedupKey(item);
-        if (!key) return;
+        if (!key) {
+            item.dataset.oujDupHidden = 'false';
+            updateSearchResultItemVisibility(item);
+            return;
+        }
         if (seenKeys.has(key)) {
-            item.style.display = 'none';
+            item.dataset.oujDupHidden = 'true';
         } else {
             seenKeys.add(key);
-            item.style.display = '';
+            item.dataset.oujDupHidden = 'false';
         }
+        updateSearchResultItemVisibility(item);
     });
 }
 
@@ -52,3 +66,4 @@ function startSearchResultDedupObserver() {
 }
 
 window.startSearchResultDedupObserver = startSearchResultDedupObserver;
+window.updateSearchResultItemVisibility = updateSearchResultItemVisibility;

@@ -40,6 +40,38 @@ const fetchWithCache = async (url, cacheKey, minute=720) => {
     // console.warn(`fetchWithCache: ${cacheKey} のキャッシュされたデータも見つかりませんでした。`);
     return null;
 };
+/**
+ * ページ全体で共有する同時実行数ゲートを作る。
+ * runWithConcurrencyLimitは1回の呼び出し内でしか同時実行数を制限できないため、
+ * IntersectionObserverなどにより「独立した呼び出し元」が同時多発するケース
+ * （例: 画面内の科目フォルダが一度に10件以上検知され、それぞれが個別に
+ * リクエストを投げ始める）では、呼び出し元ごとの制限を足し合わせた分だけ
+ * 実際の同時リクエスト数が増えてしまう。createConcurrencyGateは呼び出し元を
+ * またいで1つの上限を共有するためのユーティリティ。
+ * @param {number} limit - ページ全体での同時実行数の上限
+ * @returns {{ run: (fn: () => Promise<any>) => Promise<any> }}
+ */
+const createConcurrencyGate = (limit) => {
+    let active = 0;
+    const queue = [];
+    const runNext = () => {
+        if (active >= limit || queue.length === 0) return;
+        active++;
+        const { fn, resolve, reject } = queue.shift();
+        fn().then(
+            (value) => { active--; resolve(value); runNext(); },
+            (error) => { active--; reject(error); runNext(); }
+        );
+    };
+    return {
+        run(fn) {
+            return new Promise((resolve, reject) => {
+                queue.push({ fn, resolve, reject });
+                runNext();
+            });
+        },
+    };
+};
 const fetchFromNetwork = async (url) => {
     try {
         const response = await fetch(url);
@@ -713,6 +745,7 @@ https://nurse.ouj.ac.jp/webclass/login.php
 
 // グローバル関数として公開
 window.fetchWithCache = fetchWithCache;
+window.createConcurrencyGate = createConcurrencyGate;
 window.waitForElement = waitForElement;
 window.waitForCondition = waitForCondition;
 window.saveSetting = saveSetting;

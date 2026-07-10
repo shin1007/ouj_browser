@@ -28,11 +28,13 @@ async function main() {
     await window.handleHomePageAutoLogin();
   } else if (pageType.page === 'search-result') {
     window.startSearchResultDedupObserver();
+    window.initializeSearchResultFilters();
   } else if (pageType.page === 'player') {
     window.addFavoriteButtonToBreadCrumbs();
     window.initializeVideoPlayer();      
   } else if (pageType.page === 'series-select') {
     window.waitThenAddFavBtnToCategoryList();
+    window.waitThenAddProgressBadgesToCategoryList();
   } else if (pageType.page === 'video-select') {
     window.addFavoriteButtonToBreadCrumbs();
   } else {
