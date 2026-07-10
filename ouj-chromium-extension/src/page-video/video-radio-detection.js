@@ -1,37 +1,55 @@
 const captionUi = "字幕が利用可能です"
 const noCaptionUi = "字幕なし"
 
+// 再生ページ限定: 動画ストリームそのものの内在解像度(videoWidth/videoHeight)で判定する。
+// 従来はCSSで指定された表示幅(style.vjs-styles-dimensions)をテキスト解析していたが、
+// レイアウト計算が終わるタイミングに左右され、過去に両方向(ラジオがTV扱い/TVがラジオ扱い)の
+// 誤判定を起こしていた。videoWidth/videoHeightは動画ストリーム自体が持つコーデック
+// メタデータであり、DRM保護下でも(実ピクセルの読み取りとは違い)制限なく参照できるため、
+// 表示上のCSS解析より直接的で確実な判定材料になる。
 async function isTvSize(){
-  const title = await new Promise(resolve => window.waitForElement('#content-detail-area > div.title', resolve, { timeout: 3000 }));
-
-  const styleElement = await new Promise(resolve => window.waitForElement('style.vjs-styles-dimensions', resolve, { timeout: 3000 }));
-    
-  // textContent の中身が出るまで最大3秒間待機
-  const styleContent = await new Promise(resolve => {
-    const start = Date.now();
-    const check = () => {
-      if (styleElement.textContent && styleElement.textContent.trim() !== '') {
-        resolve(styleElement.textContent);
-      } else if (Date.now() - start > 3000) {
-        resolve('');
-      } else {
-        setTimeout(check, 100);
-      }
+  const video = await new Promise(resolve => window.waitForElement('video', resolve));
+  await new Promise((resolve) => {
+    if (video.videoWidth > 0) {
+      resolve();
+      return;
+    }
+    const onLoadedMetadata = () => {
+      video.removeEventListener('loadedmetadata', onLoadedMetadata);
+      resolve();
     };
-    check();
+    video.addEventListener('loadedmetadata', onLoadedMetadata);
+    // メタデータがどうしても読み込まれない場合に備えたフォールバック
+    setTimeout(resolve, 5000);
   });
 
-  if (!styleContent) {
-    return false;
-  }
+  // 解像度が取得できない場合は、誤ってラジオ番組表示を出さないよう安全側(テレビ番組扱い)に倒す
+  if (!video.videoWidth) return true;
 
-  // widthが300px以下の場合にラジオと判定
-  const widthMatch = styleContent.match(/width:\s*(\d+)px;/);
-  if (widthMatch && parseInt(widthMatch[1], 10) <= 300) {
-    return false;
-  } 
-  return true;
+  return video.videoWidth > 300;
 }
+
+// video-src/v3のレスポンスをキャッシュ付きで取得する。contentTypeやexistsSamiFile
+// (実字幕の有無。画像字幕を含む)など、カテゴリの説明文より確実な判定材料が含まれている。
+// DRMチケット発行を伴うエンドポイントで、かつこのページでは動画再生のためにサイト自身が
+// 既に同じエンドポイントを呼んでいるため、再生中の動画に限って使う(検索結果一覧など
+// 大量の項目を判定する呼び出しでは使わない)。
+async function getVideoSrcInfo(contentId) {
+  if (!contentId || typeof window.fetchWithCache !== 'function') return null;
+  try {
+    const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/video-src/v3?region=cdn`;
+    const cacheKey = `videoSrcInfo_${contentId}`;
+    const data = await window.fetchWithCache(url, cacheKey, 60);
+    if (!data || !data.content) return null;
+    return {
+      contentType: data.content.contentType,
+      existsSamiFile: !!data.existsSamiFile,
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
 // contentIdを省略した場合は現在再生中の動画を対象にする（従来通りの挙動）。
 // 検索結果一覧など、プレイヤー以外のページから任意の動画を判定したい場合はcontentIdを明示的に渡す。
 async function isRadioProgram(contentId) {
@@ -50,36 +68,38 @@ async function isRadioProgram(contentId) {
     return false;
   }
 
-  // summary欄の情報はカテゴリメタデータであり、動画プレイヤーのサイズより信頼できるため優先する
-  // （まれにラジオ番組でも通常の動画サイズで読み込まれることがあり、サイズだけで判定すると誤判定になるため）
-  if (currentCategory.summary && currentCategory.summary.startsWith('(ラジオ')) {
-    return true;
-  }
-
-  // isTvSize()は動画プレイヤーページ専用のDOM(#content-detail-area, vjs-styles-dimensions)を
-  // 最大3秒待つ処理のため、他の動画のcontentIdを明示的に指定した呼び出し（検索結果一覧など）
-  // では使わず、summaryに記載がなければテレビ番組として扱う。
+  // 検索結果一覧など、動画要素が存在しないページでの判定はカテゴリの説明文に頼るしかない
   if (isExplicitContentId) {
-    return false;
+    return !!(currentCategory.summary && currentCategory.summary.startsWith('(ラジオ'));
   }
 
-  // summaryにラジオの記載がない場合は、動画用サイズでなければラジオとみなす
+  // 再生中のページでは、実際の動画ストリームの解像度を判定材料にする。カテゴリの説明文が
+  // 「(ラジオ...)」表記でも実際には映像が配信されているコースがあるため、その場合は
+  // 表記より実際に映像があるかどうかを優先する(映像があればラジオ番組表示は出さない)。
   return !(await isTvSize());
 }
 async function isCaptionAvailable(contentId) {
+    const isExplicitContentId = contentId !== undefined && contentId !== null;
     // 現在の動画IDを取得（contentId省略時は現在再生中の動画）
-    const currentVideoId = (contentId !== undefined && contentId !== null) ? contentId : window.getCurrentContentId();
+    const currentVideoId = isExplicitContentId ? contentId : window.getCurrentContentId();
     if (!currentVideoId) return false;
 
-    // 動画IDから現在のカテゴリデータを取得
+    // 再生中のページでは実字幕(SAMIファイル。画像字幕を含む)の有無を優先する。
+    // getVideoSrcInfoはDRMチケット発行を伴うため、検索結果一覧など大量の項目を
+    // 判定する呼び出し(contentId明示指定)では使わない。
+    if (!isExplicitContentId) {
+      const videoSrcInfo = await getVideoSrcInfo(currentVideoId);
+      if (videoSrcInfo && typeof videoSrcInfo.existsSamiFile === 'boolean') {
+        return videoSrcInfo.existsSamiFile;
+      }
+    }
+
+    // 動画IDから現在のカテゴリデータを取得(フォールバック、または検索結果一覧からの呼び出し)
     const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
     if (!currentCategory) return false;
 
-    // summary欄でラジオ番組かどうかを判定
-    const isCaptionAvailable = currentCategory.summary && (
-      currentCategory.summary.startsWith('(ラジオ・字幕')
-    );
-    return isCaptionAvailable;
+    // summary欄で「ラジオ番組の字幕付加実験」カテゴリかどうかを判定
+    return !!(currentCategory.summary && currentCategory.summary.startsWith('(ラジオ・字幕'));
 }
 // ラジオ番組判定関数
 async function checkIfRadioProgram() {
@@ -171,3 +191,4 @@ window.checkIfRadioProgram = checkIfRadioProgram;
 window.showRadioProgramUI = showRadioProgramUI;
 window.isRadioProgram = isRadioProgram;
 window.isCaptionAvailable = isCaptionAvailable;
+window.getVideoSrcInfo = getVideoSrcInfo;
