@@ -1,4 +1,13 @@
 // 動画下部に設定パネルを追加する関数
+//
+// waitForVideoElementAndInsertPanel経由でSPA遷移のたびに呼ばれるが、内部でinsertPrevNextLinks/
+// insertEpisodeListMenuの非同期処理を待つため、短時間に2回呼ばれると1回目の処理が終わる前に
+// 2回目が開始してしまうことがある。関数冒頭の重複チェックは呼び出し開始時点のDOMしか見ておらず、
+// この非同期処理中の重複呼び出しは防げないため(2回とも「まだ存在しない」と判定してしまう)、
+// video-settings-panelだけ二重に挿入される不具合があった。
+// 単純な再入防止フラグだと、対象要素が見つからないまま(例: ページ離脱)フラグが永久にtrueの
+// ままになり、次の動画で二度とパネルが挿入されなくなる恐れがあるため、代わりに「一番新しい
+// 呼び出しだけが最終的な挿入を行う」トークン方式にする。
 function addVideoSettingsPanel() {
   // 既にパネルが存在する場合は何もしない
   if (document.getElementById('video-settings-panel')) {
@@ -13,9 +22,13 @@ function addVideoSettingsPanel() {
     setTimeout(addVideoSettingsPanel, 100);
     return;
   }
+  window.oujVideoSettingsPanelToken = (window.oujVideoSettingsPanelToken || 0) + 1;
+  const myToken = window.oujVideoSettingsPanelToken;
   window.waitForElement('#content-detail-area > div.title', async (targetElement) => {
     await window.insertPrevNextLinks(targetElement);
     await window.insertEpisodeListMenu(targetElement);
+    // 待っている間により新しい呼び出しが発生していれば、この呼び出しの結果は古いので破棄する
+    if (window.oujVideoSettingsPanelToken !== myToken) return;
     insertSettingsPanel(targetElement);
   });
 }

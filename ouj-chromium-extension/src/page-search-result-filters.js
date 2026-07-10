@@ -69,6 +69,57 @@ function applyFilters() {
   list.querySelectorAll(':scope > ion-item[role="listitem"]').forEach((item) => applyFiltersToItem(item, state));
 }
 
+// --- 並び替え機能 ---
+// 「未視聴を優先」は全項目の分類(サーバーリクエスト)が必要になるため、ページ表示時に
+// 自動実行はせず、ユーザーがチップを明示的にクリックした時だけ発火させる。
+// 選択状態も設定として永続化はせず(次回訪問時に意図せず一括classifyが走るのを防ぐため)、
+// list要素上のプロパティとして現在の検索結果表示中のみ保持する。
+
+// 一覧の表示順(サイトが返した元の順番)をitemごとに記録しておく。並び替え後に
+// 「サイト表示順」へ戻すため、無限スクロールで項目が追加されるたびに呼び出す想定
+function assignSiteOrderIndexes(list) {
+  if (list.oujSiteOrderCounter === undefined) list.oujSiteOrderCounter = 0;
+  list.querySelectorAll(':scope > ion-item[role="listitem"]').forEach((item) => {
+    if (item.dataset.oujSiteOrder !== undefined) return;
+    item.dataset.oujSiteOrder = String(list.oujSiteOrderCounter++);
+  });
+}
+
+// 'default'(サイト表示順) | 'newest'(新しい順) | 'unwatched'(未視聴を優先)
+async function applySearchResultSort(list) {
+  const sortMode = list.oujSortMode || 'default';
+  const items = Array.from(list.querySelectorAll(':scope > ion-item[role="listitem"]'));
+  if (items.length === 0) return;
+
+  if (sortMode === 'unwatched') {
+    // 未分類の項目だけをまとめて分類する。既存のgateを共有し同時実行数を抑える
+    const gate = list.__oujFilterGate || window.createConcurrencyGate(4);
+    const unclassified = items.filter((item) => item.dataset.oujClassified !== 'done' && item.dataset.oujClassified !== 'unavailable');
+    await Promise.all(unclassified.map((item) => classifySearchResultItem(item, gate)));
+  }
+
+  let sorted;
+  if (sortMode === 'newest') {
+    // コンテンツIDは新しいコンテンツほど大きい値になる傾向があるため、追加リクエストなしで近似できる
+    sorted = items.slice().sort((a, b) => {
+      const idA = Number(window.extractContentIdFromThumbnail(a)) || 0;
+      const idB = Number(window.extractContentIdFromThumbnail(b)) || 0;
+      return idB - idA;
+    });
+  } else if (sortMode === 'unwatched') {
+    sorted = items.slice().sort((a, b) => {
+      const unwatchedA = a.dataset.oujUnwatched === '1' ? 0 : 1;
+      const unwatchedB = b.dataset.oujUnwatched === '1' ? 0 : 1;
+      if (unwatchedA !== unwatchedB) return unwatchedA - unwatchedB;
+      return Number(a.dataset.oujSiteOrder || 0) - Number(b.dataset.oujSiteOrder || 0);
+    });
+  } else {
+    sorted = items.slice().sort((a, b) => Number(a.dataset.oujSiteOrder || 0) - Number(b.dataset.oujSiteOrder || 0));
+  }
+
+  sorted.forEach((item) => list.appendChild(item));
+}
+
 function buildFilterChip(label, isActive, onClick) {
   const chip = document.createElement('button');
   chip.type = 'button';
@@ -141,7 +192,50 @@ function renderFilterBar(list) {
     })
   );
 
+  bar.appendChild(buildSortRow(list));
+
   list.parentNode.insertBefore(bar, list);
+}
+
+// 並び替えチップ行。「未視聴を優先」だけは全項目の分類(サーバーリクエスト)が
+// 必要になるため、クリックされた時だけ非同期で分類してから並び替える
+function buildSortRow(list) {
+  const sortMode = list.oujSortMode || 'default';
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;width:100%;margin-top:4px;';
+
+  const label = document.createElement('span');
+  label.textContent = '並び替え:';
+  label.style.cssText = 'font-size:13px;color:#666;margin-right:8px;';
+  row.appendChild(label);
+
+  const sortOptions = [
+    { value: 'default', label: 'サイト表示順' },
+    { value: 'newest', label: '新しい順' },
+    { value: 'unwatched', label: '未視聴を優先' },
+  ];
+  sortOptions.forEach(({ value, label: optionLabel }) => {
+    row.appendChild(
+      buildFilterChip(optionLabel, sortMode === value, async () => {
+        if (list.oujSortMode === value && !list.oujSortLoading) return;
+        list.oujSortMode = value;
+        list.oujSortLoading = value === 'unwatched';
+        renderFilterBar(list);
+        await applySearchResultSort(list);
+        list.oujSortLoading = false;
+        renderFilterBar(list);
+      })
+    );
+  });
+
+  if (list.oujSortLoading) {
+    const loading = document.createElement('span');
+    loading.textContent = '並び替え中...';
+    loading.style.cssText = 'font-size:12px;color:#999;margin-left:8px;';
+    row.appendChild(loading);
+  }
+
+  return row;
 }
 
 function startSearchFilterObserver() {
@@ -169,10 +263,13 @@ function startSearchFilterObserver() {
     { root: null, rootMargin: '150px 0px', threshold: 0 }
   );
   window.__oujSearchFilterObserver = observer;
+  observer.__oujGate = gate;
   return observer;
 }
 
 function registerItemsForClassification(observer, list) {
+  // 並び替え(「サイト表示順」「未視聴を優先」)で使う元の表示順インデックスを付与
+  assignSiteOrderIndexes(list);
   list.querySelectorAll(':scope > ion-item[role="listitem"]').forEach((item) => {
     if (item.dataset.oujClassified) return;
     observer.observe(item);
@@ -181,8 +278,11 @@ function registerItemsForClassification(observer, list) {
 
 function initializeSearchResultFilters() {
   window.waitForElement(SEARCH_RESULT_FILTER_LIST_SELECTOR, (list) => {
-    renderFilterBar(list);
+    list.oujSortMode = 'default';
+    list.oujSortLoading = false;
     const observer = startSearchFilterObserver();
+    list.__oujFilterGate = observer.__oujGate;
+    renderFilterBar(list);
     registerItemsForClassification(observer, list);
 
     // 無限スクロールで追加される項目にも監視対象を広げる

@@ -6,6 +6,7 @@ const MENU_CONFIG = {
     { id: "history", text: "履歴", icon: "time" },
     { id: "recommend", text: "おすすめ動画", icon: "play" },
     { id: "year", text: "年度別", icon: "calendar" },
+    { id: "studytime", text: "学習時間", icon: "stats" },
     { id: "darkmode", text: "ダークモード", icon: "moon" }
   ]
 };
@@ -183,6 +184,10 @@ function createMenuList() {
   const yearItem = menuList.querySelector('#year-menu-item');
   if (yearItem) {
     yearItem.addEventListener('click', window.handleYearMenuOpen);
+  }
+  const studyTimeItem = menuList.querySelector('#studytime-menu-item');
+  if (studyTimeItem) {
+    studyTimeItem.addEventListener('click', window.handleStudyTimePanelOpen);
   }
   const darkModeItem = menuList.querySelector('#darkmode-menu-item');
   if (darkModeItem) {

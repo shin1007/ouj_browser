@@ -96,8 +96,25 @@ function handleYearMenuOpen() {
       });
     }
 
-    function renderCourses(bucket, yearBuckets) {
-      const itemsHtml = bucket.courses.map((course) => window.buildNativeCategoryItemHtml({
+    function renderCourses(bucket, yearBuckets, sortMode = 'name') {
+      // 「お気に入りを上に」選択時のみお気に入り優先で並び替える。判定はローカルの
+      // お気に入り登録状況だけを見るため、追加のネットワークリクエストは発生しない
+      const sortedCourses = sortMode === 'favorite'
+        ? bucket.courses.slice().sort((a, b) => {
+            const favA = window.isFavorite(a.categoryId) ? 0 : 1;
+            const favB = window.isFavorite(b.categoryId) ? 0 : 1;
+            if (favA !== favB) return favA - favB;
+            return a.name.localeCompare(b.name, 'ja');
+          })
+        : bucket.courses;
+
+      const sortToggleHtml = `
+        <div style="padding:8px 20px 0 20px;">
+          <button id="year-course-sort-toggle" type="button" style="font-size:13px;padding:4px 10px;border:1px solid ${sortMode === 'favorite' ? '#1976d2' : '#ddd'};border-radius:14px;background:${sortMode === 'favorite' ? '#1976d2' : '#fff'};color:${sortMode === 'favorite' ? '#fff' : '#333'};cursor:pointer;">★ お気に入りを上に</button>
+        </div>
+      `;
+
+      const itemsHtml = sortedCourses.map((course) => window.buildNativeCategoryItemHtml({
         text: course.name,
         buttonClass: 'year-course-button',
         dataAttrs: { 'category-id': course.categoryId },
@@ -109,12 +126,19 @@ function handleYearMenuOpen() {
           { text: '年度別', id: 'year-breadcrumb-root' },
           { text: `${bucket.year}年度` }
         ]),
+        extraAsideHtml: sortToggleHtml,
         asideListHtml: itemsHtml || '<div style="padding:16px;color:#666;">この年度の講義はありません</div>'
       });
 
       const rootBreadcrumb = overlay.querySelector('#year-breadcrumb-root');
       if (rootBreadcrumb) {
         rootBreadcrumb.addEventListener('click', () => renderFolders(yearBuckets));
+      }
+      const sortToggleBtn = overlay.querySelector('#year-course-sort-toggle');
+      if (sortToggleBtn) {
+        sortToggleBtn.addEventListener('click', () => {
+          renderCourses(bucket, yearBuckets, sortMode === 'favorite' ? 'name' : 'favorite');
+        });
       }
       overlay.querySelectorAll('.year-course-button').forEach((btn) => {
         btn.addEventListener('click', (event) => {

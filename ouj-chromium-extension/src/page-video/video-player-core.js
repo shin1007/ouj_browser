@@ -78,6 +78,9 @@ async function addFunctionPanel(currentVideo){
   // 番組間の音量差を抑える音量正規化の音声グラフを準備する
   window.startVolumeNormalizationManagement();
 
+  // 学習時間トラッキングを開始
+  window.startStudyTimeTracking();
+
   // 動画自動再生設定の取得
   const autoPlayEnabled = window.getBooleanSetting ? window.getBooleanSetting('autoPlayEnabled', false) : false;
 
