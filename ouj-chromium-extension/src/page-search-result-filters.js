@@ -11,14 +11,67 @@ const SEARCH_FILTER_SETTINGS_KEYS = {
   media: 'searchFilterMedia', // 'all' | 'tv' | 'radio'
   captionOnly: 'searchFilterCaptionOnly',
   unwatchedOnly: 'searchFilterUnwatchedOnly',
+  partialOnly: 'searchFilterPartialOnly',
 };
+
+// 検索キーワード履歴（最近の検索チップ用）
+const SEARCH_KEYWORD_HISTORY_KEY = 'searchKeywordHistory';
+const SEARCH_KEYWORD_HISTORY_MAX = 8;
 
 function getSearchFilterState() {
   return {
     media: window.getSetting(SEARCH_FILTER_SETTINGS_KEYS.media, 'all'),
     captionOnly: window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.captionOnly, false),
     unwatchedOnly: window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.unwatchedOnly, false),
+    partialOnly: window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.partialOnly, false),
   };
+}
+
+// 現在のURLから検索キーワード（se=パラメータ）を取り出して履歴に保存する。
+// rawはURLに入っていたそのままの値（再検索時にそのまま使う）、labelは表示用のデコード済み文字列
+function recordSearchKeyword() {
+  const match = window.location.href.match(/[?&]se=([^&]+)/);
+  if (!match) return;
+  const raw = match[1];
+  let label = raw;
+  try {
+    label = window.decodeURLComponentSafe(`se=${raw}`);
+  } catch (e) { /* デコード失敗時はrawのまま表示 */ }
+  if (!label || !label.trim()) return;
+  let history = window.getSetting(SEARCH_KEYWORD_HISTORY_KEY, []);
+  if (!Array.isArray(history)) history = [];
+  history = history.filter((item) => item.label !== label);
+  history.unshift({ raw, label });
+  if (history.length > SEARCH_KEYWORD_HISTORY_MAX) history = history.slice(0, SEARCH_KEYWORD_HISTORY_MAX);
+  window.saveSetting(SEARCH_KEYWORD_HISTORY_KEY, history);
+}
+
+// 分類結果（テレビ/ラジオ・字幕・視聴状況）を項目上に常時表示する小さなバッジ。
+// フィルターを使わなくても一覧を見るだけで種別が分かるようにする
+function applyBadgesToItem(item) {
+  if (item.dataset.oujClassified !== 'done') return;
+  if (item.querySelector('.ouj-result-badges')) return;
+  const titleEl = item.querySelector('.list-content-title .title') || item.querySelector('.title');
+  if (!titleEl) return;
+  const badges = document.createElement('span');
+  badges.className = 'ouj-result-badges';
+  badges.style.cssText = 'display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle;';
+  const makeBadge = (text, bg, color) =>
+    `<span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:normal;background:${bg};color:${color};white-space:nowrap;">${text}</span>`;
+  let html = '';
+  html += item.dataset.oujMedia === 'radio'
+    ? makeBadge('📻 ラジオ', '#e1f5fe', '#0277bd')
+    : makeBadge('📺 テレビ', '#ede7f6', '#4527a0');
+  if (item.dataset.oujCaption === '1') {
+    html += makeBadge('字幕あり', '#e8f5e9', '#2e7d32');
+  }
+  if (item.dataset.oujWatchState === 'done') {
+    html += makeBadge('✓ 視聴済み', '#dcedc8', '#33691e');
+  } else if (item.dataset.oujWatchState === 'partial') {
+    html += makeBadge(`途中 ${item.dataset.oujWatchPercent || ''}%`, '#fff3e0', '#e65100');
+  }
+  badges.innerHTML = html;
+  titleEl.appendChild(badges);
 }
 
 // 検索結果1件を分類する。分類できた項目のみdataset.oujClassified='done'になる。
@@ -39,12 +92,23 @@ async function classifySearchResultItem(item, gate) {
     const status = await gate.run(() => window.getVideoViewingStatus(contentId));
     item.dataset.oujMedia = isRadio ? 'radio' : 'tv';
     item.dataset.oujCaption = captionOk ? '1' : '0';
+    // 視聴状況は3値で持つ: unwatched(未視聴) / partial(視聴途中) / done(視聴済み)
+    if (status && status.isFinished) {
+      item.dataset.oujWatchState = 'done';
+    } else if (status && status.currentTimeRate > 0) {
+      item.dataset.oujWatchState = 'partial';
+      item.dataset.oujWatchPercent = String(Math.floor(status.currentTimeRate * 100));
+    } else {
+      item.dataset.oujWatchState = 'unwatched';
+    }
+    // 既存の並び替え処理との互換用（未視聴を優先ソートで使用）
     item.dataset.oujUnwatched = status && status.isFinished ? '0' : '1';
     item.dataset.oujClassified = 'done';
   } catch (error) {
     item.dataset.oujClassified = 'unavailable';
   }
   applyFiltersToItem(item);
+  applyBadgesToItem(item);
 }
 
 // 分類済みの項目にのみフィルター条件を適用する。未分類・分類不能の項目は隠さない
@@ -57,7 +121,10 @@ function applyFiltersToItem(item, state = getSearchFilterState()) {
   let hidden = false;
   if (state.media !== 'all' && item.dataset.oujMedia !== state.media) hidden = true;
   if (state.captionOnly && item.dataset.oujCaption !== '1') hidden = true;
-  if (state.unwatchedOnly && item.dataset.oujUnwatched !== '1') hidden = true;
+  // 「未視聴のみ」は視聴済み(done)を隠す（視聴途中は表示する）
+  if (state.unwatchedOnly && item.dataset.oujWatchState === 'done') hidden = true;
+  // 「視聴途中のみ」は途中まで見たものだけを表示する
+  if (state.partialOnly && item.dataset.oujWatchState !== 'partial') hidden = true;
   item.dataset.oujFilterHidden = hidden ? 'true' : 'false';
   window.updateSearchResultItemVisibility(item);
 }
@@ -107,10 +174,16 @@ async function applySearchResultSort(list) {
       return idB - idA;
     });
   } else if (sortMode === 'unwatched') {
+    // 未視聴 → 視聴途中 → 視聴済み の順に並べる
+    const stateRank = (item) => {
+      if (item.dataset.oujWatchState === 'done') return 2;
+      if (item.dataset.oujWatchState === 'partial') return 1;
+      return 0;
+    };
     sorted = items.slice().sort((a, b) => {
-      const unwatchedA = a.dataset.oujUnwatched === '1' ? 0 : 1;
-      const unwatchedB = b.dataset.oujUnwatched === '1' ? 0 : 1;
-      if (unwatchedA !== unwatchedB) return unwatchedA - unwatchedB;
+      const rankA = stateRank(a);
+      const rankB = stateRank(b);
+      if (rankA !== rankB) return rankA - rankB;
       return Number(a.dataset.oujSiteOrder || 0) - Number(b.dataset.oujSiteOrder || 0);
     });
   } else {
@@ -192,9 +265,57 @@ function renderFilterBar(list) {
     })
   );
 
+  bar.appendChild(
+    buildFilterChip('視聴途中のみ', state.partialOnly, () => {
+      window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.partialOnly, !state.partialOnly);
+      renderFilterBar(list);
+      applyFilters();
+    })
+  );
+
   bar.appendChild(buildSortRow(list));
 
+  const keywordRow = buildSearchKeywordHistoryRow(list);
+  if (keywordRow) bar.appendChild(keywordRow);
+
   list.parentNode.insertBefore(bar, list);
+}
+
+// 「最近の検索」チップ行。クリックでそのキーワードの検索結果へ遷移する
+function buildSearchKeywordHistoryRow(list) {
+  const history = window.getSetting(SEARCH_KEYWORD_HISTORY_KEY, []);
+  if (!Array.isArray(history) || history.length === 0) return null;
+  // 現在表示中のキーワードは除いて表示する
+  const currentMatch = window.location.href.match(/[?&]se=([^&]+)/);
+  const currentRaw = currentMatch ? currentMatch[1] : '';
+  const others = history.filter((item) => item.raw !== currentRaw);
+  if (others.length === 0) return null;
+
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;width:100%;margin-top:4px;';
+
+  const label = document.createElement('span');
+  label.textContent = '最近の検索:';
+  label.style.cssText = 'font-size:13px;color:#666;margin-right:8px;';
+  row.appendChild(label);
+
+  others.forEach((item) => {
+    row.appendChild(
+      buildFilterChip(item.label, false, () => {
+        window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?se=${item.raw}`;
+      })
+    );
+  });
+
+  // 履歴のクリア
+  const clearChip = buildFilterChip('× 履歴を消す', false, () => {
+    window.saveSetting(SEARCH_KEYWORD_HISTORY_KEY, []);
+    renderFilterBar(list);
+  });
+  clearChip.style.color = '#999';
+  row.appendChild(clearChip);
+
+  return row;
 }
 
 // 並び替えチップ行。「未視聴を優先」だけは全項目の分類(サーバーリクエスト)が
@@ -277,6 +398,8 @@ function registerItemsForClassification(observer, list) {
 }
 
 function initializeSearchResultFilters() {
+  // 検索キーワードを履歴に記録（「最近の検索」チップ用）
+  recordSearchKeyword();
   window.waitForElement(SEARCH_RESULT_FILTER_LIST_SELECTOR, (list) => {
     list.oujSortMode = 'default';
     list.oujSortLoading = false;

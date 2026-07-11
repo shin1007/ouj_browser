@@ -1,7 +1,13 @@
 
 
 async function main() {
-  
+
+  // 他デバイス・ポップアップで変更された設定の取り込み（settings-sync.js）を待つ。
+  // 待たないと、取り込み前の古いlocalStorage値で各機能が初期化されてしまう
+  if (window.oujSettingsSyncReady) {
+    try { await window.oujSettingsSyncReady; } catch (e) { /* 失敗しても続行 */ }
+  }
+
   // 画面種別を判定して処理を分岐
   const pageType = await window.detectOujPageType(window.location.href);
   
@@ -25,6 +31,10 @@ async function main() {
   window.startMenuOpeningMutationObserver();
   if (pageType.page === 'home') {
     // ホームページの処理を呼び出す
+    // 「続きから見る」パネルは自動ログイン判定と並行して挿入する
+    if (typeof window.insertHomeContinuePanel === 'function') {
+      window.insertHomeContinuePanel();
+    }
     await window.handleHomePageAutoLogin();
   } else if (pageType.page === 'search-result') {
     window.startSearchResultDedupObserver();

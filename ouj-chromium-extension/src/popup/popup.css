@@ -206,3 +206,72 @@ h2 {
     border-radius: 4px;
     font-size: 10px;
 }
+
+/* 再生・動画の設定（ポップアップから変更できる設定群） */
+.settings-note {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.5;
+    margin: 8px 0;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #333;
+    padding: 5px 0;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.setting-row input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: #0075C1;
+}
+
+.setting-select-row {
+    cursor: default;
+    justify-content: space-between;
+}
+
+.setting-select-row select {
+    padding: 4px 6px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+    color: #333;
+    max-width: 160px;
+}
+
+/* データのバックアップ */
+.backup-button {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 8px 0;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.2s;
+}
+
+.backup-button:hover {
+    background-color: #eef6fc;
+    border-color: #0075C1;
+}
+
+.backup-file-input {
+    display: none;
+}

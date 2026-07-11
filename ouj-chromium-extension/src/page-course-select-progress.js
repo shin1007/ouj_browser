@@ -7,6 +7,8 @@
 
 function removeCourseProgressBadges() {
   document.querySelectorAll('.course-progress-badge').forEach((badge) => badge.remove());
+  // バッジとセットで挿入した「▶続き」ボタンも一緒に消す（SPA遷移での再構築対策）
+  document.querySelectorAll('.course-continue-btn').forEach((btn) => btn.remove());
 }
 
 function createCourseProgressBadgePlaceholder(categoryId) {
@@ -25,6 +27,24 @@ function createCourseProgressBadgePlaceholder(categoryId) {
     white-space: nowrap;
   `;
   return badge;
+}
+
+// 直近2週間の視聴ペース（履歴ベース）から修了までの目安を計算する。
+// 履歴にこの科目の動画がなければnullを返す（表示しない）
+function estimateCompletionPace(videoList, finishedCount) {
+  const remaining = videoList.length - finishedCount;
+  if (remaining <= 0) return null;
+  const history = window.getSetting('history', []);
+  if (!Array.isArray(history) || history.length === 0) return null;
+  const idsInCourse = new Set(videoList.map((v) => String(v.contentId)));
+  const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+  const recentCount = history.filter((h) =>
+    idsInCourse.has(String(h.contentId)) && h.date && new Date(h.date).getTime() >= twoWeeksAgo
+  ).length;
+  if (recentCount === 0) return null;
+  const perWeek = recentCount / 2;
+  const weeks = Math.ceil(remaining / perWeek);
+  return { remaining, perWeek: Math.round(perWeek * 10) / 10, weeks };
 }
 
 async function classifyCourseProgress(categoryId, badge, gate) {
@@ -52,6 +72,52 @@ async function classifyCourseProgress(categoryId, badge, gate) {
     } else if (finishedCount > 0) {
       badge.style.background = '#e3f2fd';
       badge.style.color = '#1565c0';
+    }
+
+    // 修了ペース予測（直近2週間の視聴履歴があるときだけツールチップで表示）
+    const pace = estimateCompletionPace(videoList, finishedCount);
+    if (pace) {
+      badge.title = `あと${pace.remaining}回。直近2週間の視聴ペース（週${pace.perWeek}回）が続けば約${pace.weeks}週間で見終わります`;
+    }
+
+    // 「▶続き」ボタン: 最初の未視聴回へ直行する（未視聴回がある場合のみ）
+    if (finishedCount < videoList.length && !badge.parentNode.querySelector('.course-continue-btn')) {
+      const firstUnfinishedIndex = statuses.findIndex((s) => !s || !s.isFinished);
+      const target = firstUnfinishedIndex >= 0 ? videoList[firstUnfinishedIndex] : null;
+      if (target) {
+        const contBtn = document.createElement('span');
+        contBtn.className = 'course-continue-btn';
+        contBtn.setAttribute('role', 'button');
+        contBtn.setAttribute('tabindex', '0');
+        contBtn.title = `続きから再生: ${target.title || ''}`;
+        contBtn.textContent = '▶ 続き';
+        contBtn.style.cssText = `
+          display: inline-flex;
+          align-items: center;
+          margin-left: 6px;
+          padding: 2px 10px;
+          border: 1px solid #1976d2;
+          border-radius: 12px;
+          font-size: 12px;
+          color: #1976d2;
+          background: transparent;
+          cursor: pointer;
+          white-space: nowrap;
+        `;
+        const onContinue = (event) => {
+          event.stopPropagation();
+          event.preventDefault();
+          window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${target.contentId}&ct=V&ca=${categoryId}`;
+        };
+        contBtn.addEventListener('click', onContinue);
+        contBtn.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onContinue(event);
+          }
+        });
+        badge.parentNode.insertBefore(contBtn, badge.nextSibling);
+      }
     }
   } catch (error) {
     badge.remove();

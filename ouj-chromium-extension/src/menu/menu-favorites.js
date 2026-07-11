@@ -1,6 +1,8 @@
 // お気に入り機能（menu.jsから分離）
 // ネイティブなカテゴリー一覧ページ（右ペイン）と同じ見た目で科目一覧を表示する
 // オーバーレイの共通基盤はmenu-native-shell.jsを利用する
+// 並び順は「カテゴリ別（従来）」と「手動（↑↓ボタンで入れ替え）」を切り替えられる。
+// 手動並び替えはfavorites配列自体の順序を入れ替えるため、同期・エクスポートにもそのまま反映される。
 
 async function fetchFavoriteItems(favorites, categories) {
   const idToCategory = {};
@@ -52,8 +54,30 @@ function groupFavoriteItems(items) {
   return { pinnedItems, groups: sortedNames.map((name) => ({ name, items: grouped[name] })) };
 }
 
-function buildFavoriteItemHtml(item) {
-  const extraHtml = window.buildPinToggleHtml(item.id, item.pinned) + window.buildFavoriteToggleHtml(item.id, true);
+// 「▶続き」ボタン（その科目の最初の未視聴回へ直行）
+function buildContinueButtonHtml(categoryId) {
+  return `
+    <span class="favorite-continue-btn" role="button" tabindex="0" title="最初の未視聴回から再生" data-category-id="${categoryId}" style="display:inline-flex;align-items:center;padding:2px 10px;border:1px solid #1976d2;color:#1976d2;background:transparent;cursor:pointer;border-radius:12px;font-size:12px;white-space:nowrap;margin-left:8px;">▶ 続き</span>
+  `;
+}
+
+// 手動並び替え用の↑↓ボタン
+function buildMoveButtonsHtml(categoryId) {
+  const btnStyle = 'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;border-radius:6px;font-size:12px;';
+  return `
+    <span class="favorite-move-up" role="button" tabindex="0" title="上へ" data-category-id="${categoryId}" style="${btnStyle}margin-left:8px;">↑</span>
+    <span class="favorite-move-down" role="button" tabindex="0" title="下へ" data-category-id="${categoryId}" style="${btnStyle}margin-left:4px;">↓</span>
+  `;
+}
+
+function buildFavoriteItemHtml(item, sortMode) {
+  let extraHtml = buildContinueButtonHtml(item.id);
+  if (sortMode === 'manual') {
+    extraHtml += buildMoveButtonsHtml(item.id);
+  } else {
+    extraHtml += window.buildPinToggleHtml(item.id, item.pinned);
+  }
+  extraHtml += window.buildFavoriteToggleHtml(item.id, true);
   return window.buildNativeCategoryItemHtml({
     text: item.name,
     buttonClass: 'favorite-course-button',
@@ -63,21 +87,36 @@ function buildFavoriteItemHtml(item) {
   });
 }
 
-function buildFavoriteListHtml(items) {
+function buildFavoriteListHtml(items, sortMode) {
   if (!items.length) {
     return '<div style="padding:16px;color:#666;">該当するお気に入りはありません</div>';
+  }
+  if (sortMode === 'manual') {
+    // 手動モードはfavorites配列の順そのまま（グループ分けしない）
+    return items.map((item) => buildFavoriteItemHtml(item, sortMode)).join('');
   }
   const { pinnedItems, groups } = groupFavoriteItems(items);
   let html = '';
   if (pinnedItems.length) {
     html += window.buildNativeSectionHeaderHtml('ピン止め');
-    html += pinnedItems.map(buildFavoriteItemHtml).join('');
+    html += pinnedItems.map((item) => buildFavoriteItemHtml(item, sortMode)).join('');
   }
   groups.forEach((group) => {
     html += window.buildNativeSectionHeaderHtml(group.name);
-    html += group.items.map(buildFavoriteItemHtml).join('');
+    html += group.items.map((item) => buildFavoriteItemHtml(item, sortMode)).join('');
   });
   return html;
+}
+
+// favorites配列内で指定IDを前後に移動する
+function moveFavorite(categoryId, direction) {
+  const favorites = window.getSetting('favorites', []);
+  const index = favorites.indexOf(String(categoryId));
+  if (index === -1) return;
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= favorites.length) return;
+  [favorites[index], favorites[newIndex]] = [favorites[newIndex], favorites[index]];
+  window.saveSetting('favorites', favorites);
 }
 
 function handleFavoritesPanelOpen() {
@@ -88,9 +127,12 @@ function handleFavoritesPanelOpen() {
     // お気に入り星・ピン止めボタンは表示を更新するたびに作り直すので、
     // イベントリスナーもその都度再登録する
     function wireListEvents() {
+      const sortMode = window.getSetting('favoritesSortMode', 'category');
       overlay.querySelectorAll('.favorite-course-button').forEach((btn) => {
         btn.addEventListener('click', (event) => {
-          if (event.target.closest('.favorite-btn') || event.target.closest('.pin-btn')) return;
+          if (event.target.closest('.favorite-btn') || event.target.closest('.pin-btn')
+            || event.target.closest('.favorite-continue-btn')
+            || event.target.closest('.favorite-move-up') || event.target.closest('.favorite-move-down')) return;
           const categoryId = btn.getAttribute('data-category-id');
           if (categoryId) {
             window.removeNativeOverlay();
@@ -138,23 +180,88 @@ function handleFavoritesPanelOpen() {
           }
         });
       });
+      // 「▶続き」ボタン: 最初の未視聴回を探して再生ページへ直行する
+      overlay.querySelectorAll('.favorite-continue-btn').forEach((contBtn) => {
+        const onContinue = async (event) => {
+          event.stopPropagation();
+          event.preventDefault();
+          if (contBtn.dataset.busy === '1') return;
+          contBtn.dataset.busy = '1';
+          const categoryId = contBtn.getAttribute('data-category-id');
+          contBtn.textContent = '検索中...';
+          try {
+            const next = await window.findFirstUnfinishedVideo(categoryId);
+            if (next) {
+              window.removeNativeOverlay();
+              window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${next.contentId}&ct=V&ca=${categoryId}`;
+              return;
+            }
+            window.showInfoNotification('この科目は全話視聴済みです');
+          } catch (e) {
+            window.showErrorNotification('未視聴回の検索に失敗しました');
+          }
+          contBtn.textContent = '▶ 続き';
+          contBtn.dataset.busy = '';
+        };
+        contBtn.addEventListener('click', onContinue);
+        contBtn.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onContinue(event);
+          }
+        });
+      });
+      // 手動並び替えの↑↓ボタン
+      if (sortMode === 'manual') {
+        const wireMove = (selector, direction) => {
+          overlay.querySelectorAll(selector).forEach((moveBtn) => {
+            const onMove = async (event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              moveFavorite(moveBtn.getAttribute('data-category-id'), direction);
+              allItems = await createFavoriteListData();
+              renderList();
+            };
+            moveBtn.addEventListener('click', onMove);
+            moveBtn.addEventListener('keydown', (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onMove(event);
+              }
+            });
+          });
+        };
+        wireMove('.favorite-move-up', -1);
+        wireMove('.favorite-move-down', 1);
+      }
     }
 
     // 検索ボックスは全体を再描画すると入力中にフォーカスが切れてしまうため、
     // リスト部分（#favorite-native-list）だけを差し替える
     function renderList() {
+      const sortMode = window.getSetting('favoritesSortMode', 'category');
       const keyword = filterValue.trim().toLowerCase();
       const filtered = keyword
         ? allItems.filter((item) => item.name.toLowerCase().includes(keyword) || item.parentCategoryName.toLowerCase().includes(keyword))
         : allItems;
       const listEl = overlay.querySelector('#favorite-native-list');
-      if (listEl) listEl.innerHTML = buildFavoriteListHtml(filtered);
+      if (listEl) listEl.innerHTML = buildFavoriteListHtml(filtered, sortMode);
+      // 並び順トグルの表示も更新
+      const sortToggle = overlay.querySelector('#favorite-sort-toggle');
+      if (sortToggle) {
+        sortToggle.textContent = sortMode === 'manual' ? '並び順: 手動（↑↓で入れ替え）' : '並び順: カテゴリ別';
+      }
       wireListEvents();
     }
 
     overlay.innerHTML = window.renderNativeShellHtml({
       breadcrumbHtml: window.buildNativeBreadcrumbHtml([{ text: 'お気に入り' }]),
-      extraAsideHtml: window.buildNativeSearchBoxHtml({ id: 'favorite-native-search', placeholder: '科目名・親カテゴリ名で検索' }),
+      extraAsideHtml: `
+        ${window.buildNativeSearchBoxHtml({ id: 'favorite-native-search', placeholder: '科目名・親カテゴリ名で検索' })}
+        <div style="padding:0 20px 12px 20px;">
+          <span id="favorite-sort-toggle" role="button" tabindex="0" style="display:inline-block;padding:4px 12px;border:1px solid #d1d5db;border-radius:12px;font-size:12px;color:#374151;cursor:pointer;">並び順: カテゴリ別</span>
+        </div>
+      `,
       asideListHtml: '<div id="favorite-native-list" style="padding:16px;color:#666;">読み込み中...</div>'
     });
 
@@ -163,6 +270,22 @@ function handleFavoritesPanelOpen() {
       searchInput.addEventListener('input', (event) => {
         filterValue = event.target.value;
         renderList();
+      });
+    }
+
+    const sortToggle = overlay.querySelector('#favorite-sort-toggle');
+    if (sortToggle) {
+      const onToggleSort = () => {
+        const current = window.getSetting('favoritesSortMode', 'category');
+        window.saveSetting('favoritesSortMode', current === 'manual' ? 'category' : 'manual');
+        renderList();
+      };
+      sortToggle.addEventListener('click', onToggleSort);
+      sortToggle.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onToggleSort();
+        }
       });
     }
 

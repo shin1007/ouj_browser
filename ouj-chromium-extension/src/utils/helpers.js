@@ -225,6 +225,36 @@ const getBooleanSetting = (key, defaultValue = true) => {
 };
 
 /**
+ * 科目別設定を取得する関数。
+ * `${baseKey}_${categoryId}`（科目別）があればそれを、なければ全体設定を返す
+ * @param {string} baseKey - 設定のベースキー（例: 'playbackSpeed'）
+ * @param {string|number} categoryId - 科目のカテゴリID
+ * @param {any} defaultValue - どちらも未設定の場合のデフォルト値
+ */
+const getPerCourseSetting = (baseKey, categoryId, defaultValue = null) => {
+    if (categoryId) {
+        const perCourse = getSetting(`${baseKey}_${categoryId}`, null);
+        if (perCourse !== null) return perCourse;
+    }
+    return getSetting(baseKey, defaultValue);
+};
+
+/**
+ * 科目別設定を保存する関数。
+ * 科目別キーと全体キーの両方に保存する。「最後に設定した値が他科目のデフォルトになり、
+ * 明示的に設定したことのある科目は自分の値を覚え続ける」という動きになる
+ * @param {string} baseKey - 設定のベースキー
+ * @param {string|number} categoryId - 科目のカテゴリID（無ければ全体のみ保存）
+ * @param {any} value - 保存する値
+ */
+const savePerCourseSetting = (baseKey, categoryId, value) => {
+    if (categoryId) {
+        saveSetting(`${baseKey}_${categoryId}`, value);
+    }
+    saveSetting(baseKey, value);
+};
+
+/**
  * 設定を削除する関数
  * @param {string} key - 設定キー
  */
@@ -598,6 +628,98 @@ const showConfirmDialog = (message, title = '確認', options = {}) => {
     });
 };
 
+/**
+ * 1行テキスト入力ダイアログを表示する関数（しおりのメモ入力などに使用）
+ * @param {string} message - 説明メッセージ
+ * @param {string} title - ダイアログのタイトル
+ * @param {Object} options - { placeholder, defaultValue, okText, cancelText }
+ * @returns {Promise<string|null>} 入力文字列（キャンセル時はnull）
+ */
+const showPromptDialog = (message, title = '入力', options = {}) => {
+    return new Promise((resolve) => {
+        const {
+            placeholder = '',
+            defaultValue = '',
+            okText = 'OK',
+            cancelText = 'キャンセル'
+        } = options;
+
+        // 既存のダイアログがあれば削除
+        const existingDialog = document.getElementById('prompt-dialog');
+        if (existingDialog) existingDialog.remove();
+
+        const dialog = document.createElement('div');
+        dialog.id = 'prompt-dialog';
+
+        const overlay = document.createElement('div');
+        Object.assign(overlay.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            background: 'rgba(0, 0, 0, 0.5)', zIndex: '10001',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            opacity: '0', transition: 'opacity 0.3s ease-in-out'
+        });
+
+        const content = document.createElement('div');
+        Object.assign(content.style, {
+            background: '#ffffff', borderRadius: '12px', padding: '24px',
+            maxWidth: '400px', width: '90%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            transform: 'scale(0.95)', transition: 'transform 0.3s ease-in-out',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        });
+
+        content.innerHTML = `
+            <h3 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600; color: #1f2937;">${title}</h3>
+            <p style="margin: 0 0 12px 0; font-size: 14px; line-height: 1.5; color: #4b5563;">${message}</p>
+            <input type="text" class="prompt-input" placeholder="${placeholder.replace(/"/g, '&quot;')}" style="
+                width: 100%; box-sizing: border-box; padding: 8px 12px; margin-bottom: 20px;
+                border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; color: #1f2937;">
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="prompt-cancel" style="padding: 8px 16px; border: 1px solid #d1d5db; background: #ffffff; color: #374151; border-radius: 6px; font-size: 14px; cursor: pointer;">${cancelText}</button>
+                <button class="prompt-ok" style="padding: 8px 16px; border: none; background: #3b82f6; color: #ffffff; border-radius: 6px; font-size: 14px; cursor: pointer;">${okText}</button>
+            </div>
+        `;
+
+        overlay.appendChild(content);
+        dialog.appendChild(overlay);
+        document.body.appendChild(dialog);
+
+        const input = content.querySelector('.prompt-input');
+        input.value = defaultValue;
+
+        setTimeout(() => {
+            overlay.style.opacity = '1';
+            content.style.transform = 'scale(1)';
+            input.focus();
+        }, 10);
+
+        const closeDialog = (result) => {
+            document.removeEventListener('keydown', handleKeydown);
+            overlay.style.opacity = '0';
+            content.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                if (dialog.parentNode) dialog.remove();
+                resolve(result);
+            }, 300);
+        };
+
+        content.querySelector('.prompt-ok').addEventListener('click', () => closeDialog(input.value));
+        content.querySelector('.prompt-cancel').addEventListener('click', () => closeDialog(null));
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) closeDialog(null);
+        });
+
+        const handleKeydown = (event) => {
+            if (event.key === 'Enter') {
+                closeDialog(input.value);
+            } else if (event.key === 'Escape') {
+                closeDialog(null);
+            }
+        };
+        document.addEventListener('keydown', handleKeydown);
+    });
+};
+
 // 画面種別を判定する関数
 async function detectOujPageType(url) {
     // ログイン画面
@@ -759,6 +881,9 @@ window.showErrorNotification = showErrorNotification;
 window.showWarningNotification = showWarningNotification;
 window.showInfoNotification = showInfoNotification;
 window.showConfirmDialog = showConfirmDialog;
+window.showPromptDialog = showPromptDialog;
+window.getPerCourseSetting = getPerCourseSetting;
+window.savePerCourseSetting = savePerCourseSetting;
 window.trimTitle = trimTitle;
 window.trimCourseName = trimCourseName;
 window.detectOujPageType = detectOujPageType;

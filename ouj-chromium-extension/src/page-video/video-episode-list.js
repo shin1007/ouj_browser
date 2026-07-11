@@ -2,6 +2,8 @@
 // 前後動画リンク(video-prev-next.js)だけでは、試験前の見直しなどで特定の回に
 // 直接飛びたいときに一度コース一覧まで戻る必要があるため、同じ科目内の全話を
 // 折りたたみ一覧で表示し、クリックで直接ジャンプできるようにする。
+// 各行には視聴済みマーク（クリックで手動の視聴済み/未視聴マークをトグル）と
+// 「あとで見る」トグルも表示する。
 async function insertEpisodeListMenu(titleElement) {
   const categoryId = window.getCurrentCategoryId();
   // insertPrevNextLinksと同じキャッシュキーを叩くため、直後に呼んでも追加のネットワークリクエストは発生しない
@@ -47,6 +49,14 @@ async function insertEpisodeListMenu(titleElement) {
   list.forEach((item) => {
     const isCurrent = String(item.contentId) === String(currentVideoId);
 
+    const row = document.createElement('div');
+    row.style.cssText = `
+      display: flex;
+      align-items: center;
+      background: ${isCurrent ? '#1976d2' : '#fff'};
+      border-bottom: 1px solid #eee;
+    `;
+
     const link = document.createElement('a');
     link.href = window.location.href.replace(/co=\d+/, 'co=' + item.contentId);
     if (isCurrent) {
@@ -54,13 +64,15 @@ async function insertEpisodeListMenu(titleElement) {
     }
     link.style.cssText = `
       display: block;
+      flex: 1;
+      min-width: 0;
       padding: 10px 16px;
       color: ${isCurrent ? '#fff' : '#333'};
-      background: ${isCurrent ? '#1976d2' : '#fff'};
       text-decoration: none;
-      border-bottom: 1px solid #eee;
       font-size: 14px;
       line-height: 1.4;
+      overflow: hidden;
+      text-overflow: ellipsis;
     `;
     link.textContent = item.title || String(item.contentId);
     link.onclick = function (e) {
@@ -68,10 +80,54 @@ async function insertEpisodeListMenu(titleElement) {
       window.location.href = this.href;
     };
     if (!isCurrent) {
-      link.onmouseenter = () => { link.style.background = '#e3f2fd'; };
-      link.onmouseleave = () => { link.style.background = '#fff'; };
+      link.onmouseenter = () => { row.style.background = '#e3f2fd'; };
+      link.onmouseleave = () => { row.style.background = '#fff'; };
     }
-    listContainer.appendChild(link);
+    row.appendChild(link);
+
+    // 視聴済みマーク（クリックで手動マークをトグル）。状態は後から非同期で反映する
+    const watchedToggle = document.createElement('span');
+    watchedToggle.className = 'episode-watched-toggle';
+    watchedToggle.dataset.contentId = item.contentId;
+    watchedToggle.setAttribute('role', 'button');
+    watchedToggle.setAttribute('tabindex', '0');
+    watchedToggle.title = 'クリックで視聴済み/未視聴を切り替え';
+    watchedToggle.style.cssText = `
+      flex-shrink: 0;
+      padding: 10px 8px;
+      cursor: pointer;
+      font-size: 14px;
+      color: ${isCurrent ? '#bbdefb' : '#ccc'};
+      user-select: none;
+    `;
+    watchedToggle.textContent = '～'; // 読み込み中の仮表示
+    row.appendChild(watchedToggle);
+
+    // あとで見るトグル
+    const watchLaterToggle = document.createElement('span');
+    watchLaterToggle.className = 'episode-watch-later-toggle';
+    watchLaterToggle.setAttribute('role', 'button');
+    watchLaterToggle.setAttribute('tabindex', '0');
+    watchLaterToggle.title = '「あとで見る」に追加/削除';
+    const inWatchLater = typeof window.isInWatchLater === 'function' && window.isInWatchLater(item.contentId);
+    watchLaterToggle.style.cssText = `
+      flex-shrink: 0;
+      padding: 10px 12px 10px 4px;
+      cursor: pointer;
+      font-size: 13px;
+      user-select: none;
+    `;
+    watchLaterToggle.textContent = inWatchLater ? '✓⏱' : '⏱';
+    watchLaterToggle.style.opacity = inWatchLater ? '1' : '0.45';
+    watchLaterToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const nowActive = window.toggleWatchLater(item.contentId, categoryId);
+      watchLaterToggle.textContent = nowActive ? '✓⏱' : '⏱';
+      watchLaterToggle.style.opacity = nowActive ? '1' : '0.45';
+    });
+    row.appendChild(watchLaterToggle);
+
+    listContainer.appendChild(row);
   });
 
   details.appendChild(listContainer);
@@ -85,6 +141,37 @@ async function insertEpisodeListMenu(titleElement) {
   } else {
     insertAfter.parentNode.appendChild(details);
   }
+
+  // 視聴状況を非同期で取得してマークに反映する（同時実行数を制限）。
+  // 多くはキャッシュ(40分)から返るため、実際のリクエスト数は限定的
+  const gate = window.createConcurrencyGate(3);
+  listContainer.querySelectorAll('.episode-watched-toggle').forEach((toggle) => {
+    const contentId = toggle.dataset.contentId;
+    const applyState = (isFinished) => {
+      toggle.textContent = isFinished ? '✓済' : '未';
+      toggle.style.color = isFinished ? '#2e7d32' : '#bbb';
+      toggle.style.fontWeight = isFinished ? 'bold' : 'normal';
+    };
+    gate.run(() => window.getVideoViewingStatus(contentId)).then((status) => {
+      applyState(status.isFinished);
+      const onToggle = async (event) => {
+        event.stopPropagation();
+        // 現在の表示状態の逆を手動マークとして保存する
+        const currentlyFinished = toggle.textContent.includes('済');
+        window.setWatchedOverride(contentId, !currentlyFinished);
+        applyState(!currentlyFinished);
+      };
+      toggle.addEventListener('click', onToggle);
+      toggle.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onToggle(event);
+        }
+      });
+    }).catch(() => {
+      toggle.textContent = '';
+    });
+  });
 }
 
 // グローバル関数として公開

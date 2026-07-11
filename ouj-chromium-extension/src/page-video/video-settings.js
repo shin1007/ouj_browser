@@ -54,12 +54,16 @@ function insertSettingsPanel(targetElement) {
   // 動画自動再生設定の取得
   const autoPlayEnabled = window.getBooleanSetting('autoPlayEnabled', false);
 
-  // 新規追加設定の取得
-  const skipEnd = Number(window.getSetting('skipEndSeconds', 0));
+  // 現在の科目ID（再生速度・スキップ秒数の科目別記憶に使う）
+  const currentCategoryId = window.getCurrentCategoryId ? window.getCurrentCategoryId() : null;
+
+  // 新規追加設定の取得（スキップ秒数は科目別設定があればそれを優先）
+  const skipEnd = Number(window.getPerCourseSetting('skipEndSeconds', currentCategoryId, 0));
+  const skipStart = Number(window.getPerCourseSetting('skipStartSeconds', currentCategoryId, 0));
   const playlogIntervalMinutes = Number(window.getSetting('playlogIntervalMinutes', 3));
-  // 再生速度設定の取得
+  // 再生速度設定の取得（科目別設定があればそれを優先）
   const playbackSpeedControlEnabled = window.getBooleanSetting('playbackSpeedControlEnabled', true);
-  const playbackSpeed = Number(window.getSetting('playbackSpeed', 1.0));
+  const playbackSpeed = Number(window.getPerCourseSetting('playbackSpeed', currentCategoryId, 1.0));
   // 字幕表示時に画面が縮小しないようにする設定の取得
   const preventCaptionShrink = window.getBooleanSetting('preventCaptionShrink', true);
   // 画面の自動ロック防止設定の取得
@@ -88,11 +92,12 @@ function insertSettingsPanel(targetElement) {
           <label for="playback-speed-control-enabled" style="margin-left: 5px; cursor: pointer; color: #333;">再生速度を調整する</label>
         </div>
         <div id="playback-speed-container" style="margin-bottom: 8px; display: flex; align-items: center; ${playbackSpeedControlEnabled ? '' : 'display: none;'}">
-          <label for="playback-speed" style="width: 250px; color: #333;">再生速度</label>
+          <label for="playback-speed" style="width: 250px; color: #333;">再生速度（科目ごとに記憶）</label>
           <select id="playback-speed" style="flex: 1;">
             ${speedOptions}
           </select>
         </div>
+        <div id="ab-repeat-container"></div>
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
         <div style='margin-bottom: 8px;'>
@@ -131,10 +136,28 @@ function insertSettingsPanel(targetElement) {
           <input type="radio" id="favorites-random" name="next-video" value="favorites-random" ${nextVideoMode === 'favorites-random' ? 'checked' : ''}>
           <label for="favorites-random" style="margin-left: 5px; cursor: pointer; color: #333;">お気に入りの中からランダムで次を再生</label>
         </div>
+        <div style="margin-bottom: 8px;">
+          <input type="radio" id="watch-later-queue" name="next-video" value="watch-later" ${nextVideoMode === 'watch-later' ? 'checked' : ''}>
+          <label for="watch-later-queue" style="margin-left: 5px; cursor: pointer; color: #333;">「あとで見る」リストの順に次を再生</label>
+        </div>
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
         <div style="margin-bottom: 8px; display: flex; align-items: center;">
-          <label for="skip-end" style="width: 250px; color: #333;">動画の最後をスキップ</label>
+          <label for="skip-start" style="width: 250px; color: #333;">動画の最初をスキップ（科目ごとに記憶）</label>
+          <select id="skip-start">
+            <option value="0" ${skipStart == 0 ? 'selected' : ''}>なし</option>
+            <option value="15" ${skipStart == 15 ? 'selected' : ''}>15秒</option>
+            <option value="30" ${skipStart == 30 ? 'selected' : ''}>30秒</option>
+            <option value="45" ${skipStart == 45 ? 'selected' : ''}>45秒</option>
+            <option value="60" ${skipStart == 60 ? 'selected' : ''}>60秒</option>
+            <option value="75" ${skipStart == 75 ? 'selected' : ''}>75秒</option>
+            <option value="90" ${skipStart == 90 ? 'selected' : ''}>90秒</option>
+            <option value="105" ${skipStart == 105 ? 'selected' : ''}>105秒</option>
+            <option value="120" ${skipStart == 120 ? 'selected' : ''}>120秒</option>
+          </select>
+        </div>
+        <div style="margin-bottom: 8px; display: flex; align-items: center;">
+          <label for="skip-end" style="width: 250px; color: #333;">動画の最後をスキップ（科目ごとに記憶）</label>
           <select id="skip-end">
             <option value="0" ${skipEnd == 0 ? 'selected' : ''}>なし</option>
             <option value="15" ${skipEnd == 15 ? 'selected' : ''}>15秒</option>
@@ -143,7 +166,7 @@ function insertSettingsPanel(targetElement) {
             <option value="60" ${skipEnd == 60 ? 'selected' : ''}>60秒</option>
             <option value="75" ${skipEnd == 75 ? 'selected' : ''}>75秒</option>
             <option value="90" ${skipEnd == 90 ? 'selected' : ''}>90秒</option>
-            <option value="105" ${skipEnd == 105 ? 'selected' : ''}>105秒</option>  
+            <option value="105" ${skipEnd == 105 ? 'selected' : ''}>105秒</option>
             <option value="120" ${skipEnd == 120 ? 'selected' : ''}>120秒</option>
           </select>
         </div>
@@ -168,6 +191,7 @@ function insertSettingsPanel(targetElement) {
           <label for="sleep-timer" style="width: 250px; color: #333;">スリープタイマー</label>
           <select id="sleep-timer">
             <option value="0">オフ</option>
+            <option value="episode-end" ${window.isSleepAtEpisodeEnd && window.isSleepAtEpisodeEnd() ? 'selected' : ''}>この回の終わりまで</option>
             <option value="15">15分</option>
             <option value="30">30分</option>
             <option value="45">45分</option>
@@ -178,6 +202,10 @@ function insertSettingsPanel(targetElement) {
         ${sleepTimerRemainingMinutes > 0 ? `
         <div style="margin-bottom: 8px; font-size: 12px; color: #666;">
           残り約${sleepTimerRemainingMinutes}分で自動的に一時停止します
+        </div>` : ''}
+        ${window.isSleepAtEpisodeEnd && window.isSleepAtEpisodeEnd() ? `
+        <div style="margin-bottom: 8px; font-size: 12px; color: #666;">
+          この回の再生が終わったところで自動的に停止します
         </div>` : ''}
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
@@ -191,11 +219,26 @@ function insertSettingsPanel(targetElement) {
       //   <!-- 分割バー -->
       // <div style="width: 1px; background: #ccc; height: 100%; min-height: 320px; margin: 0 8px; align-self: stretch;"></div>
 
-  // 追加設定項目のイベントリスナー
+  // 現在の科目ID（科目別設定の保存に使う）
+  const panelCategoryId = window.getCurrentCategoryId ? window.getCurrentCategoryId() : null;
+
+  // A-B区間リピートの操作行を挿入
+  const abRepeatContainer = panel.querySelector('#ab-repeat-container');
+  if (abRepeatContainer && typeof window.insertAbRepeatControls === 'function') {
+    window.insertAbRepeatControls(abRepeatContainer);
+  }
+
+  // 追加設定項目のイベントリスナー（スキップ秒数は科目別＋全体の両方に保存）
   const skipEndSelect = panel.querySelector('#skip-end');
   if (skipEndSelect) {
     skipEndSelect.addEventListener('change', (event) => {
-      window.saveSetting('skipEndSeconds', Number(event.target.value));
+      window.savePerCourseSetting('skipEndSeconds', panelCategoryId, Number(event.target.value));
+    });
+  }
+  const skipStartSelect = panel.querySelector('#skip-start');
+  if (skipStartSelect) {
+    skipStartSelect.addEventListener('change', (event) => {
+      window.savePerCourseSetting('skipStartSeconds', panelCategoryId, Number(event.target.value));
     });
   }
   const playlogIntervalSelect = panel.querySelector('#playlog-interval');
@@ -225,8 +268,9 @@ function insertSettingsPanel(targetElement) {
   if (speedSelect) {
     speedSelect.addEventListener('change', (event) => {
       const speed = Number(event.target.value);
+      // 科目別＋全体の両方に保存（この科目は自分の速度を記憶し、他科目のデフォルトも更新される）
+      window.savePerCourseSetting('playbackSpeed', panelCategoryId, speed);
       window.setPlaybackSpeed();
-      window.saveSetting('playbackSpeed', speed);
     });
   }
 
@@ -332,7 +376,13 @@ function insertSettingsPanel(targetElement) {
   const sleepTimerSelect = panel.querySelector('#sleep-timer');
   if (sleepTimerSelect) {
     sleepTimerSelect.addEventListener('change', (event) => {
-      const minutes = Number(event.target.value);
+      const value = event.target.value;
+      if (value === 'episode-end' && typeof window.armSleepTimerEndOfEpisode === 'function') {
+        // この回の終わりまで再生し、そこで停止する
+        window.armSleepTimerEndOfEpisode();
+        return;
+      }
+      const minutes = Number(value);
       if (minutes > 0 && typeof window.armSleepTimer === 'function') {
         window.armSleepTimer(minutes);
       } else if (typeof window.clearSleepTimer === 'function') {

@@ -3,10 +3,13 @@ const MENU_CONFIG = {
   title: "拡張機能",
   items: [
     { id: "favorites", text: "お気に入り", icon: "star" },
+    { id: "watchlater", text: "あとで見る", icon: "list" },
+    { id: "bookmarks", text: "しおり", icon: "bookmark" },
     { id: "history", text: "履歴", icon: "time" },
     { id: "recommend", text: "おすすめ動画", icon: "play" },
     { id: "year", text: "年度別", icon: "calendar" },
     { id: "studytime", text: "学習時間", icon: "stats" },
+    { id: "whatsnew", text: "お知らせ", icon: "notifications" },
     { id: "darkmode", text: "ダークモード", icon: "moon" }
   ]
 };
@@ -176,6 +179,22 @@ function createMenuList() {
   const favoritesItem = menuList.querySelector('#favorites-menu-item');
   if (favoritesItem) {
     favoritesItem.addEventListener('click', window.handleFavoritesPanelOpen);
+  }
+  const watchLaterItem = menuList.querySelector('#watchlater-menu-item');
+  if (watchLaterItem) {
+    watchLaterItem.addEventListener('click', window.handleWatchLaterPanelOpen);
+  }
+  const bookmarksItem = menuList.querySelector('#bookmarks-menu-item');
+  if (bookmarksItem) {
+    bookmarksItem.addEventListener('click', window.handleBookmarksPanelOpen);
+  }
+  const whatsNewItem = menuList.querySelector('#whatsnew-menu-item');
+  if (whatsNewItem) {
+    whatsNewItem.addEventListener('click', window.handleWhatsNewPanelOpen);
+    // 拡張機能の更新後、まだ「お知らせ」を開いていなければNEWバッジを表示する
+    if (typeof window.updateWhatsNewBadge === 'function') {
+      window.updateWhatsNewBadge(whatsNewItem);
+    }
   }
   const recommendItem = menuList.querySelector('#recommend-menu-item');
   if (recommendItem) {
