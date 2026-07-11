@@ -528,4 +528,20 @@ function initializeSearchResultFilters() {
   });
 }
 
+// 検索結果ページを開いている状態で、検索ボックスのクイック絞り込みパネル
+// (search-box-filter-panel.js)からプリセットのトグルが変更された時に、
+// 下部のフィルターバーと一覧表示を即座に追従させるためのヘルパー。
+// 検索結果ページ以外ではlistが無いので何もしない。
+function refreshSearchResultFilterUI() {
+  const list = document.querySelector(SEARCH_RESULT_FILTER_LIST_SELECTOR);
+  if (!list) return;
+  renderFilterBar(list);
+  applyFilters();
+}
+
 window.initializeSearchResultFilters = initializeSearchResultFilters;
+window.refreshSearchResultFilterUI = refreshSearchResultFilterUI;
+// 検索ボックスのクイック絞り込みパネルから再利用する設定キー・履歴キー・チップ生成関数
+window.OUJ_SEARCH_FILTER_KEYS = SEARCH_FILTER_SETTINGS_KEYS;
+window.OUJ_SEARCH_KEYWORD_HISTORY_KEY = SEARCH_KEYWORD_HISTORY_KEY;
+window.buildOujFilterChip = buildFilterChip;

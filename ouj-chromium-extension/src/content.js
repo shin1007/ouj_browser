@@ -23,6 +23,10 @@ async function main() {
   window.insertHeaderDarkModeToggle();
   window.insertHeaderCollapseToggle();
   window.startMenuOpeningMutationObserver();
+  // 検索ボックス(#searchText)フォーカス時のクイック絞り込みパネル（全ページ共通）
+  if (typeof window.initSearchBoxFilterPanel === 'function') {
+    window.initSearchBoxFilterPanel();
+  }
   if (pageType.page === 'home') {
     // ホームページの処理を呼び出す
     // 「続きから見る」パネルは自動ログイン判定と並行して挿入する
