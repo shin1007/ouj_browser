@@ -210,8 +210,8 @@ function refreshYearCourseOptions() {
 }
 
 // --- 並び替え機能 ---
-// 「未視聴を優先」は全項目の分類(サーバーリクエスト)が必要になるため、ページ表示時に
-// 自動実行はせず、ユーザーがチップを明示的にクリックした時だけ発火させる。
+// 「未視聴を優先」「視聴途中を優先」は全項目の分類(サーバーリクエスト)が必要になるため、
+// ページ表示時に自動実行はせず、ユーザーがチップを明示的にクリックした時だけ発火させる。
 // 選択状態も設定として永続化はせず(次回訪問時に意図せず一括classifyが走るのを防ぐため)、
 // list要素上のプロパティとして現在の検索結果表示中のみ保持する。
 
@@ -225,18 +225,28 @@ function assignSiteOrderIndexes(list) {
   });
 }
 
-// 'default'(サイト表示順) | 'newest'(新しい順) | 'unwatched'(未視聴を優先)
+// 'default'(サイト表示順) | 'newest'(新しい順) | 'unwatched'(未視聴を優先) | 'partial'(視聴途中を優先)
 async function applySearchResultSort(list) {
   const sortMode = list.oujSortMode || 'default';
   const items = Array.from(list.querySelectorAll(':scope > ion-item[role="listitem"]'));
   if (items.length === 0) return;
 
-  if (sortMode === 'unwatched') {
+  // 視聴状況で並べ替えるモードは全項目の視聴状況(サーバーリクエスト)が必要
+  if (sortMode === 'unwatched' || sortMode === 'partial') {
     // 未分類の項目だけをまとめて分類する。既存のgateを共有し同時実行数を抑える
     const gate = list.__oujFilterGate || window.createConcurrencyGate(4);
     const unclassified = items.filter((item) => item.dataset.oujClassified !== 'done' && item.dataset.oujClassified !== 'unavailable');
     await Promise.all(unclassified.map((item) => classifySearchResultItem(item, gate)));
   }
+
+  // 視聴状況の優先度で並べ替える。同順位内はサイト表示順を保つ
+  const sortByWatchStateRank = (stateRank) =>
+    items.slice().sort((a, b) => {
+      const rankA = stateRank(a);
+      const rankB = stateRank(b);
+      if (rankA !== rankB) return rankA - rankB;
+      return Number(a.dataset.oujSiteOrder || 0) - Number(b.dataset.oujSiteOrder || 0);
+    });
 
   let sorted;
   if (sortMode === 'newest') {
@@ -248,16 +258,17 @@ async function applySearchResultSort(list) {
     });
   } else if (sortMode === 'unwatched') {
     // 未視聴 → 視聴途中 → 視聴済み の順に並べる
-    const stateRank = (item) => {
+    sorted = sortByWatchStateRank((item) => {
       if (item.dataset.oujWatchState === 'done') return 2;
       if (item.dataset.oujWatchState === 'partial') return 1;
       return 0;
-    };
-    sorted = items.slice().sort((a, b) => {
-      const rankA = stateRank(a);
-      const rankB = stateRank(b);
-      if (rankA !== rankB) return rankA - rankB;
-      return Number(a.dataset.oujSiteOrder || 0) - Number(b.dataset.oujSiteOrder || 0);
+    });
+  } else if (sortMode === 'partial') {
+    // 視聴途中 → 未視聴 → 視聴済み の順に並べる（続きを見たいものを最優先）
+    sorted = sortByWatchStateRank((item) => {
+      if (item.dataset.oujWatchState === 'partial') return 0;
+      if (item.dataset.oujWatchState === 'done') return 2;
+      return 1;
     });
   } else {
     sorted = items.slice().sort((a, b) => Number(a.dataset.oujSiteOrder || 0) - Number(b.dataset.oujSiteOrder || 0));
@@ -435,7 +446,7 @@ function buildSearchKeywordHistoryRow(list) {
   return row;
 }
 
-// 並び替えチップ行。「未視聴を優先」だけは全項目の分類(サーバーリクエスト)が
+// 並び替えチップ行。「未視聴を優先」「視聴途中を優先」は全項目の分類(サーバーリクエスト)が
 // 必要になるため、クリックされた時だけ非同期で分類してから並び替える
 function buildSortRow(list) {
   const sortMode = list.oujSortMode || 'default';
@@ -451,13 +462,14 @@ function buildSortRow(list) {
     { value: 'default', label: 'サイト表示順' },
     { value: 'newest', label: '新しい順' },
     { value: 'unwatched', label: '未視聴を優先' },
+    { value: 'partial', label: '視聴途中を優先' },
   ];
   sortOptions.forEach(({ value, label: optionLabel }) => {
     row.appendChild(
       buildFilterChip(optionLabel, sortMode === value, async () => {
         if (list.oujSortMode === value && !list.oujSortLoading) return;
         list.oujSortMode = value;
-        list.oujSortLoading = value === 'unwatched';
+        list.oujSortLoading = value === 'unwatched' || value === 'partial';
         renderFilterBar(list);
         await applySearchResultSort(list);
         list.oujSortLoading = false;
