@@ -38,7 +38,13 @@
         "page-video/video-subtitle-size.css"
       ],
       "js": [
-        "utils/helpers.js",
+        "utils/net.js",
+        "utils/dom-wait.js",
+        "utils/settings.js",
+        "utils/notification.js",
+        "utils/dialog.js",
+        "utils/text.js",
+        "utils/page-type.js",
         "utils/favorites-helper.js",
         "utils/viewingStatus.js",
         "utils/watch-later.js",
@@ -57,6 +63,8 @@
         "menu/menu-bookmarks.js",
         "menu/menu-whats-new.js",
         "menu/menu.js",
+        "menu/menu-header-darkmode.js",
+        "menu/menu-header-collapse.js",
         "page-video/video-ending.js",
         "page-video/video-wake-lock.js",
         "page-video/video-sleep-timer.js",

@@ -1,5 +1,5 @@
 // 各specファイルで共通に使うナビゲーション・待機・ダークモード切替のヘルパー。
-// セレクタは src/menu/menu.js, src/content.js, src/utils/helpers.js の実装に合わせている。
+// セレクタは src/menu/menu.js, src/content.js, src/utils/*.js の実装に合わせている。
 const { expect } = require('@playwright/test');
 
 const BASE_URL = 'https://v.ouj.ac.jp/view/ouj/#';
