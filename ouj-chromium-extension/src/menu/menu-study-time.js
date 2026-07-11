@@ -93,7 +93,9 @@ function buildStudyTimeChartHtml(totalsByDate, days) {
     `;
   }).join('');
 
-  return `<div style="display:flex;gap:${showEveryLabel ? 8 : 2}px;padding:16px 20px;align-items:flex-end;">${bars}</div>`;
+  // box-sizing/width:100%でパネル幅を超えないようにし、日付ラベル等の横はみ出しは枠内でクリップする
+  // （30日表示で棒やラベルがパネルからあふれるのを防ぐ）
+  return `<div style="display:flex;gap:${showEveryLabel ? 8 : 2}px;padding:16px 20px;align-items:flex-end;box-sizing:border-box;width:100%;max-width:100%;overflow:hidden;">${bars}</div>`;
 }
 
 // 週別の棒グラフ（90日用）
@@ -119,7 +121,7 @@ function buildStudyTimeWeeklyChartHtml(totalsByDate) {
       </div>
     `;
   }).join('');
-  return `<div style="display:flex;gap:4px;padding:16px 20px;align-items:flex-end;">${bars}</div>`;
+  return `<div style="display:flex;gap:4px;padding:16px 20px;align-items:flex-end;box-sizing:border-box;width:100%;max-width:100%;overflow:hidden;">${bars}</div>`;
 }
 
 function buildStudyTimeSummaryHtml(totalsByDate, goalMinutes) {

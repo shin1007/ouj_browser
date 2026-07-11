@@ -175,13 +175,32 @@ async function sendPlayLogDirect(video) {
       return false;
     }
     const latest = await latestRes.json();
-    // viewIdのフィールド名はAPI仕様が公開されていないため、候補を順に探す
-    const viewId = latest ? (latest.viewId ?? latest.id ?? latest.viewingLogId ?? latest.logId) : null;
-    if (viewId === undefined || viewId === null) {
+    // 想定した視聴ログの形（数値のcurrentTimeRateを持つオブジェクト）でなければ、
+    // 誤ったIDのレコードへ書き込む事故を避けるため直接送信はあきらめてフォールバックに任せる。
+    // getVideoProgressもこの/viewinglog/latestのcurrentTimeRateを読んでいるので、
+    // この形が満たされない場合はそもそも想定外のレスポンス
+    if (!latest || typeof latest !== 'object' || typeof latest.currentTimeRate !== 'number') {
+      playlogDirectFailed = true;
+      return false;
+    }
+    // viewIdのフィールド名はAPI仕様が公開されていないため候補を順に探し、
+    // 使える型（正の数値 or 空でない文字列）であることも確認する
+    const viewId = latest.viewId ?? latest.id ?? latest.viewingLogId ?? latest.logId;
+    const viewIdUsable = (typeof viewId === 'number' && Number.isFinite(viewId) && viewId > 0)
+      || (typeof viewId === 'string' && viewId.trim() !== '');
+    if (!viewIdUsable) {
       playlogDirectFailed = true;
       return false;
     }
     const rate = Math.max(0, Math.min(video.currentTime / video.duration, 1));
+    const savedRate = Math.max(0, Math.min(latest.currentTimeRate, 1));
+    // 現在位置が記録済みの進捗より後ろ（シーク戻し・見直し）のときは、
+    // 学習進捗を巻き戻さないよう送信しない。送信はしないが「処理済み」として返し、
+    // フォールバックの一時停止→再生（これもサイト側に低い再生率を保存させてしまう）も走らせない。
+    // 小さなfloat誤差で誤って抑止しないよう0.001の許容を持たせる
+    if (rate + 0.001 < savedRate) {
+      return true;
+    }
     const postRes = await fetch(`https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/${viewId}/end-date`, {
       method: 'POST',
       credentials: 'include',
