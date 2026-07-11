@@ -54,6 +54,32 @@ function groupFavoriteItems(items) {
   return { pinnedItems, groups: sortedNames.map((name) => ({ name, items: grouped[name] })) };
 }
 
+// 視聴回数バッジ（例:「5/15回視聴済み」）のプレースホルダー。
+// 中身は表示後にIntersectionObserverで遅延計算して埋める（wireProgressBadges参照）。
+function buildProgressBadgePlaceholderHtml(categoryId) {
+  return `<span class="favorite-progress-badge" data-category-id="${categoryId}" style="display:inline-flex;align-items:center;margin-left:8px;padding:2px 10px;border-radius:12px;font-size:12px;color:#666;background:#eee;white-space:nowrap;"></span>`;
+}
+
+// バッジ要素に集計結果を反映する。resultがnull（動画0件）ならバッジ自体を消す。
+function fillFavoriteProgressBadge(badge, result) {
+  if (!result) {
+    badge.remove();
+    return;
+  }
+  const { finishedCount, total, suffix } = result;
+  badge.textContent = `${finishedCount}/${total}回視聴済み${suffix}`;
+  if (finishedCount >= total) {
+    badge.style.background = '#dcedc8';
+    badge.style.color = '#33691e';
+  } else if (finishedCount > 0) {
+    badge.style.background = '#e3f2fd';
+    badge.style.color = '#1565c0';
+  } else {
+    badge.style.background = '#eee';
+    badge.style.color = '#666';
+  }
+}
+
 // 「▶続き」ボタン（その科目の最初の未視聴回へ直行）
 function buildContinueButtonHtml(categoryId) {
   return `
@@ -71,7 +97,8 @@ function buildMoveButtonsHtml(categoryId) {
 }
 
 function buildFavoriteItemHtml(item, sortMode) {
-  let extraHtml = buildContinueButtonHtml(item.id);
+  let extraHtml = buildProgressBadgePlaceholderHtml(item.id);
+  extraHtml += buildContinueButtonHtml(item.id);
   if (sortMode === 'manual') {
     extraHtml += buildMoveButtonsHtml(item.id);
   } else {
@@ -123,6 +150,13 @@ function handleFavoritesPanelOpen() {
   window.openNativeOverlay((overlay) => {
     let allItems = [];
     let filterValue = '';
+
+    // 視聴回数バッジの遅延計算用。renderListは絞り込み・並び替えのたびに
+    // innerHTMLを丸ごと作り直すため、一度計算した結果はcategoryIdごとに
+    // キャッシュして再計算（＝サーバーへの再リクエスト）を避ける。
+    const progressCache = new Map();
+    const progressGate = window.createConcurrencyGate(4);
+    let progressObserver = null;
 
     // お気に入り星・ピン止めボタンは表示を更新するたびに作り直すので、
     // イベントリスナーもその都度再登録する
@@ -236,6 +270,42 @@ function handleFavoritesPanelOpen() {
       }
     }
 
+    // バッジのプレースホルダーに視聴回数を埋める。お気に入りが多いと科目ごとに
+    // 動画一覧＋各回の視聴状況を取得するため、科目一覧ページ(page-course-select-progress.js)
+    // と同様に、画面内に入った科目だけをIntersectionObserverで遅延計算し、
+    // 同時リクエスト数もゲートで制限する。
+    function wireProgressBadges() {
+      if (!progressObserver) {
+        progressObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const badge = entry.target;
+            progressObserver.unobserve(badge);
+            const categoryId = badge.dataset.categoryId;
+            window.getCategoryProgress(categoryId, progressGate)
+              .then((result) => {
+                progressCache.set(categoryId, result);
+                // 再描画で差し替わっていなければ（＝まだDOM上にあれば）反映する
+                if (badge.isConnected) fillFavoriteProgressBadge(badge, result);
+              })
+              .catch(() => {
+                progressCache.set(categoryId, null);
+                if (badge.isConnected) badge.remove();
+              });
+          });
+        }, { root: null, rootMargin: '100px 0px', threshold: 0 });
+      }
+      overlay.querySelectorAll('.favorite-progress-badge').forEach((badge) => {
+        const categoryId = badge.dataset.categoryId;
+        // 計算済みの科目はキャッシュから即反映（再リクエストしない）
+        if (progressCache.has(categoryId)) {
+          fillFavoriteProgressBadge(badge, progressCache.get(categoryId));
+          return;
+        }
+        progressObserver.observe(badge);
+      });
+    }
+
     // 検索ボックスは全体を再描画すると入力中にフォーカスが切れてしまうため、
     // リスト部分（#favorite-native-list）だけを差し替える
     function renderList() {
@@ -252,6 +322,7 @@ function handleFavoritesPanelOpen() {
         sortToggle.textContent = sortMode === 'manual' ? '並び順: 手動（↑↓で入れ替え）' : '並び順: カテゴリ別';
       }
       wireListEvents();
+      wireProgressBadges();
     }
 
     overlay.innerHTML = window.renderNativeShellHtml({

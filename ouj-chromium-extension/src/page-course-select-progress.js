@@ -49,22 +49,16 @@ function estimateCompletionPace(videoList, finishedCount) {
 
 async function classifyCourseProgress(categoryId, badge, gate) {
   try {
-    // 科目一覧の取得も含め、この科目に関する全リクエストをページ共有ゲート経由にする
-    const videoList = await gate.run(() => window.getVideoListInCategory(categoryId));
-    if (!Array.isArray(videoList) || videoList.length === 0) {
+    // 科目一覧の取得・各動画の視聴状況取得は、この科目に関する全リクエストを
+    // ページ共有ゲート経由にする。IntersectionObserverが同時に多数の科目フォルダを
+    // 検知しても、ページ全体での同時リクエスト数はgateの上限を超えない(科目ごとに
+    // 個別の並列数を持たせると合計が際限なく増えるため)
+    const progress = await window.getCategoryProgress(categoryId, gate);
+    if (!progress) {
       badge.remove();
       return;
     }
-    // 動画ごとのリクエストも同じゲートを通す。IntersectionObserverが同時に
-    // 多数の科目フォルダを検知しても、ページ全体での同時リクエスト数はgateの
-    // 上限を超えない(科目ごとに個別の並列数を持たせると合計が際限なく増えるため)
-    const statuses = await Promise.all(
-      videoList.map((video) => gate.run(() => window.getVideoViewingStatus(video.contentId)))
-    );
-    const finishedCount = statuses.filter((s) => s && s.isFinished).length;
-    // getVideoListInCategoryはlimit=30で打ち切られるため、ちょうど30件の場合は
-    // 実際にはもっと話数がある可能性を示す「+」を付ける
-    const suffix = videoList.length === 30 ? '+' : '';
+    const { finishedCount, statuses, videoList, suffix } = progress;
     badge.textContent = `${finishedCount}/${videoList.length}回視聴済み${suffix}`;
     if (finishedCount >= videoList.length) {
       badge.style.background = '#dcedc8';
