@@ -80,7 +80,7 @@ function handleWatchLaterPanelOpen() {
       if (listEl) {
         listEl.innerHTML = validItems.length
           ? validItems.map((item) => buildWatchLaterItemHtml(item, categories)).join('')
-          : '<div style="padding:16px;color:#666;">「あとで見る」はまだありません。動画ページや回一覧の「⏱」ボタンで追加できます。</div>';
+          : '<div style="padding:16px;color:#666;">「あとで見る」はまだありません。動画ページ・動画一覧ページ・回一覧の「⏱」ボタンで追加できます。</div>';
       }
       wireItemEvents();
     }

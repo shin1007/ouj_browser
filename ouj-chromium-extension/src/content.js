@@ -41,6 +41,7 @@ async function main() {
     window.waitThenAddProgressBadgesToCategoryList();
   } else if (pageType.page === 'video-select') {
     window.addFavoriteButtonToBreadCrumbs();
+    window.addWatchLaterButtonsToVideoList();
   } else {
     // その他の処理
   };
