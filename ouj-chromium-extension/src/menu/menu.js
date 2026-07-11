@@ -78,6 +78,11 @@ function startMenuOpeningMutationObserver() {
     return;
   }
   const observer = new MutationObserver((mutations) => {
+    // SPA遷移で左メニュー(#menu)が作り直された場合に備え、DOMの変化のたびに
+    // 拡張機能メニューを（冪等に）入れ直す。挿入先が未構築なら何もせず、
+    // 次の変化で再挿入されるため取りこぼさない。挿入済みならinsertMenuが
+    // aria-labelで判定して即returnするので、繰り返し呼んでも無害。
+    insertMenu(LEFT_SELECTOR);
     mutations.forEach((mutation) => {
       // ion-popoverが開かれたかどうかをチェック
       mutation.addedNodes.forEach((node) => {
@@ -91,33 +96,33 @@ function startMenuOpeningMutationObserver() {
           }, 100);
         }
       });
-      
+
     });
   });
   observer.observe(ionApp, { childList: true, subtree: true });
   window.oujMenuOpeningObserver = observer;
 }
-// ロゴを待ってメニューを挿入する処理
+// 挿入先（設定リスト）を待ってメニューを挿入する処理
 function insertLeftMenu() {
   // 重要な関数が設定されていなければ再実行
   if (typeof window.waitForElement !== 'function') {
     setTimeout(insertLeftMenu, 100);
     return;
   }
-  // 重複挿入防止
-  if (window.isLeftMenuInProgress) return;
-  window.isLeftMenuInProgress = true;
-  
-  // ロゴの存在確認
-  window.waitForElement('img.logo-img[src="./assets/images/icon_logo.png"]', (logo) => {
-    try {
-      // 既にメニューが存在する場合はスキップ（aria-labelで検索）
-      insertMenu(LEFT_SELECTOR)
-    } finally {
-      // 挿入処理完了フラグをリセット（途中で例外が発生してもフラグを必ず戻す）
-      window.isLeftMenuInProgress = false;
-    }
-  });
+  // 挿入先である左メニューの設定リスト(LEFT_SELECTOR)が現れてから挿入する。
+  insertMenuWhenReady(LEFT_SELECTOR);
+}
+
+// 挿入先セレクタ（設定リスト等）が現れるまで待ってからメニューを挿入する。
+// 以前はヘッダーのロゴ出現だけを待って即挿入していたため、ロゴ（ヘッダーは
+// ページ遷移でも保持される）は用意済みでも、挿入先のメニュー本体（#menu／
+// ポップオーバー）がまだ構築中だと挿入先が見つからず取りこぼし、しかも再試行
+// しないので拡張機能メニューが出ないことがあった。特にホームの「続きから見る」
+// カードや「▶続き」ボタンでプレーヤー画面へ直接遷移したときに再現する。
+// 挿入先そのものを待つことでこの取りこぼしを防ぐ。insertMenuはaria-labelで
+// 二重挿入を防ぐ冪等な処理なので、多重に呼ばれても安全。
+function insertMenuWhenReady(selector) {
+  window.waitForElement(selector, () => insertMenu(selector), 100, 50); // 最大約5秒待つ
 }
 function insertMenu(selector){
   // 既にメニューが存在する場合はスキップ（aria-labelで検索）
@@ -133,7 +138,7 @@ function insertMenu(selector){
   settingList.parentNode.insertBefore(menuList, settingList);
 }
 function insertPopoverMenu() {
-  insertMenu(POPOVER_SELECTOR);
+  insertMenuWhenReady(POPOVER_SELECTOR);
 }
 
 
