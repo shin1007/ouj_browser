@@ -107,43 +107,12 @@ async function addFunctionPanel(currentVideo){
   // 存在するまで待つ
   window.waitForElement('video', (video) => {
     if (video){
-      // 自動再生設定が有効な場合は再生を試みる
+      // 自動再生設定が有効な場合はautoplay属性を付与する
       if (autoPlayEnabled) {
         video.autoplay = true;
-        attemptAutoPlay(video);
       }
     }  }, 100, 30); // 100ms間隔で最大30回(約3秒)試行
   window.isInitializingVideo = false;
-}
-
-// 自動再生を試みる。ブラウザのポリシーで音声付き自動再生がブロックされた場合は、
-// ミュート状態でなら再生開始できることが多いため、ミュートで開始して
-// 「クリックで音声オン」の通知を出す（どこかをクリックした時点でミュート解除）
-function attemptAutoPlay(video) {
-  if (video.dataset.oujAutoPlayAttempted === '1') return;
-  video.dataset.oujAutoPlayAttempted = '1';
-  video.play().then(() => {
-    // 音声付きで自動再生できた
-  }).catch(() => {
-    // ブロックされた場合はミュートで再挑戦
-    video.muted = true;
-    video.play().then(() => {
-      const notification = window.showInfoNotification('🔇 ミュートで自動再生中です。画面のどこかをクリックすると音声がオンになります。', 8000);
-      const unmuteOnce = () => {
-        video.muted = false;
-        if (notification && typeof window.closeNotification === 'function') {
-          window.closeNotification(notification);
-        }
-        document.removeEventListener('click', unmuteOnce, true);
-        document.removeEventListener('keydown', unmuteOnce, true);
-      };
-      document.addEventListener('click', unmuteOnce, true);
-      document.addEventListener('keydown', unmuteOnce, true);
-    }).catch(() => {
-      // ミュートでも再生できない場合は諦める（ユーザー操作を待つ）
-      video.muted = false;
-    });
-  });
 }
 
 // videoタグの出現を監視し、出現したら設定パネルを挿入する関数

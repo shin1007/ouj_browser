@@ -39,7 +39,6 @@
       ],
       "js": [
         "utils/helpers.js",
-        "utils/settings-sync.js",
         "utils/favorites-helper.js",
         "utils/viewingStatus.js",
         "utils/watch-later.js",

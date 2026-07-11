@@ -12,6 +12,7 @@ const SEARCH_FILTER_SETTINGS_KEYS = {
   captionOnly: 'searchFilterCaptionOnly',
   unwatchedOnly: 'searchFilterUnwatchedOnly',
   partialOnly: 'searchFilterPartialOnly',
+  neverPlayedOnly: 'searchFilterNeverPlayedOnly', // 一度も再生していない（視聴履歴のない）回のみ
 };
 
 // 検索キーワード履歴（最近の検索チップ用）
@@ -24,6 +25,7 @@ function getSearchFilterState() {
     captionOnly: window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.captionOnly, false),
     unwatchedOnly: window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.unwatchedOnly, false),
     partialOnly: window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.partialOnly, false),
+    neverPlayedOnly: window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.neverPlayedOnly, false),
   };
 }
 
@@ -125,6 +127,8 @@ function applyFiltersToItem(item, state = getSearchFilterState()) {
   if (state.unwatchedOnly && item.dataset.oujWatchState === 'done') hidden = true;
   // 「視聴途中のみ」は途中まで見たものだけを表示する
   if (state.partialOnly && item.dataset.oujWatchState !== 'partial') hidden = true;
+  // 「未再生のみ」は一度も再生していない（視聴履歴のない）回だけを表示する
+  if (state.neverPlayedOnly && item.dataset.oujWatchState !== 'unwatched') hidden = true;
   item.dataset.oujFilterHidden = hidden ? 'true' : 'false';
   window.updateSearchResultItemVisibility(item);
 }
@@ -268,6 +272,14 @@ function renderFilterBar(list) {
   bar.appendChild(
     buildFilterChip('視聴途中のみ', state.partialOnly, () => {
       window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.partialOnly, !state.partialOnly);
+      renderFilterBar(list);
+      applyFilters();
+    })
+  );
+
+  bar.appendChild(
+    buildFilterChip('未再生のみ', state.neverPlayedOnly, () => {
+      window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.neverPlayedOnly, !state.neverPlayedOnly);
       renderFilterBar(list);
       applyFilters();
     })

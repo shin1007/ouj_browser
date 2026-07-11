@@ -248,10 +248,9 @@ const getPerCourseSetting = (baseKey, categoryId, defaultValue = null) => {
  * @param {any} value - 保存する値
  */
 const savePerCourseSetting = (baseKey, categoryId, value) => {
-    // window.saveSetting（settings-sync.js等が差し替えたラッパー）経由で保存する。
-    // モジュール内の素のsaveSettingを直接呼ぶと、chrome.storageミラー（デバイス間同期・
-    // バックアップ）や再生ページ側のキャッシュ更新ラッパーを通らず、科目別設定はもちろん
-    // 基本設定（playbackSpeed等）まで同期されなくなるため。
+    // window.saveSetting（menu.js等が差し替えたラッパー）経由で保存する。
+    // モジュール内の素のsaveSettingを直接呼ぶと、再生ページ側のキャッシュ更新ラッパー等を
+    // 通らないため、必ず公開APIのwindow.saveSettingを使う。
     const save = (typeof window !== 'undefined' && window.saveSetting) ? window.saveSetting : saveSetting;
     if (categoryId) {
         save(`${baseKey}_${categoryId}`, value);

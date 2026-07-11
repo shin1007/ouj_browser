@@ -39,61 +39,6 @@
             </select>
         </div>
 
-        <!-- 再生・動画の設定 -->
-        <div class="accordion">
-            <div class="accordion-header" id="settings-header">
-                <span>再生・動画の設定</span>
-                <span class="accordion-icon">▼</span>
-            </div>
-            <div class="accordion-content" id="settings-content">
-                <div class="settings-note">動画ページの設定パネルと同じ内容です。変更は開いている放送大学のページに自動で反映されます。</div>
-                <label class="setting-row"><input type="checkbox" id="set-playbackSpeedControlEnabled"><span>再生速度を調整する</span></label>
-                <div class="setting-row setting-select-row">
-                    <span>再生速度（全科目のデフォルト）</span>
-                    <select id="set-playbackSpeed" title="再生速度"></select>
-                </div>
-                <label class="setting-row"><input type="checkbox" id="set-autoCaptionEnabledTV"><span>字幕を表示する（テレビ番組）</span></label>
-                <label class="setting-row"><input type="checkbox" id="set-autoCaptionEnabledRadio"><span>字幕を表示する（ラジオ番組）</span></label>
-                <label class="setting-row"><input type="checkbox" id="set-preventCaptionShrink"><span>字幕表示時に画面を縮小しない</span></label>
-                <label class="setting-row"><input type="checkbox" id="set-volumeNormalizationEnabled"><span>番組間の音量差を自動で抑える</span></label>
-                <label class="setting-row"><input type="checkbox" id="set-autoPlayEnabled"><span>可能なら動画を自動再生する</span></label>
-                <label class="setting-row"><input type="checkbox" id="set-autoNextVideoEnabled"><span>動画終了時に自動で次の動画に進む</span></label>
-                <label class="setting-row"><input type="checkbox" id="set-screenWakeLockEnabled"><span>再生中に画面が自動ロックされないようにする</span></label>
-                <div class="setting-row setting-select-row">
-                    <span>次に再生する動画</span>
-                    <select id="set-nextVideoSetting" title="次に再生する動画">
-                        <option value="same-course">同じ科目の中で次</option>
-                        <option value="favorites-random">お気に入りからランダム</option>
-                        <option value="watch-later">「あとで見る」の順</option>
-                    </select>
-                </div>
-                <div class="setting-row setting-select-row">
-                    <span>再生ログ保存頻度</span>
-                    <select id="set-playlogIntervalMinutes" title="再生ログ保存頻度">
-                        <option value="3">3分</option>
-                        <option value="5">5分</option>
-                        <option value="10">10分</option>
-                        <option value="15">15分</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <!-- データのバックアップ -->
-        <div class="accordion">
-            <div class="accordion-header" id="backup-header">
-                <span>データのバックアップ</span>
-                <span class="accordion-icon">▼</span>
-            </div>
-            <div class="accordion-content" id="backup-content">
-                <div class="settings-note">お気に入り・履歴・学習時間・しおり・各種設定をファイルに保存/復元できます。ブラウザのサイトデータ削除や機種変更に備えて定期的な保存をおすすめします。</div>
-                <button type="button" id="backup-export" class="backup-button">💾 バックアップを保存（エクスポート）</button>
-                <button type="button" id="backup-import" class="backup-button">📂 バックアップから復元（インポート）</button>
-                <input type="file" id="backup-import-file" class="backup-file-input" accept="application/json,.json" title="バックアップファイル">
-                <div id="backup-status" class="settings-note"></div>
-            </div>
-        </div>
-
         <!-- OSSライセンス -->
         <div class="accordion">
             <div class="accordion-header" id="licenses-header">
