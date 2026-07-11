@@ -57,6 +57,7 @@
         "menu/menu-favorites.js",
         "menu/menu-history.js",
         "menu/menu-recommendation.js",
+        "menu/menu-recommendation-panel.js",
         "menu/menu-year.js",
         "menu/menu-study-time.js",
         "menu/menu-watch-later.js",

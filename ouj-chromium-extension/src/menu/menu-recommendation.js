@@ -1,5 +1,6 @@
-// おすすめ機能（menu.jsから分離）
-// 履歴・お気に入り・カテゴリからおすすめ動画リストを生成
+// おすすめ機能のデータ生成（アルゴリズム）。
+// 履歴・お気に入り・カテゴリ類似度からおすすめ動画リストを生成する。
+// 表示（パネル／HTML生成）は menu-recommendation-panel.js に分離している。
 
 /**
  * 視聴履歴に基づいて最大2件のおすすめ動画を選定します。
@@ -309,145 +310,6 @@ async function createRecommendListData() {
   return [...historyList, ...favoriteList, ...similarList];
 }
 
-// ここからネイティブな動画一覧ページ（右ペイン）と同じ見た目の表示部分
-// オーバーレイの共通基盤はmenu-native-shell.jsを利用する
-
-// 履歴・お気に入り・類似それぞれの表示件数を選ぶドロップダウン（ネイティブの
-// 並び順選択ion-item.sortの位置を再利用する）
-function buildRecommendTopHtml() {
-  const historyLevel = window.getSetting('history-recommend-level', 2);
-  const favoriteLevel = window.getSetting('favorite-recommend-level', 5);
-  const similarLevel = window.getSetting('similar-recommend-level', 3);
-  const createOptions = (selectedValue) => {
-    let options = '';
-    for (let i = 0; i <= 10; i++) {
-      options += `<option value="${i}" ${i === selectedValue ? 'selected' : ''}>${i}</option>`;
-    }
-    return options;
-  };
-  return `
-    <ion-item class="sort item item-block item-md">
-      <div class="item-inner">
-        <div class="input-wrapper">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;width:100%;font-size:14px;color:#374151;">
-            <label for="history-recommend-level">履歴から</label>
-            <select id="history-recommend-level" title="履歴からのおすすめ表示数">${createOptions(historyLevel)}</select>
-            <span>件</span>
-            <label for="favorite-recommend-level">お気に入りから</label>
-            <select id="favorite-recommend-level" title="お気に入りからのおすすめ表示数">${createOptions(favoriteLevel)}</select>
-            <span>件</span>
-            <label for="similar-recommend-level">類似から</label>
-            <select id="similar-recommend-level" title="類似からのおすすめ表示数">${createOptions(similarLevel)}</select>
-            <span>件</span>
-          </div>
-        </div>
-      </div>
-    </ion-item>
-  `;
-}
-
-function buildRecommendItemHtml(item, categories) {
-  const categoryPath = window.buildCategoryPathText(categories, item.categoryId);
-  let sourceLabel = '';
-  let sourceColor = '';
-  if (item.source === 'history') {
-    sourceLabel = '履歴';
-    sourceColor = '#3b82f6';
-  } else if (item.source === 'favorites') {
-    sourceLabel = 'お気に入り';
-    sourceColor = '#f59e0b';
-  } else if (item.source === 'similar') {
-    sourceLabel = '類似';
-    sourceColor = '#059669';
-  }
-  const badgeHtml = sourceLabel
-    ? `<span style="display:inline-block;font-size:11px;color:${sourceColor};background:${sourceColor}20;padding:2px 8px;border-radius:4px;font-weight:500;">${sourceLabel}</span>`
-    : '';
-  return window.buildNativeVideoItemHtml({
-    contentId: item.contentId,
-    categoryId: item.categoryId,
-    title: item.title,
-    summary: item.summary,
-    categoryPath,
-    rightAreaHtml: badgeHtml,
-    progressPercent: Math.floor((item.progress || 0) * 100)
-  });
-}
-
-function handleRecommendPanelOpen() {
-  window.openNativeOverlay((overlay) => {
-    let categories = [];
-
-    function wireItemEvents() {
-      overlay.querySelectorAll('.native-video-button').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          // おすすめ動画はその動画自体の再生ページへ直接遷移する
-          const contentId = btn.getAttribute('data-content-id');
-          const categoryId = btn.getAttribute('data-category-id');
-          if (contentId) {
-            window.removeNativeOverlay();
-            window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${contentId}&ct=V&ca=${categoryId || ''}`;
-          }
-        });
-      });
-    }
-
-    function renderList(recommendList) {
-      const listEl = overlay.querySelector('#common-list-content');
-      if (listEl) {
-        listEl.innerHTML = recommendList.length
-          ? recommendList.map((item) => buildRecommendItemHtml(item, categories)).join('')
-          : '<div style="padding:16px;color:#666;">おすすめ動画はありません（全て再生済み）</div>';
-      }
-      wireItemEvents();
-    }
-
-    const refresh = () => {
-      createRecommendListData().then((recommendList) => {
-        window.oujRecommendCache = { data: recommendList, lastFetched: Date.now() };
-        if (!document.body.contains(overlay)) return;
-        renderList(recommendList);
-      });
-    };
-
-    function wireDropdowns() {
-      const setupDropdownListener = (id, settingKey) => {
-        const dropdown = overlay.querySelector(`#${id}`);
-        if (dropdown) {
-          dropdown.addEventListener('change', (event) => {
-            window.saveSetting(settingKey, parseInt(event.target.value, 10));
-            refresh();
-          });
-        }
-      };
-      setupDropdownListener('history-recommend-level', 'history-recommend-level');
-      setupDropdownListener('favorite-recommend-level', 'favorite-recommend-level');
-      setupDropdownListener('similar-recommend-level', 'similar-recommend-level');
-    }
-
-    overlay.innerHTML = window.renderNativeShellHtml({
-      breadcrumbHtml: window.buildNativeBreadcrumbHtml([{ text: 'おすすめ動画' }]),
-      mainHtml: window.renderNativeVideoListMainHtml({
-        topHtml: buildRecommendTopHtml(),
-        itemsHtml: '<div style="padding:16px;color:#666;">読み込み中...</div>'
-      })
-    });
-    wireDropdowns();
-
-    window.getCategoriesData().then((cats) => {
-      if (!document.body.contains(overlay)) return;
-      categories = cats;
-      if (window.oujRecommendCache && window.oujRecommendCache.data) {
-        renderList(window.oujRecommendCache.data);
-        // 裏で再取得も走らせておく（表示中の一覧はすぐには更新しない）
-        prefetchRecommendListData();
-      } else {
-        refresh();
-      }
-    });
-  });
-}
-
 window.oujRecommendCache = {
   data: null,
   lastFetched: 0
@@ -460,4 +322,3 @@ async function prefetchRecommendListData() {
 // グローバルwindowに関数を公開
 window.prefetchRecommendListData = prefetchRecommendListData;
 window.createRecommendListData = createRecommendListData;
-window.handleRecommendPanelOpen = handleRecommendPanelOpen;
