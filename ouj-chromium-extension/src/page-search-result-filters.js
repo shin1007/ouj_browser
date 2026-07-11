@@ -4,6 +4,13 @@
 // page-course-select-progress.jsと同様にIntersectionObserverで画面内に入った
 // 項目だけを対象に、同時実行数を制限しながら遅延分類する。未分類の項目は
 // フィルターで隠さず表示し続け、分類が完了した時点で個別に再評価する。
+//
+// TODO: 並列作業向けのロジック/UI分割は保留中。renderFilterBar↔applyFilters/
+// applySearchResultSort が双方向依存で、分割するとgetSearchFilterState等
+// 約8関数＋定数をwindow.*で公開して呼び出し側も書き換える必要があり、
+// window.前置が増えて可読性が下がるわりに並列作業の恩恵が小さいため見送った。
+// 分割するなら「フィルターバー描画(chip/row生成)」と「分類・絞り込み・並び替え」の
+// 2ファイルが候補。
 
 const SEARCH_RESULT_FILTER_LIST_SELECTOR = '#common-list-content';
 
