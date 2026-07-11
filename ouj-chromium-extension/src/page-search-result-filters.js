@@ -53,8 +53,8 @@ function recordSearchKeyword() {
   window.saveSetting(SEARCH_KEYWORD_HISTORY_KEY, history);
 }
 
-// 分類結果（テレビ/ラジオ・字幕・視聴状況）を項目上に常時表示する小さなバッジ。
-// フィルターを使わなくても一覧を見るだけで種別が分かるようにする
+// 分類結果（字幕・視聴状況）を項目上に常時表示する小さなバッジ。
+// テレビ/ラジオはサムネイルから自明なのでバッジには出さない
 function applyBadgesToItem(item) {
   if (item.dataset.oujClassified !== 'done') return;
   if (item.querySelector('.ouj-result-badges')) return;
@@ -66,9 +66,6 @@ function applyBadgesToItem(item) {
   const makeBadge = (text, bg, color) =>
     `<span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:normal;background:${bg};color:${color};white-space:nowrap;">${text}</span>`;
   let html = '';
-  html += item.dataset.oujMedia === 'radio'
-    ? makeBadge('📻 ラジオ', '#e1f5fe', '#0277bd')
-    : makeBadge('📺 テレビ', '#ede7f6', '#4527a0');
   if (item.dataset.oujCaption === '1') {
     html += makeBadge('字幕あり', '#e8f5e9', '#2e7d32');
   }
@@ -77,6 +74,7 @@ function applyBadgesToItem(item) {
   } else if (item.dataset.oujWatchState === 'partial') {
     html += makeBadge(`途中 ${item.dataset.oujWatchPercent || ''}%`, '#fff3e0', '#e65100');
   }
+  if (!html) return;
   badges.innerHTML = html;
   titleEl.appendChild(badges);
 }
