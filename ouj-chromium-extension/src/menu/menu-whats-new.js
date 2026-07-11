@@ -103,11 +103,13 @@ function handleWhatsNewPanelOpen() {
     overlay.innerHTML = window.renderNativeShellHtml({
       breadcrumbHtml: window.buildNativeBreadcrumbHtml([{ text: 'お知らせ' }]),
       mainHtml: `
-        ${sectionsHtml}
-        <div style="padding:12px 20px 20px 20px;font-size:12px;color:#999;">
-          バージョン: ${getExtensionVersion() || '不明'} ／ 不具合の報告・要望は
-          <a href="https://github.com/shin1007/ouj_browser" target="_blank" rel="noopener" style="color:#1976d2;">GitHub</a>
-          へお寄せください
+        <div style="text-align:left;">
+          ${sectionsHtml}
+          <div style="padding:12px 20px 20px 20px;font-size:12px;color:#999;">
+            バージョン: ${getExtensionVersion() || '不明'} ／ 不具合の報告・要望は
+            <a href="https://github.com/shin1007/ouj_browser" target="_blank" rel="noopener" style="color:#1976d2;">GitHub</a>
+            へお寄せください
+          </div>
         </div>
       `
     });
