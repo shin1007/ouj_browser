@@ -65,10 +65,9 @@ const MENU_ITEM_IDS = {
   favorites: 'favorites-menu-item',
   history: 'history-menu-item',
   recommend: 'recommend-menu-item',
-  year: 'year-menu-item',
 };
 
-// お気に入り/履歴/おすすめ/年度別パネル（#ouj-native-overlay）を開き、
+// お気に入り/履歴/おすすめパネル（#ouj-native-overlay）を開き、
 // 一覧の非同期読み込みが完了するまで待つ。
 async function openMenuOverlay(page, kind) {
   const itemId = MENU_ITEM_IDS[kind];

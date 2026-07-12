@@ -11,7 +11,6 @@ const MENU_CONFIG = {
     { id: "bookmarks", text: "しおり", icon: "bookmark" },
     { id: "history", text: "履歴", icon: "time" },
     { id: "recommend", text: "おすすめ動画", icon: "play" },
-    { id: "year", text: "年度別", icon: "calendar" },
     { id: "studytime", text: "学習時間", icon: "stats" },
     { id: "whatsnew", text: "お知らせ", icon: "notifications" },
     { id: "darkmode", text: "ダークモード", icon: "moon" }
@@ -178,10 +177,6 @@ function createMenuList() {
   const recommendItem = menuList.querySelector('#recommend-menu-item');
   if (recommendItem) {
     recommendItem.addEventListener('click', window.handleRecommendPanelOpen);
-  }
-  const yearItem = menuList.querySelector('#year-menu-item');
-  if (yearItem) {
-    yearItem.addEventListener('click', window.handleYearMenuOpen);
   }
   const studyTimeItem = menuList.querySelector('#studytime-menu-item');
   if (studyTimeItem) {

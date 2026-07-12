@@ -15,7 +15,7 @@ const OUJ_VOD_BASE_URL = 'https://v.ouj.ac.jp/view/ouj/#/navi/vod';
 
 // 年度・コースデータはカテゴリAPI(キャッシュ約12時間)を叩くため、パネルを開くたびに
 // 取り直さず、最初に開いた時のPromiseを使い回す。
-//  - yearBuckets: 年度セレクトの選択肢（createYearListData／menu-year.js）
+//  - yearBuckets: 年度セレクトの選択肢（createYearListData／utils/year.js）
 //  - courseGroups: コースセレクトの選択肢（getCourseGroups／utils/categories.js。学部・大学院等でグループ化）
 let oujBrowseDataPromise = null;
 function getBrowseData() {

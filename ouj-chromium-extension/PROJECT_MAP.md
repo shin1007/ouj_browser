@@ -43,6 +43,7 @@
 | [utils/text.js](src/utils/text.js) | タイトル/科目名の整形 | `trimTitle`, `trimCourseName` |
 | [utils/page-type.js](src/utils/page-type.js) | URLから画面種別を判定 | `detectOujPageType`, `decodeURLComponentSafe` |
 | [utils/categories.js](src/utils/categories.js) | カテゴリ/動画データAPIのラッパ | `getCategoriesData`, `getChildIds`, `getCurrentCategoryId`, `getVideoData`, `getVideoListInCategory`, `getVideoProgress`, `getCategoryDataFromContentId`, `getParentCategoryName`, `getCourseGroups`（コース級を親でグループ化）他 |
+| [utils/year.js](src/utils/year.js) | 年度データのヘルパー（科目名末尾の（'XX）から年度抽出・年度別に科目をまとめる）。categories.jsに依存。検索ボックスの絞り込み／科目一覧フィルタが利用（以前あったメニューの年度別パネルは廃止） | `createYearListData`, `extractYearFromCategoryName` |
 | [utils/favorites-helper.js](src/utils/favorites-helper.js) | お気に入り（**科目単位**） | `getFavorites`, `isFavorite`, `addFavorite`, `removeFavorite`, `toggleFavorite` |
 | [utils/watch-later.js](src/utils/watch-later.js) | あとで見る（**動画/回単位**のキュー） | `getWatchLaterList`, `isInWatchLater`, `addToWatchLater`, `removeFromWatchLater`, `toggleWatchLater`, `getNextWatchLaterVideo` |
 | [utils/viewingStatus.js](src/utils/viewingStatus.js) | 視聴状況（再生率＋手動override） | `getVideoViewingStatus`, `get/setWatchedOverride`, `getCategoryProgress`, `findFirstUnfinishedVideo` |
@@ -58,14 +59,13 @@
 | ファイル | 役割 | 主な公開IF（window.*） |
 |---|---|---|
 | [menu/menu.js](src/menu/menu.js) | メニュー本体。左メニュー挿入・`MENU_CONFIG`・開閉監視 | `insertLeftMenu`, `startMenuOpeningMutationObserver`, `getIconHtml` |
-| [menu/menu-native-shell.js](src/menu/menu-native-shell.js) | **各パネル共通のネイティブ風右ペイン基盤**（年度別/お気に入り/履歴/おすすめ等が共用） | `openNativeOverlay`, `removeNativeOverlay`, `renderNativeShellHtml`, `buildNative*Html` 系多数 |
+| [menu/menu-native-shell.js](src/menu/menu-native-shell.js) | **各パネル共通のネイティブ風右ペイン基盤**（お気に入り/履歴/おすすめ等が共用） | `openNativeOverlay`, `removeNativeOverlay`, `renderNativeShellHtml`, `buildNative*Html` 系多数 |
 | [menu/menu-favorites.js](src/menu/menu-favorites.js) | お気に入りパネル（手動並び替え・「▶続き」・視聴回数バッジ） | `handleFavoritesPanelOpen`, `createFavoriteListData` |
 | [menu/menu-watch-later.js](src/menu/menu-watch-later.js) | あとで見るパネル | `handleWatchLaterPanelOpen` |
 | [menu/menu-bookmarks.js](src/menu/menu-bookmarks.js) | しおり一覧パネル（位置＋メモへジャンプ） | `handleBookmarksPanelOpen` |
 | [menu/menu-history.js](src/menu/menu-history.js) | 視聴履歴パネル | `handleHistoryPanelOpen` |
 | [menu/menu-recommendation.js](src/menu/menu-recommendation.js) | おすすめ**生成アルゴリズム**（履歴/お気に入り/類似度） | `createRecommendListData`, `prefetchRecommendListData`, `oujRecommendCache` |
 | [menu/menu-recommendation-panel.js](src/menu/menu-recommendation-panel.js) | おすすめ**表示**（HTML生成） | `handleRecommendPanelOpen` |
-| [menu/menu-year.js](src/menu/menu-year.js) | 年度別一覧（科目名末尾の（'XX）から年度抽出） | `handleYearMenuOpen`, `createYearListData`, `extractYearFromCategoryName` |
 | [menu/menu-study-time.js](src/menu/menu-study-time.js) | 学習時間パネル（7/30/90日・ストリーク・科目別内訳） | `handleStudyTimePanelOpen` |
 | [menu/menu-whats-new.js](src/menu/menu-whats-new.js) | お知らせ/変更点（NEWバッジ）。**★リリース時は `OUJ_CHANGELOG_ENTRIES` 先頭に追記** | `handleWhatsNewPanelOpen`, `updateWhatsNewBadge` |
 | [menu/menu-header-darkmode.js](src/menu/menu-header-darkmode.js) | ヘッダーのテーマ切替ボタン | `insertHeaderDarkModeToggle` |
