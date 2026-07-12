@@ -19,6 +19,20 @@ async function main() {
     // v.ouj.ac.jp以外のサブドメインの場合は何もしない
     return;
   }
+  // ログイン/ログアウトのタイミングで授業一覧(カテゴリ)を取得しなおすための監視を開始する。
+  // ログイン前後で取得できる授業一覧が変わる(実測: ゲスト274件→ログイン529件)ため、状態が
+  // 切り替わったらキャッシュ(cachedCategoriesData)を破棄する。監視の実体は login-state.js。
+  if (typeof window.startOujLoginStateWatcher === 'function') {
+    window.startOujLoginStateWatcher((newState) => {
+      // ログイン直後(→ログイン済み)は、表示中の内容も最新の授業一覧で描き直す。
+      // ログアウト方向はサイト側が自然にページをリロードするためここでは描き直さない
+      // (遷移直前の再取得で古い一覧をキャッシュし直す事故を避ける)。
+      if (newState === 'user') {
+        window.oujLastMainTime = 0;
+        callSafeMainOnce();
+      }
+    });
+  }
   window.insertLeftMenu();
   window.insertHeaderDarkModeToggle();
   window.insertHeaderCollapseToggle();
@@ -131,15 +145,10 @@ if (!window.location.href.includes('ouj.ac.jp')) {
         const currentUrl = location.href;
         if (currentUrl !== lastUrl) {
           // console.log(`[OUJ拡張 DEBUG] URL change detected by ${source}. last: ${lastUrl}, current: ${currentUrl}`);
-          // ログインページからの遷移を検知してキャッシュをクリア
-          const wasLoginPage = lastUrl.includes('https://sso.ouj.ac.jp/cas/login');
-          const isNowLoginPage = currentUrl.includes('https://sso.ouj.ac.jp/cas/login');
-          if (wasLoginPage && !isNowLoginPage) {
-            // clearCachedCategoriesDataはpage-login.jsで定義されている
-            if (typeof window.clearCachedCategoriesData === 'function') {
-              window.clearCachedCategoriesData();
-            }
-          }
+          // ログイン/ログアウトに伴う授業一覧キャッシュの破棄は、URL遷移ではなく実際の
+          // ログイン状態の変化を見る login-state.js の監視(startOujLoginStateWatcher)に一本化した。
+          // ログアウトは .../logout/cas 経由でログイン画面URLを通らず、従来のURL判定では
+          // 捕捉できなかったため。
 
           lastUrl = currentUrl;
           window.oujLastMainTime = 0;

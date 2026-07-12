@@ -50,6 +50,7 @@
 | [utils/thumbnail-progress.js](src/utils/thumbnail-progress.js) | サムネイルに再生進捗バー | `extractContentIdFromThumbnail` |
 | [utils/study-time.js](src/utils/study-time.js) | 学習時間トラッキング（日別・科目別に積算） | `startStudyTimeTracking`, `getStudyTimeByDate`, `getStudyTimeTotalsByDate`, `getStudyTimeByCategory` |
 | [utils/goToLoginPage.js](src/utils/goToLoginPage.js) | ホームでの自動ログイン遷移 | `handleHomePageAutoLogin`, `tryPushLoginButton` |
+| [utils/login-state.js](src/utils/login-state.js) | ログイン状態(ゲスト/CASログイン済み)の変化を監視し、切替時に授業一覧(cachedCategoriesData)＋視聴進捗(videoViewingStatus_*)キャッシュを破棄。状態は `sessionStorage["ClasstreamIsCasLogin_1"]` で判定（`ClasstreamIsGuest_1` はサイト側バグで不可） | `getOujLoginState`, `clearOujUserScopedCaches`, `syncOujLoginStateAndInvalidate`, `startOujLoginStateWatcher` |
 | [utils/dark-mode.js](src/utils/dark-mode.js) | ダークモード制御（`document_start`で別途ロード。ポップアップからも利用） | `isOujDarkModeActive`, `get/cycleOujDarkModeSetting`, `OUJ_DARK_MODE_LABELS` |
 
 ## menu/ — 左メニューと各パネル
@@ -126,7 +127,8 @@
 
 ```
 sso（ログイン画面） → waitForPasswordAndLogin → 成功ならhomeへ
-v.* 共通           → insertLeftMenu / ヘッダー2ボタン / メニュー監視 / initSearchBoxFilterPanel
+v.* 共通           → startOujLoginStateWatcher(ログイン/ログアウト検知で授業一覧キャッシュ破棄)
+                    ／ insertLeftMenu / ヘッダー2ボタン / メニュー監視 / initSearchBoxFilterPanel
                     ＋ SPA遷移対策: 前ページのフィルターバー(search-result-filter-bar / course-list-filter-bar)を除去
   home            → insertHomeContinuePanel + handleHomePageAutoLogin
   search-result   → startSearchResultDedupObserver + initializeSearchResultFilters

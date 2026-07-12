@@ -51,6 +51,7 @@
         "utils/breadcrumbs.js",
         "utils/categories.js",
         "utils/goToLoginPage.js",
+        "utils/login-state.js",
         "utils/thumbnail-progress.js",
         "utils/study-time.js",
         "menu/menu-native-shell.js",
