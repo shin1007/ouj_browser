@@ -25,6 +25,12 @@ const COURSE_ITEM_SELECTOR = '#main div.icon-text > .icon-area';
 // フィルタ対象の科目フォルダ行(ion-item)。setupCourseFilterRowsで作り直す
 let courseFilterRows = [];
 
+// 年度絞り込みの選択値（西暦4桁の文字列。''はすべて）。媒体/字幕/視聴状況と違い、
+// コースごとに対象年度が異なり別コースへ持ち越すと意図せず全件が隠れるため、設定には
+// 保存せずモジュール変数として現在表示中のコース内でのみ保持する（検索結果の年度絞り込みと同方針）。
+// 検索ボックスパネルから「年度＋コース」で来た場合はwindow.__oujPendingCourseYearで初期値を受け取る。
+let courseYearFilter = '';
+
 // フォールバック用の設定キー(page-search-result-filters.jsが先に読み込まれていれば
 // window.OUJ_SEARCH_FILTER_KEYSが使える。読み込み順の都合で未定義でも動くようにしておく)
 function getCourseFilterKeys() {
@@ -43,6 +49,7 @@ function getCourseFilterState() {
     captionOnly: window.getBooleanSetting(keys.captionOnly, false),
     incompleteOnly: window.getBooleanSetting(keys.incompleteOnly, false),
     partialOnly: window.getBooleanSetting(keys.partialOnly, false),
+    year: courseYearFilter,
   };
 }
 
@@ -74,8 +81,17 @@ function isCourseWatchHidden(row, state) {
   return false;
 }
 
+// 年度フィルタで隠れる行か。年度は科目名末尾の（'YY）から判定済み(oujCourseYear)。
+// 年度不明の科目(oujCourseYearが空)は、年度を指定すると隠れる（該当年度と確定できないため）
+function isCourseYearHidden(row, state) {
+  if (!state.year) return false;
+  return row.dataset.oujCourseYear !== state.year;
+}
+
 function applyCourseFiltersToRow(row, state) {
-  const hidden = isCourseMediaCaptionHidden(row, state) || isCourseWatchHidden(row, state);
+  const hidden = isCourseMediaCaptionHidden(row, state)
+    || isCourseWatchHidden(row, state)
+    || isCourseYearHidden(row, state);
   row.style.display = hidden ? 'none' : '';
 }
 
@@ -103,12 +119,13 @@ async function classifyCourseWatch(row, gate) {
 }
 
 // 視聴状況フィルタがONのとき、まだ視聴状況を取得していない行をまとめて分類する。
-// 媒体・字幕で既に隠れる行は無駄なリクエストを避けるため対象外にする
+// 媒体・字幕・年度で既に隠れる行は無駄なリクエストを避けるため対象外にする（サーバー負荷最小化）
 async function classifyCourseWatchForActiveFilter(rows, state) {
   const targets = rows.filter((row) =>
     row.dataset.oujCourseWatchClass !== 'done' &&
     row.dataset.oujCourseWatchClass !== 'pending' &&
-    !isCourseMediaCaptionHidden(row, state)
+    !isCourseMediaCaptionHidden(row, state) &&
+    !isCourseYearHidden(row, state)
   );
   if (targets.length === 0) return;
   targets.forEach((row) => { row.dataset.oujCourseWatchClass = 'pending'; });
@@ -144,10 +161,24 @@ function setupCourseFilterRows(childCategories, items) {
     const { media, caption } = parseCourseMediaCaption(subEl ? subEl.textContent : '');
     row.dataset.oujCourseMedia = media;
     row.dataset.oujCourseCaption = caption;
+    // 年度は科目名末尾の（'YY）から判定（ネットワーク不要）。抽出できない科目は空にする
+    const year = (typeof window.extractYearFromCategoryName === 'function')
+      ? window.extractYearFromCategoryName(category.name)
+      : null;
+    row.dataset.oujCourseYear = year ? String(year) : '';
     // 視聴状況は必要時に取得。再セットアップ時は既存の分類結果を保持する
     if (row.dataset.oujCourseWatchClass === undefined) row.dataset.oujCourseWatchClass = 'none';
     courseFilterRows.push(row);
   }
+}
+
+// 現在の科目フォルダ行に含まれる年度の一覧（新しい順）。年度セレクトの選択肢用
+function collectCourseYears() {
+  const years = new Set();
+  courseFilterRows.forEach((row) => {
+    if (row.dataset.oujCourseYear) years.add(row.dataset.oujCourseYear);
+  });
+  return Array.from(years).sort((a, b) => Number(b) - Number(a));
 }
 
 // フィルタバーを挿入する科目リストのコンテナ(ion-list)を得る
@@ -221,6 +252,24 @@ function renderCourseFilterBar() {
     onChange();
   }));
 
+  // 年度セレクト（このコースに含まれる年度のみ）。年度が1つも取れない場合は出さない。
+  // 値の変更はバー全体を作り直さず applyCourseFilters のみ呼ぶ（selectの選択状態を保つ）
+  const years = collectCourseYears();
+  if (years.length > 0) {
+    const yearSelect = document.createElement('select');
+    yearSelect.id = 'course-filter-year';
+    yearSelect.style.cssText = 'font-size:13px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#333;margin:0 8px 8px 0;';
+    yearSelect.appendChild(new Option('年度: すべて', ''));
+    years.forEach((y) => yearSelect.appendChild(new Option(`${y}年度`, y)));
+    yearSelect.value = courseYearFilter;
+    if (yearSelect.selectedIndex === -1) yearSelect.value = '';
+    yearSelect.addEventListener('change', () => {
+      courseYearFilter = yearSelect.value;
+      applyCourseFilters();
+    });
+    bar.appendChild(yearSelect);
+  }
+
   const loading = document.createElement('span');
   loading.id = COURSE_FILTER_LOADING_ID;
   loading.textContent = '絞り込み中...';
@@ -231,9 +280,11 @@ function renderCourseFilterBar() {
 }
 
 // 検索ボックスのプリセットパネルなどからトグルが変わった時に、科目一覧の
-// バーと絞り込みを即座に追従させるヘルパー。科目一覧ページ以外では何もしない
+// バーと絞り込みを即座に追従させるヘルパー。科目一覧ページ以外(＝バーが出ていない)では何もしない。
+// （バーはSPA遷移時にcontent.jsが除去するため、バーの有無で「今この画面が科目一覧か」を判定する。
+//  courseFilterRowsは前ページの分が残っていることがあり判定に使えない）
 function refreshCourseListFilterUI() {
-  if (courseFilterRows.length === 0) return;
+  if (!document.getElementById(COURSE_FILTER_BAR_ID)) return;
   renderCourseFilterBar();
   applyCourseFilters();
 }
@@ -253,7 +304,12 @@ async function initializeCourseListFilters() {
     const cat = categories.find((c) => c.categoryId === child.categoryId);
     return cat && cat.summary;
   });
-  if (!hasSummaryInChildren) return;
+  if (!hasSummaryInChildren) {
+    // 科目一覧ではない(コース一覧などのフォルダページ)。前ページの行情報を残すと
+    // refreshCourseListFilterUI等が誤作動しうるためクリアする
+    courseFilterRows = [];
+    return;
+  }
 
   const items = document.querySelectorAll(COURSE_ITEM_SELECTOR);
   if (!items.length) {
@@ -262,6 +318,14 @@ async function initializeCourseListFilters() {
   }
 
   setupCourseFilterRows(childCategories, items);
+  // 年度絞り込みは別コースへ持ち越さない。検索ボックスパネルから「年度＋コース」で来た場合のみ、
+  // その年度で初期絞り込みする（受け取ったら即クリアして次回以降に残さない）
+  courseYearFilter = window.__oujPendingCourseYear ? String(window.__oujPendingCourseYear) : '';
+  window.__oujPendingCourseYear = '';
+  // 渡された年度がこのコースに存在しない場合は「すべて」に戻す（全科目が消えて空表示になるのを防ぐ）
+  if (courseYearFilter && !collectCourseYears().includes(courseYearFilter)) {
+    courseYearFilter = '';
+  }
   renderCourseFilterBar();
   applyCourseFilters();
 }

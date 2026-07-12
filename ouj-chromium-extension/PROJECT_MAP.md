@@ -42,7 +42,7 @@
 | [utils/dialog.js](src/utils/dialog.js) | モーダル確認/入力ダイアログ | `showConfirmDialog`, `showPromptDialog` |
 | [utils/text.js](src/utils/text.js) | タイトル/科目名の整形 | `trimTitle`, `trimCourseName` |
 | [utils/page-type.js](src/utils/page-type.js) | URLから画面種別を判定 | `detectOujPageType`, `decodeURLComponentSafe` |
-| [utils/categories.js](src/utils/categories.js) | カテゴリ/動画データAPIのラッパ | `getCategoriesData`, `getChildIds`, `getCurrentCategoryId`, `getVideoData`, `getVideoListInCategory`, `getVideoProgress`, `getCategoryDataFromContentId`, `getParentCategoryName` 他 |
+| [utils/categories.js](src/utils/categories.js) | カテゴリ/動画データAPIのラッパ | `getCategoriesData`, `getChildIds`, `getCurrentCategoryId`, `getVideoData`, `getVideoListInCategory`, `getVideoProgress`, `getCategoryDataFromContentId`, `getParentCategoryName`, `getCourseGroups`（コース級を親でグループ化）他 |
 | [utils/favorites-helper.js](src/utils/favorites-helper.js) | お気に入り（**科目単位**） | `getFavorites`, `isFavorite`, `addFavorite`, `removeFavorite`, `toggleFavorite` |
 | [utils/watch-later.js](src/utils/watch-later.js) | あとで見る（**動画/回単位**のキュー） | `getWatchLaterList`, `isInWatchLater`, `addToWatchLater`, `removeFromWatchLater`, `toggleWatchLater`, `getNextWatchLaterVideo` |
 | [utils/viewingStatus.js](src/utils/viewingStatus.js) | 視聴状況（再生率＋手動override） | `getVideoViewingStatus`, `get/setWatchedOverride`, `getCategoryProgress`, `findFirstUnfinishedVideo` |
@@ -98,11 +98,11 @@
 | [page-home-continue.js](src/page-home-continue.js) | ホームの「続きから見る」パネル | `insertHomeContinuePanel` |
 | [page-course-select.js](src/page-course-select.js) | 科目一覧(series-select)のお気に入りボタン | `waitThenAddFavBtnToCategoryList` |
 | [page-course-select-progress.js](src/page-course-select-progress.js) | 科目一覧の視聴進捗バッジ・「▶続き」（遅延計算） | `waitThenAddProgressBadgesToCategoryList` |
-| [page-course-select-filters.js](src/page-course-select-filters.js) | 科目一覧(series-select)の絞り込み（媒体/字幕は行の表示テキストから即判定、未完了/視聴途中は`getCategoryProgress`で必要時のみ遅延判定）。検索と同じ設定キーを共有 | `initializeCourseListFilters`, `refreshCourseListFilterUI` |
+| [page-course-select-filters.js](src/page-course-select-filters.js) | 科目一覧(series-select)の絞り込み（媒体/字幕は行の表示テキストから即判定、未完了/視聴途中は`getCategoryProgress`で必要時のみ遅延判定、年度は科目名末尾の（'YY）から即判定）。検索と同じ設定キーを共有。検索ボックスパネルから`window.__oujPendingCourseYear`で年度初期値を受け取る | `initializeCourseListFilters`, `refreshCourseListFilterUI` |
 | [page-video-select.js](src/page-video-select.js) | 回の一覧(video-select)へ「あとで見る」トグル | `addWatchLaterButtonsToVideoList` |
 | [page-search-result.js](src/page-search-result.js) | 検索結果の重複講義を非表示 | `startSearchResultDedupObserver`, `updateSearchResultItemVisibility` |
 | [page-search-result-filters.js](src/page-search-result-filters.js) | 検索結果の絞り込み/並び替え。回一覧(video-select)でも`context`引数で流用（視聴状況フィルタ＋並び替えのみ／媒体・字幕・年度・科目・最近の検索は出さない） | `initializeSearchResultFilters(context)`, `refreshSearchResultFilterUI`, `buildOujFilterChip`, `OUJ_SEARCH_*_KEY` |
-| [search-box-filter-panel.js](src/search-box-filter-panel.js) | 検索ボックスのクイック絞り込みパネル（全ページ共通） | `initSearchBoxFilterPanel` |
+| [search-box-filter-panel.js](src/search-box-filter-panel.js) | 検索ボックスのクイック絞り込みパネル（全ページ共通）。「最近の検索」／「年度・コースで探す（コースを選ぶとそのコースへ遷移、年度も選べば遷移先を年度絞り込み）」／絞り込みプリセット | `initSearchBoxFilterPanel` |
 
 ## popup/ — ポップアップ兼オプションページ
 
@@ -127,6 +127,7 @@
 ```
 sso（ログイン画面） → waitForPasswordAndLogin → 成功ならhomeへ
 v.* 共通           → insertLeftMenu / ヘッダー2ボタン / メニュー監視 / initSearchBoxFilterPanel
+                    ＋ SPA遷移対策: 前ページのフィルターバー(search-result-filter-bar / course-list-filter-bar)を除去
   home            → insertHomeContinuePanel + handleHomePageAutoLogin
   search-result   → startSearchResultDedupObserver + initializeSearchResultFilters
   player          → addFavoriteButtonToBreadCrumbs + initializeVideoPlayer

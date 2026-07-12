@@ -13,16 +13,22 @@
 const SEARCH_BOX_PANEL_ID = 'ouj-search-box-panel';
 const OUJ_VOD_BASE_URL = 'https://v.ouj.ac.jp/view/ouj/#/navi/vod';
 
-// 年度・科目データ(createYearListData)はカテゴリAPI(キャッシュ約12時間)を叩くため、
-// パネルを開くたびに取り直さず、最初に開いた時のPromiseを使い回す。
-let oujYearCourseDataPromise = null;
-function getYearCourseData() {
-  if (!oujYearCourseDataPromise) {
-    oujYearCourseDataPromise = (typeof window.createYearListData === 'function')
-      ? window.createYearListData().catch(() => ({ yearBuckets: [] }))
-      : Promise.resolve({ yearBuckets: [] });
+// 年度・コースデータはカテゴリAPI(キャッシュ約12時間)を叩くため、パネルを開くたびに
+// 取り直さず、最初に開いた時のPromiseを使い回す。
+//  - yearBuckets: 年度セレクトの選択肢（createYearListData／menu-year.js）
+//  - courseGroups: コースセレクトの選択肢（getCourseGroups／utils/categories.js。学部・大学院等でグループ化）
+let oujBrowseDataPromise = null;
+function getBrowseData() {
+  if (!oujBrowseDataPromise) {
+    const yearP = (typeof window.createYearListData === 'function')
+      ? window.createYearListData().then((r) => (r && Array.isArray(r.yearBuckets)) ? r.yearBuckets : []).catch(() => [])
+      : Promise.resolve([]);
+    const courseP = (typeof window.getCourseGroups === 'function')
+      ? window.getCourseGroups().catch(() => [])
+      : Promise.resolve([]);
+    oujBrowseDataPromise = Promise.all([yearP, courseP]).then(([yearBuckets, courseGroups]) => ({ yearBuckets, courseGroups }));
   }
-  return oujYearCourseDataPromise;
+  return oujBrowseDataPromise;
 }
 
 // パネル内の見出し(小さなラベル)を作る
@@ -74,12 +80,14 @@ function buildRecentSearchSection() {
   return section;
 }
 
-// --- セクション2: 年度・科目で探す（キーワードなし） ---
-// 年度→科目のカスケード。科目を選ぶとそのカテゴリの動画一覧(ca=)へ遷移する。
+// --- セクション2: 年度・コースで探す（キーワードなし） ---
+// コース(生活と福祉コース・臨床心理学プログラム等)を選ぶと、そのコースの科目一覧(ca=)へ遷移する。
+// 年度も選んでいれば、遷移先の科目一覧をその年度だけに絞り込む（window.__oujPendingCourseYear
+// でpage-course-select-filters.jsへ受け渡す）。年度とコースは独立で、年度はコース候補を絞らない。
 function buildBrowseSection() {
   const section = document.createElement('div');
   section.style.cssText = 'margin-bottom:10px;';
-  section.appendChild(buildPanelSectionLabel('キーワードなしで探す（年度・科目）'));
+  section.appendChild(buildPanelSectionLabel('キーワードなしで探す（年度・コース）'));
 
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:8px;';
@@ -91,7 +99,7 @@ function buildBrowseSection() {
   yearSelect.disabled = true;
 
   const courseSelect = document.createElement('select');
-  courseSelect.style.cssText = `${selectStyle}flex:1;min-width:180px;`;
+  courseSelect.style.cssText = `${selectStyle}flex:1;min-width:200px;`;
   courseSelect.appendChild(new Option('読み込み中...', ''));
   courseSelect.disabled = true;
 
@@ -99,42 +107,46 @@ function buildBrowseSection() {
   row.appendChild(courseSelect);
   section.appendChild(row);
 
-  // 選択中の年度に応じて科目の選択肢を組み直す
-  const rebuildCourseOptions = (yearBuckets) => {
-    const selectedYear = yearSelect.value;
-    let courses;
-    if (selectedYear) {
-      const bucket = yearBuckets.find((b) => String(b.year) === String(selectedYear));
-      courses = bucket ? bucket.courses.slice() : [];
-    } else {
-      // 年度指定なしは全年度の科目をまとめて表示（createYearListData側で重複排除済み）
-      courses = yearBuckets.reduce((acc, b) => acc.concat(b.courses), []);
-    }
-    courses.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
-    courseSelect.innerHTML = '';
-    courseSelect.appendChild(new Option(`科目を選ぶ（${courses.length}件）`, ''));
-    courses.forEach((c) => courseSelect.appendChild(new Option(c.name, c.categoryId)));
-  };
+  const hint = document.createElement('div');
+  hint.style.cssText = 'font-size:11px;color:#999;margin-top:4px;';
+  hint.textContent = 'コースを選ぶとそのコースへ移動します（年度も選ぶと科目一覧をその年度で絞り込み）';
+  section.appendChild(hint);
 
-  getYearCourseData().then(({ yearBuckets }) => {
+  const trim = (name) => (typeof window.trimCourseName === 'function') ? window.trimCourseName(name) : name;
+
+  getBrowseData().then(({ yearBuckets, courseGroups }) => {
     // パネルが閉じている/作り直された場合は何もしない
     if (!section.isConnected) return;
-    if (!Array.isArray(yearBuckets) || yearBuckets.length === 0) {
-      courseSelect.innerHTML = '';
-      courseSelect.appendChild(new Option('科目データを取得できませんでした', ''));
+
+    // 年度セレクト: 各年度を選択肢にする
+    if (Array.isArray(yearBuckets) && yearBuckets.length > 0) {
+      yearSelect.disabled = false;
+      yearBuckets.forEach((b) => yearSelect.appendChild(new Option(`${b.year}年度`, String(b.year))));
+    }
+
+    // コースセレクト: 学部/大学院等でグループ化（optgroup）して選択肢にする
+    courseSelect.innerHTML = '';
+    if (!Array.isArray(courseGroups) || courseGroups.length === 0) {
+      courseSelect.appendChild(new Option('コースデータを取得できませんでした', ''));
       return;
     }
-    yearSelect.disabled = false;
+    const totalCourses = courseGroups.reduce((n, g) => n + g.courses.length, 0);
+    courseSelect.appendChild(new Option(`コースを選ぶ（${totalCourses}件）`, ''));
+    courseGroups.forEach((group) => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = trim(group.parentName);
+      group.courses.forEach((c) => optgroup.appendChild(new Option(trim(c.name), String(c.categoryId))));
+      courseSelect.appendChild(optgroup);
+    });
     courseSelect.disabled = false;
-    yearBuckets.forEach((b) => yearSelect.appendChild(new Option(`${b.year}年度`, b.year)));
-    rebuildCourseOptions(yearBuckets);
 
-    yearSelect.addEventListener('change', () => rebuildCourseOptions(yearBuckets));
     courseSelect.addEventListener('change', () => {
       const categoryId = courseSelect.value;
-      if (categoryId) {
-        window.location.href = `${OUJ_VOD_BASE_URL}?ca=${categoryId}`;
-      }
+      if (!categoryId) return;
+      // 年度も選ばれていれば、遷移先の科目一覧をその年度で初期絞り込みするための一時フラグ。
+      // 同一ドキュメント内のハッシュ遷移なのでwindow変数で受け渡せる（遷移先で読み取り後にクリア）
+      window.__oujPendingCourseYear = yearSelect.value || '';
+      window.location.href = `${OUJ_VOD_BASE_URL}?ca=${categoryId}`;
     });
   });
 

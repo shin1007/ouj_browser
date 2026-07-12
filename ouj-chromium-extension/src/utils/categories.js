@@ -163,6 +163,53 @@ async function categoriesUsedAsParent() {
   return Array.from(parentIdSet);
 }
 
+/**
+ * 「コース級」カテゴリ（生活と福祉コース・臨床心理学プログラム等）を、
+ * その親（教養学部・大学院 等）ごとにまとめて返す。
+ *
+ * コース級の定義: 子として科目（summary付き）を1つ以上持つフォルダ。
+ * （放送大学の階層は 学部/大学院 → コース/プログラム → 科目 → 回。中間のコース層を抜き出す）
+ *
+ * 検索ボックスのクイック絞り込みパネル(search-box-filter-panel.js)の「コースで探す」で使う。
+ * @returns {Promise<Array<{parentId:number, parentName:string, courses:Array<{categoryId:number, name:string}>}>>}
+ */
+async function getCourseGroups() {
+  const categories = await getCategoriesData();
+  if (!Array.isArray(categories)) return [];
+
+  const byId = new Map(categories.map((c) => [c.categoryId, c]));
+  // 親IDごとの子リストを1回だけ構築する
+  const childrenByParent = new Map();
+  categories.forEach((c) => {
+    if (!c.parentId) return;
+    if (!childrenByParent.has(c.parentId)) childrenByParent.set(c.parentId, []);
+    childrenByParent.get(c.parentId).push(c);
+  });
+
+  const groups = new Map(); // parentId -> { parentId, parentName, courses: [] }
+  categories.forEach((c) => {
+    const kids = childrenByParent.get(c.categoryId);
+    // 子に科目(summary付き)が1つも無ければコース級ではない（さらに深いフォルダ or 科目そのもの）
+    if (!kids || !kids.some((k) => k.summary)) return;
+    const parent = byId.get(c.parentId);
+    const parentName = parent ? parent.name : '';
+    if (!groups.has(c.parentId)) {
+      groups.set(c.parentId, { parentId: c.parentId, parentName, courses: [] });
+    }
+    groups.get(c.parentId).courses.push({ categoryId: c.categoryId, name: c.name });
+  });
+
+  // 名前先頭の番号（"01 …"）で親グループ・各コースを並べる（サイトの表示順に合わせる）
+  const numPrefix = (name) => {
+    const m = (name || '').match(/^\s*([0-9]+)/);
+    return m ? parseInt(m[1], 10) : 9999;
+  };
+  const result = Array.from(groups.values());
+  result.forEach((g) => g.courses.sort((a, b) => numPrefix(a.name) - numPrefix(b.name)));
+  result.sort((a, b) => numPrefix(a.parentName) - numPrefix(b.parentName));
+  return result;
+}
+
 
 async function getVideoProgress(contentId) {
   try {
@@ -201,6 +248,7 @@ window.getChildIds = getChildIds;
 window.getCurrentCategoryId = getCurrentCategoryId;
 window.getParentCategoryName = getParentCategoryName;
 window.categoriesUsedAsParent = categoriesUsedAsParent;
+window.getCourseGroups = getCourseGroups;
 window.getVideoListInCategory = getVideoListInCategory;
 window.getVideoData = getVideoData;
 window.getCategoryDataFromContentId = getCategoryDataFromContentId;

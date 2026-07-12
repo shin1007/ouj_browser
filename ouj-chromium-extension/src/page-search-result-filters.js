@@ -588,6 +588,10 @@ function initializeSearchResultFilters(context = 'search') {
 // 下部のフィルターバーと一覧表示を即座に追従させるためのヘルパー。
 // 検索結果ページ以外ではlistが無いので何もしない。
 function refreshSearchResultFilterUI() {
+  // 既にフィルターバーが出ているページ(＝検索結果/回一覧)でのみ追従させる。
+  // コース一覧など#common-list-contentだけ存在するページで新たにバーを出さないよう、
+  // バーの有無で判定する（SPA遷移時のバー除去はcontent.jsが行う）
+  if (!document.getElementById('search-result-filter-bar')) return;
   const list = document.querySelector(SEARCH_RESULT_FILTER_LIST_SELECTOR);
   if (!list) return;
   renderFilterBar(list);
