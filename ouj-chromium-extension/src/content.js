@@ -43,9 +43,17 @@ async function main() {
   } else if (pageType.page === 'series-select') {
     window.waitThenAddFavBtnToCategoryList();
     window.waitThenAddProgressBadgesToCategoryList();
+    // 科目フォルダ一覧の絞り込み(テレビ/ラジオ・字幕・未完了・視聴途中)
+    if (typeof window.initializeCourseListFilters === 'function') {
+      window.initializeCourseListFilters();
+    }
   } else if (pageType.page === 'video-select') {
     window.addFavoriteButtonToBreadCrumbs();
     window.addWatchLaterButtonsToVideoList();
+    // 回一覧は検索結果と同じDOMなのでフィルタ機構を流用(視聴状況フィルタ+並び替え)
+    if (typeof window.initializeSearchResultFilters === 'function') {
+      window.initializeSearchResultFilters('video-select');
+    }
   } else {
     // その他の処理
   };

@@ -142,23 +142,28 @@ function buildBrowseSection() {
 }
 
 // --- セクション3: 検索結果フィルタのプリセット ---
-// 既存の検索結果フィルタ(page-search-result-filters.js)と同じ設定キーを読み書きするため、
-// ここで設定したトグルは次に検索結果を開いた時にそのまま適用される。
+// 既存の検索結果フィルタ(page-search-result-filters.js)・科目一覧フィルタ
+// (page-course-select-filters.js)と同じ設定キーを読み書きするため、ここで設定した
+// トグルは次に検索結果・科目一覧・回一覧を開いた時にそのまま適用される。
 function buildPresetSection() {
   const keys = window.OUJ_SEARCH_FILTER_KEYS;
   if (!keys) return null; // フィルタ本体が未ロードなら出さない
 
   const section = document.createElement('div');
-  section.appendChild(buildPanelSectionLabel('検索結果の絞り込み（次の検索から適用）'));
+  section.appendChild(buildPanelSectionLabel('絞り込み（検索結果・科目一覧に適用）'));
 
   const body = document.createElement('div');
   section.appendChild(body);
 
   const rerenderAndSync = () => {
     renderPresetBody(body, keys, rerenderAndSync);
-    // 検索結果ページを開いていれば即座に反映する
+    // 検索結果ページ・回一覧ページ(video-select)を開いていれば即座に反映する
     if (typeof window.refreshSearchResultFilterUI === 'function') {
       window.refreshSearchResultFilterUI();
+    }
+    // 科目フォルダ一覧ページ(series-select)を開いていれば即座に反映する
+    if (typeof window.refreshCourseListFilterUI === 'function') {
+      window.refreshCourseListFilterUI();
     }
   };
   renderPresetBody(body, keys, rerenderAndSync);

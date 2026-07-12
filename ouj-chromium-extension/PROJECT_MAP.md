@@ -98,9 +98,10 @@
 | [page-home-continue.js](src/page-home-continue.js) | ホームの「続きから見る」パネル | `insertHomeContinuePanel` |
 | [page-course-select.js](src/page-course-select.js) | 科目一覧(series-select)のお気に入りボタン | `waitThenAddFavBtnToCategoryList` |
 | [page-course-select-progress.js](src/page-course-select-progress.js) | 科目一覧の視聴進捗バッジ・「▶続き」（遅延計算） | `waitThenAddProgressBadgesToCategoryList` |
+| [page-course-select-filters.js](src/page-course-select-filters.js) | 科目一覧(series-select)の絞り込み（媒体/字幕は行の表示テキストから即判定、未完了/視聴途中は`getCategoryProgress`で必要時のみ遅延判定）。検索と同じ設定キーを共有 | `initializeCourseListFilters`, `refreshCourseListFilterUI` |
 | [page-video-select.js](src/page-video-select.js) | 回の一覧(video-select)へ「あとで見る」トグル | `addWatchLaterButtonsToVideoList` |
 | [page-search-result.js](src/page-search-result.js) | 検索結果の重複講義を非表示 | `startSearchResultDedupObserver`, `updateSearchResultItemVisibility` |
-| [page-search-result-filters.js](src/page-search-result-filters.js) | 検索結果の絞り込み/並び替え（**566行・最大**。分割は依存の都合で保留＝ファイル内TODO参照） | `initializeSearchResultFilters`, `refreshSearchResultFilterUI`, `buildOujFilterChip`, `OUJ_SEARCH_*_KEY` |
+| [page-search-result-filters.js](src/page-search-result-filters.js) | 検索結果の絞り込み/並び替え。回一覧(video-select)でも`context`引数で流用（視聴状況フィルタ＋並び替えのみ／媒体・字幕・年度・科目・最近の検索は出さない） | `initializeSearchResultFilters(context)`, `refreshSearchResultFilterUI`, `buildOujFilterChip`, `OUJ_SEARCH_*_KEY` |
 | [search-box-filter-panel.js](src/search-box-filter-panel.js) | 検索ボックスのクイック絞り込みパネル（全ページ共通） | `initSearchBoxFilterPanel` |
 
 ## popup/ — ポップアップ兼オプションページ
@@ -129,8 +130,8 @@ v.* 共通           → insertLeftMenu / ヘッダー2ボタン / メニュー�
   home            → insertHomeContinuePanel + handleHomePageAutoLogin
   search-result   → startSearchResultDedupObserver + initializeSearchResultFilters
   player          → addFavoriteButtonToBreadCrumbs + initializeVideoPlayer
-  series-select   → waitThenAddFavBtnToCategoryList + waitThenAddProgressBadgesToCategoryList
-  video-select    → addFavoriteButtonToBreadCrumbs + addWatchLaterButtonsToVideoList
+  series-select   → waitThenAddFavBtnToCategoryList + waitThenAddProgressBadgesToCategoryList + initializeCourseListFilters
+  video-select    → addFavoriteButtonToBreadCrumbs + addWatchLaterButtonsToVideoList + initializeSearchResultFilters('video-select')
 ```
 
 ## バージョン運用メモ

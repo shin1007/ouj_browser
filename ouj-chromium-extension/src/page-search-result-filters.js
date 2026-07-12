@@ -5,6 +5,15 @@
 // 項目だけを対象に、同時実行数を制限しながら遅延分類する。未分類の項目は
 // フィルターで隠さず表示し続け、分類が完了した時点で個別に再評価する。
 //
+// 検索結果ページ(se=)だけでなく、動画一覧ページ(ca=の回一覧＝video-select)も同じ
+// #common-list-content > ion-item[role="listitem"] 構造なので、この機構を流用する。
+// video-selectは1科目内の回一覧のため媒体/字幕/年度/科目は全回で共通になり、これらで
+// 絞ると全件が消えるだけになる。そこで video-select では視聴状況(未完了/視聴途中)フィルタ
+// と並び替えのみを有効にし、媒体/字幕/年度/科目・最近の検索は出さない。分岐はlist要素上の
+// oujFilterContext('search' | 'video-select')で行う(getSearchFilterState / renderFilterBar /
+// classifySearchResultItem)。科目フォルダの一覧(series-select)は別DOMのため
+// page-course-select-filters.jsで対応する。
+//
 // TODO: 並列作業向けのロジック/UI分割は保留中。renderFilterBar↔applyFilters/
 // applySearchResultSort が双方向依存で、分割するとgetSearchFilterState等
 // 約8関数＋定数をwindow.*で公開して呼び出し側も書き換える必要があり、
@@ -31,11 +40,19 @@ const SEARCH_KEYWORD_HISTORY_MAX = 8;
 // 隠れる）ため、設定には保存せずlist要素上のプロパティ(oujYearFilter/oujCourseFilter)で
 // 現在の検索結果表示中のみ保持する
 function getSearchFilterState(list) {
+  const incompleteOnly = window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.incompleteOnly, false);
+  const partialOnly = window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.partialOnly, false);
+  // video-select(1科目の回一覧)では媒体/字幕/年度/科目は全回共通。これらで絞ると全件が
+  // 消えるだけ(例: プリセットで「ラジオのみ」を選んだままテレビ科目を開くと空になる)なので、
+  // 保存済みの設定値に関わらず無効化し、視聴状況フィルタのみ効かせる
+  if (list && list.oujFilterContext === 'video-select') {
+    return { media: 'all', captionOnly: false, incompleteOnly, partialOnly, year: '', courseId: '' };
+  }
   return {
     media: window.getSetting(SEARCH_FILTER_SETTINGS_KEYS.media, 'all'),
     captionOnly: window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.captionOnly, false),
-    incompleteOnly: window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.incompleteOnly, false),
-    partialOnly: window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.partialOnly, false),
+    incompleteOnly,
+    partialOnly,
     year: (list && list.oujYearFilter) || '',
     courseId: (list && list.oujCourseFilter) || '',
   };
@@ -87,8 +104,12 @@ function applyBadgesToItem(item) {
 }
 
 // 検索結果1件を分類する。分類できた項目のみdataset.oujClassified='done'になる。
-// gateは呼び出し元(startSearchFilterObserver)がページ全体で共有する同時実行数ゲート
-async function classifySearchResultItem(item, gate) {
+// gateは呼び出し元(startSearchFilterObserver)がページ全体で共有する同時実行数ゲート。
+// contextが'video-select'のときは媒体/字幕/年度/科目のフィルタが無効(全回共通のため)なので、
+// それらの判定用リクエスト(isCaptionAvailableはDRMチケット発行を伴い重い)は省き、
+// 視聴状況(getVideoViewingStatus)だけを取得する
+async function classifySearchResultItem(item, gate, context = 'search') {
+  const needMediaCaptionYear = context !== 'video-select';
   const contentId = window.extractContentIdFromThumbnail(item);
   if (!contentId) {
     item.dataset.oujClassified = 'unavailable';
@@ -96,16 +117,16 @@ async function classifySearchResultItem(item, gate) {
     return;
   }
   try {
-    // isRadioProgram/isCaptionAvailableは内部で同じgetCategoryDataFromContentId(同じ
-    // contentId)を叩く。並列にすると初回(未キャッシュ)時に同じvod-contents APIへの
-    // リクエストが重複してしまうため、あえて直列に実行し2回目以降はキャッシュを効かせる
-    const isRadio = await gate.run(() => window.isRadioProgram(contentId));
-    const captionOk = await gate.run(() => window.isCaptionAvailable(contentId));
+    if (needMediaCaptionYear) {
+      // isRadioProgram/isCaptionAvailableは内部で同じgetCategoryDataFromContentId(同じ
+      // contentId)を叩く。並列にすると初回(未キャッシュ)時に同じvod-contents APIへの
+      // リクエストが重複してしまうため、あえて直列に実行し2回目以降はキャッシュを効かせる
+      const isRadio = await gate.run(() => window.isRadioProgram(contentId));
+      const captionOk = await gate.run(() => window.isCaptionAvailable(contentId));
+      item.dataset.oujMedia = isRadio ? 'radio' : 'tv';
+      item.dataset.oujCaption = captionOk ? '1' : '0';
+    }
     const status = await gate.run(() => window.getVideoViewingStatus(contentId));
-    // 年度・科目はキャッシュ済みのvod-content(上のisRadio等が既に取得済み)から得るので基本キャッシュヒット
-    const videoData = await gate.run(() => window.getVideoData(contentId));
-    item.dataset.oujMedia = isRadio ? 'radio' : 'tv';
-    item.dataset.oujCaption = captionOk ? '1' : '0';
     // 視聴状況は3値で持つ: unwatched(未視聴) / partial(視聴途中) / done(視聴済み)
     if (status && status.isFinished) {
       item.dataset.oujWatchState = 'done';
@@ -117,13 +138,17 @@ async function classifySearchResultItem(item, gate) {
     }
     // 既存の並び替え処理との互換用（未視聴を優先ソートで使用）
     item.dataset.oujUnwatched = status && status.isFinished ? '0' : '1';
-    // 年度(西暦下2桁)と科目(categoryId＋科目名)。detailの1行目が「科目名（'YY）」形式
-    if (videoData) {
-      const detailLine = (videoData.detail || '').split('\n')[0] || '';
-      const yearMatch = detailLine.match(/（['’‘]?(\d{2})）/);
-      item.dataset.oujCourseId = String(videoData.categoryId || '');
-      item.dataset.oujCourseName = detailLine.replace(/（['’‘]?\d{2}）\s*$/, '').trim() || String(videoData.title || '');
-      if (yearMatch) item.dataset.oujYear = yearMatch[1];
+    if (needMediaCaptionYear) {
+      // 年度・科目はキャッシュ済みのvod-content(上のisRadio等が既に取得済み)から得るので基本キャッシュヒット。
+      // 年度(西暦下2桁)と科目(categoryId＋科目名)。detailの1行目が「科目名（'YY）」形式
+      const videoData = await gate.run(() => window.getVideoData(contentId));
+      if (videoData) {
+        const detailLine = (videoData.detail || '').split('\n')[0] || '';
+        const yearMatch = detailLine.match(/（['’‘]?(\d{2})）/);
+        item.dataset.oujCourseId = String(videoData.categoryId || '');
+        item.dataset.oujCourseName = detailLine.replace(/（['’‘]?\d{2}）\s*$/, '').trim() || String(videoData.title || '');
+        if (yearMatch) item.dataset.oujYear = yearMatch[1];
+      }
     }
     item.dataset.oujClassified = 'done';
   } catch (error) {
@@ -131,8 +156,8 @@ async function classifySearchResultItem(item, gate) {
   }
   applyFiltersToItem(item);
   applyBadgesToItem(item);
-  // 年度・科目の選択肢は分類が進むにつれて増えるため、都度追記する
-  refreshYearCourseOptions();
+  // 年度・科目の選択肢は分類が進むにつれて増えるため、都度追記する(video-selectでは選択自体が無いので何もしない)
+  if (needMediaCaptionYear) refreshYearCourseOptions();
 }
 
 // 分類済みの項目にのみフィルター条件を適用する。未分類・分類不能の項目は隠さない
@@ -235,8 +260,9 @@ async function applySearchResultSort(list) {
   if (sortMode === 'unwatched' || sortMode === 'partial') {
     // 未分類の項目だけをまとめて分類する。既存のgateを共有し同時実行数を抑える
     const gate = list.__oujFilterGate || window.createConcurrencyGate(4);
+    const context = list.oujFilterContext || 'search';
     const unclassified = items.filter((item) => item.dataset.oujClassified !== 'done' && item.dataset.oujClassified !== 'unavailable');
-    await Promise.all(unclassified.map((item) => classifySearchResultItem(item, gate)));
+    await Promise.all(unclassified.map((item) => classifySearchResultItem(item, gate, context)));
   }
 
   // 視聴状況の優先度で並べ替える。同順位内はサイト表示順を保つ
@@ -308,7 +334,9 @@ function renderFilterBar(list) {
   const old = document.getElementById('search-result-filter-bar');
   if (old) old.remove();
 
-  const state = getSearchFilterState();
+  const context = (list && list.oujFilterContext) || 'search';
+  const isVideoSelect = context === 'video-select';
+  const state = getSearchFilterState(list);
   const bar = document.createElement('div');
   bar.id = 'search-result-filter-bar';
   bar.style.cssText = `
@@ -318,28 +346,31 @@ function renderFilterBar(list) {
     align-items: center;
   `;
 
-  const mediaOptions = [
-    { value: 'all', label: 'すべて' },
-    { value: 'tv', label: 'テレビのみ' },
-    { value: 'radio', label: 'ラジオのみ' },
-  ];
-  mediaOptions.forEach(({ value, label }) => {
+  // 媒体・字幕・年度・科目・最近の検索は video-select(1科目の回一覧)では意味がないので出さない
+  if (!isVideoSelect) {
+    const mediaOptions = [
+      { value: 'all', label: 'すべて' },
+      { value: 'tv', label: 'テレビのみ' },
+      { value: 'radio', label: 'ラジオのみ' },
+    ];
+    mediaOptions.forEach(({ value, label }) => {
+      bar.appendChild(
+        buildFilterChip(label, state.media === value, () => {
+          window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.media, value);
+          renderFilterBar(list);
+          applyFilters();
+        })
+      );
+    });
+
     bar.appendChild(
-      buildFilterChip(label, state.media === value, () => {
-        window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.media, value);
+      buildFilterChip('字幕ありのみ', state.captionOnly, () => {
+        window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.captionOnly, !state.captionOnly);
         renderFilterBar(list);
         applyFilters();
       })
     );
-  });
-
-  bar.appendChild(
-    buildFilterChip('字幕ありのみ', state.captionOnly, () => {
-      window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.captionOnly, !state.captionOnly);
-      renderFilterBar(list);
-      applyFilters();
-    })
-  );
+  }
 
   bar.appendChild(
     buildFilterChip('未完了のみ', state.incompleteOnly, () => {
@@ -357,11 +388,13 @@ function renderFilterBar(list) {
     })
   );
 
-  bar.appendChild(buildYearCourseRow(list));
+  if (!isVideoSelect) bar.appendChild(buildYearCourseRow(list));
   bar.appendChild(buildSortRow(list));
 
-  const keywordRow = buildSearchKeywordHistoryRow(list);
-  if (keywordRow) bar.appendChild(keywordRow);
+  if (!isVideoSelect) {
+    const keywordRow = buildSearchKeywordHistoryRow(list);
+    if (keywordRow) bar.appendChild(keywordRow);
+  }
 
   list.parentNode.insertBefore(bar, list);
 }
@@ -488,7 +521,7 @@ function buildSortRow(list) {
   return row;
 }
 
-function startSearchFilterObserver() {
+function startSearchFilterObserver(context = 'search') {
   // SPA遷移(検索キーワード変更等)で#common-list-contentがまるごと再生成されるため、
   // 呼び出しのたびに古い監視インスタンス/ゲートを破棄して作り直す
   if (window.__oujSearchFilterObserver) {
@@ -507,7 +540,7 @@ function startSearchFilterObserver() {
         if (item.dataset.oujClassified) return;
         item.dataset.oujClassified = 'pending';
         observer.unobserve(item);
-        classifySearchResultItem(item, gate);
+        classifySearchResultItem(item, gate, context);
       });
     },
     { root: null, rootMargin: '150px 0px', threshold: 0 }
@@ -526,13 +559,16 @@ function registerItemsForClassification(observer, list) {
   });
 }
 
-function initializeSearchResultFilters() {
-  // 検索キーワードを履歴に記録（「最近の検索」チップ用）
-  recordSearchKeyword();
+// contextは 'search'(検索結果ページ) | 'video-select'(科目内の回一覧ページ)。
+// video-selectでは検索キーワード履歴の記録・媒体/字幕/年度/科目フィルタを行わない
+function initializeSearchResultFilters(context = 'search') {
+  // 検索キーワードを履歴に記録（「最近の検索」チップ用。検索結果ページのみ）
+  if (context === 'search') recordSearchKeyword();
   window.waitForElement(SEARCH_RESULT_FILTER_LIST_SELECTOR, (list) => {
+    list.oujFilterContext = context;
     list.oujSortMode = 'default';
     list.oujSortLoading = false;
-    const observer = startSearchFilterObserver();
+    const observer = startSearchFilterObserver(context);
     list.__oujFilterGate = observer.__oujGate;
     renderFilterBar(list);
     registerItemsForClassification(observer, list);

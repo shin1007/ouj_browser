@@ -84,6 +84,7 @@
         "page-login.js",
         "page-course-select.js",
         "page-course-select-progress.js",
+        "page-course-select-filters.js",
         "page-search-result.js",
         "page-search-result-filters.js",
         "search-box-filter-panel.js",
