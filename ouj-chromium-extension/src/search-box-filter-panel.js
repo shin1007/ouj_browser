@@ -252,7 +252,15 @@ let oujPanelInput = null;
 function repositionOpenPanel() {
   const panel = document.getElementById(SEARCH_BOX_PANEL_ID);
   if (!panel || panel.style.display === 'none' || !oujPanelInput) return;
-  if (!oujPanelInput.isConnected) { hideSearchBoxPanel(); return; }
+  // 入力欄がDOMから外れた／非表示になったら閉じる。ヘッダー折りたたみを別タブの
+  // storage同期やポップアップ経由で行うとmousedownを経由せず#searchTextが
+  // display:noneになる。その場合isConnectedはtrueのまま（=以前は閉じられず、
+  // 矩形が全ゼロになってパネルが左上隅に取り残された）ので、実描画の有無も見る。
+  const rect = oujPanelInput.getBoundingClientRect();
+  const hidden = !oujPanelInput.isConnected
+    || oujPanelInput.offsetParent === null
+    || (rect.width === 0 && rect.height === 0);
+  if (hidden) { hideSearchBoxPanel(); return; }
   positionSearchBoxPanel(panel, oujPanelInput);
 }
 
@@ -284,14 +292,17 @@ function initSearchBoxFilterPanel() {
   });
 
   // パネル外のmousedownで閉じる。検索ボックス自身とパネル内は閉じない
-  // （blurでは閉じないので、パネル内のselectやチップ操作を邪魔しない）
+  // （blurでは閉じないので、パネル内のselectやチップ操作を邪魔しない）。
+  // キャプチャ相で登録することで、途中の固定UIがmousedownをstopPropagation
+  // しても確実に閉じられる（パネル内クリックはpanel.contains判定で除外するため、
+  // キャプチャ相でも誤って閉じることはない）。
   document.addEventListener('mousedown', (event) => {
     const panel = document.getElementById(SEARCH_BOX_PANEL_ID);
     if (!panel || panel.style.display === 'none') return;
     if (panel.contains(event.target)) return;
     if (event.target && event.target.id === 'searchText') return;
     hideSearchBoxPanel();
-  });
+  }, true);
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') hideSearchBoxPanel();
