@@ -6,7 +6,7 @@
  * 視聴履歴に基づいて最大2件のおすすめ動画を選定します。
  * 1. 視聴途中の動画があれば、それを「続きから見る」として推薦します。
  * 2. 視聴完了した動画があれば、そのコースの次の未視聴動画を推薦します。
- * @param {Array<Object>} history - 視聴履歴の配列。各要素は { contentId, progress, date } を含みます。
+ * @param {Array<Object>} history - 視聴履歴の配列。各要素は { contentId, date } を含みます（進捗は保持していないため関数内でgetVideoProgressを都度取得）。
  * @returns {Promise<Object>} おすすめ動画リスト、使用済みカテゴリIDセット、使用済みコンテンツIDセットを含むオブジェクト。
  */
 async function getRecommendFromHistory(history) {
@@ -24,7 +24,7 @@ async function getRecommendFromHistory(history) {
   // 履歴をループし、最大件数に達するまでおすすめを選定
   for (let i = 0; i < history.length; i++) {
     const historyItem = history[i];
-    const { contentId, progress, date } = historyItem;
+    const { contentId, date } = historyItem;
 
     // 不正なデータはスキップ
     if (!contentId) continue;
@@ -34,6 +34,8 @@ async function getRecommendFromHistory(history) {
     const video = await window.getVideoData(contentId);
     if (!video || !video.contentId) continue;
     if (recommendList.length > reccomendFromHistoryLength*2) continue;
+    // 履歴エントリ自体は{contentId, date}のみで進捗を持たないため、都度取得する
+    const progress = await window.getVideoProgress(contentId);
     // パターン1: 視聴が完了していない動画 (進捗率95%未満)
     if (progress < 0.95) {
       // 「続きから見る」おすすめとしてリストに追加
