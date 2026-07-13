@@ -17,9 +17,19 @@ const OUJ_VOD_BASE_URL = 'https://v.ouj.ac.jp/view/ouj/#/navi/vod';
 // 取り直さず、最初に開いた時のPromiseを使い回す。
 //  - yearBuckets: 年度セレクトの選択肢（createYearListData／utils/year.js）
 //  - courseGroups: コースセレクトの選択肢（getCourseGroups／utils/categories.js。学部・大学院等でグループ化）
+// ただし、ログイン/ログアウトで取得できる科目数が変わる(login-state.jsがcachedCategoriesData
+// 自体は破棄・再取得する)ため、取得時点のログイン状態を記録しておき、次回呼び出し時に
+// 状態が変わっていればこのPromiseも作り直す(そうしないとログイン前に一度パネルを開いた
+// だけで、以降ログインしても年度・コースの選択肢がゲスト時点のまま固定されてしまう)。
 let oujBrowseDataPromise = null;
+let oujBrowseDataLoginState = null;
 function getBrowseData() {
+  const currentLoginState = (typeof window.getOujLoginState === 'function') ? window.getOujLoginState() : null;
+  if (oujBrowseDataPromise && currentLoginState && currentLoginState !== 'unknown' && currentLoginState !== oujBrowseDataLoginState) {
+    oujBrowseDataPromise = null;
+  }
   if (!oujBrowseDataPromise) {
+    oujBrowseDataLoginState = currentLoginState;
     const yearP = (typeof window.createYearListData === 'function')
       ? window.createYearListData().then((r) => (r && Array.isArray(r.yearBuckets)) ? r.yearBuckets : []).catch(() => [])
       : Promise.resolve([]);
