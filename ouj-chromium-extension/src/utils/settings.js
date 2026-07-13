@@ -13,7 +13,7 @@ const saveSetting = (key, value) => {
     try {
         localStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
-        // console.error(`saveSetting: 設定の保存に失敗しました - ${key}:`, error);
+        console.error(`saveSetting: 設定の保存に失敗しました - ${key}:`, error);
     }
 };
 
@@ -38,7 +38,7 @@ const getSetting = (key, defaultValue = null) => {
             return value;
         }
     } catch (error) {
-        // console.error(`getSetting: 設定の取得に失敗しました - ${key}:`, error);
+        console.error(`getSetting: 設定の取得に失敗しました - ${key}:`, error);
         return defaultValue;
     }
 };
@@ -102,7 +102,7 @@ const removeSetting = (key) => {
     try {
         localStorage.removeItem(key);
     } catch (error) {
-        // console.error(`removeSetting: 設定の削除に失敗しました - ${key}:`, error);
+        console.error(`removeSetting: 設定の削除に失敗しました - ${key}:`, error);
     }
 };
 
