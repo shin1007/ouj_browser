@@ -12,10 +12,10 @@ document.addEventListener('DOMContentLoaded', function() {
     openOujHomeButton.focus();
 
     // 保存された自動ログイン設定を読み込む
+    // 未設定時、実際の自動ログイン処理(utils/goToLoginPage.js)はfalseが明示されない限り
+    // 動作する(デフォルトON)。表示をこの実挙動に合わせるため、未設定時はチェック状態にする。
     chrome.storage.sync.get(['autoLogin'], function(result) {
-        if (result.autoLogin !== undefined) {
-            autoLoginCheckbox.checked = result.autoLogin;
-        }
+        autoLoginCheckbox.checked = result.autoLogin !== false;
     });
 
     // 自動ログイン設定の変更を保存
