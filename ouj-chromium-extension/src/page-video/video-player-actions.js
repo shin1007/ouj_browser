@@ -76,7 +76,12 @@ function addPipButton(titleElement) {
 
 // しおりボタン
 function addBookmarkButton(titleElement, currentVideo) {
-  if (titleElement.querySelector('.video-bookmark-button')) return;
+  // titleElementはSPA内で動画が切り替わっても(タイトルのテキストだけ更新されて)
+  // 同じDOMノードが使い回されることがある。既存ボタンをそのまま残すと、クリック
+  // ハンドラが最初に生成した時点のcurrentVideo(古い動画)をクロージャで握ったままに
+  // なるため、既存があれば一度取り除いてから最新のcurrentVideoで作り直す
+  const existing = titleElement.querySelector('.video-bookmark-button');
+  if (existing) existing.remove();
   const button = createTitleActionButton({
     className: 'video-bookmark-button',
     title: '現在の再生位置にしおりを挟む（メニューの「しおり」から一覧できます）',
@@ -114,7 +119,10 @@ function addBookmarkButton(titleElement, currentVideo) {
 
 // あとで見るトグルボタン
 function addWatchLaterButton(titleElement, currentVideo) {
-  if (titleElement.querySelector('.video-watch-later-button')) return;
+  // 同じDOMノード再利用時に古いcontentIdのクロージャが残らないよう、既存があれば作り直す
+  // (理由はaddBookmarkButtonのコメント参照)
+  const existing = titleElement.querySelector('.video-watch-later-button');
+  if (existing) existing.remove();
   const contentId = String(currentVideo?.contentId || window.getCurrentVideoId());
   const categoryId = String(currentVideo?.categoryId || window.getCurrentCategoryId() || '');
   const button = createTitleActionButton({

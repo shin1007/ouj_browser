@@ -431,8 +431,11 @@ function addShareButtonAfterVideoTitle() {
     .replace(/\s+[a-zA-Z0-9]{5,}\s*$/, '') // 末尾の7桁以上の英数字と空白を削除
     .replace(/（.*?）\s*$/, '') // 全角括弧とその中身を削除
   const videoTitle = titleElement.textContent.trim();
-  // すでに追加されている場合はスキップ
-  if (document.querySelector('.video-share-button')) return;
+  // titleElementはSPA内で動画が切り替わっても同じDOMノードが使い回されることがある。
+  // 既存ボタンをそのまま残すと、クリック時にコピーされる科目名/タイトルが最初に
+  // 生成した時点(古い動画)のクロージャのまま固定されてしまうため、作り直す
+  const existingButton = document.querySelector('.video-share-button');
+  if (existingButton) existingButton.remove();
   const button = document.createElement('button');
   button.classList.add('video-share-button');
   button.style.marginLeft = '2px';
