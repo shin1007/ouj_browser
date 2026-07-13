@@ -22,13 +22,14 @@ const fetchWithCache = async (url, cacheKey, minute=720) => {
 
     // 1.cachedData.dataが空でなく、かつ、timestampが当日のものであれば、それを返す
     if (cachedData && cachedData.data && cachedData.timestamp) {
-        // cachedDataが空の場合はネットワークから取得
+        // cachedDataがエラー/nullの場合のみキャッシュを信用せずネットワークから取得しなおす。
+        // 空配列([])は「その科目に動画が0件」等の正当な結果でありうるため、他の結果と同様に
+        // TTL以内ならキャッシュを返す(以前はここで素通りしてしまい、空配列の結果は
+        // 毎回無条件にネットワーク再取得が走り続けていた)
         if (cachedData.data.error || cachedData.data === null) {
             // console.warn(`fetchWithCache: ${cacheKey} のキャッシュはエラーまたはnullです。ネットワークからデータ取得を試行中...`);
-        } else if (cachedData.data.length === 0) {
-        }else if(cachedData.timestamp && (new Date().getTime() - new Date(cachedData.timestamp).getTime()) < minute * 60 * 1000) {
+        } else if ((new Date().getTime() - new Date(cachedData.timestamp).getTime()) < minute * 60 * 1000) {
             return cachedData.data;
-        } else {
         }
     }
     // 2. 当日のキャッシュがない場合のみネットワークリクエストを試みる
@@ -39,7 +40,13 @@ const fetchWithCache = async (url, cacheKey, minute=720) => {
             data: fetchResult,
             timestamp: new Date().toISOString()
         };
-        await chrome.storage.local.set({ [cacheKey]: cacheData });
+        try {
+            await chrome.storage.local.set({ [cacheKey]: cacheData });
+        } catch (error) {
+            // ストレージ容量超過等でキャッシュ保存に失敗しても、取得済みのfetchResultは
+            // 呼び出し元に返す(キャッシュされないだけで、この回の動作自体は継続できる)
+            console.warn(`fetchWithCache: ${cacheKey} のキャッシュ保存に失敗しました:`, error);
+        }
         return fetchResult;
     }
     // 3. 古いキャッシュがあれば、それを返す
