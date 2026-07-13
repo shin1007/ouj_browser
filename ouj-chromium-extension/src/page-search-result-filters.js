@@ -397,6 +397,21 @@ function renderFilterBar(list) {
   }
 
   list.parentNode.insertBefore(bar, list);
+
+  // サイト純正の並び替えドロップダウン(ion-item.sort)を隠す。拡張の「並び替え」行と
+  // 二重になって紛らわしいため一本化する。純正のsort要素は検索結果と回一覧(=拡張の
+  // 並び替え行を出すページ)にだけ存在し、科目一覧など他ページには無いことを実機で確認済み。
+  // 純正の既定は「タイトル順」で、これが拡張の「サイト表示順」に相当するため、タイトル順の
+  // 並びは失われない。サーバー再取得を伴う純正の切替を隠すことでサーバー負荷も抑えられる。
+  hideNativeSortControl();
+}
+
+// サイト純正の並び替えUI(ion-item.sort)を非表示にする。Angularの再描画で作り直される
+// ことがあるため、都度クエリして隠す(renderFilterBarとリスト変化監視の両方から呼ぶ)。
+function hideNativeSortControl() {
+  document.querySelectorAll('ion-item.sort').forEach((el) => {
+    if (el.style.display !== 'none') el.style.display = 'none';
+  });
 }
 
 // 年度・科目の絞り込みセレクト行。選択肢は画面内に入って分類済みになった項目から集める
@@ -559,27 +574,55 @@ function registerItemsForClassification(observer, list) {
   });
 }
 
+// 1つの#common-list-content要素にフィルターバーと監視をセットアップする。
+// バーが消えている時の貼り直しでも再利用するため、要素単位で冪等に作る。
+function setupSearchFilterBarOnList(list, context) {
+  list.oujFilterContext = context;
+  list.oujSortMode = 'default';
+  list.oujSortLoading = false;
+  const observer = startSearchFilterObserver(context);
+  list.__oujFilterGate = observer.__oujGate;
+  renderFilterBar(list);
+  registerItemsForClassification(observer, list);
+
+  // 無限スクロールで追加される項目にも監視対象を広げる。あわせて、このリストへの流し込みと
+  // 同じタイミングでバーが消えた場合にも入れ直す(itemが流し込まれる=検索/回一覧ページなので安全)。
+  // 監視は要素ごとに1度だけ張る(oujFilterObserverAttachedは要素単位のフラグ)。
+  if (list.oujFilterObserverAttached) return;
+  list.oujFilterObserverAttached = true;
+  const mutationObserver = new MutationObserver(() => {
+    if (!document.getElementById('search-result-filter-bar')) {
+      renderFilterBar(list);
+    }
+    // 検索結果の流し込み・再描画のたびに純正の並び替えが復活しうるので隠し直す
+    hideNativeSortControl();
+    registerItemsForClassification(observer, list);
+  });
+  mutationObserver.observe(list, { childList: true });
+}
+
 // contextは 'search'(検索結果ページ) | 'video-select'(科目内の回一覧ページ)。
 // video-selectでは検索キーワード履歴の記録・媒体/字幕/年度/科目フィルタを行わない
 function initializeSearchResultFilters(context = 'search') {
   // 検索キーワードを履歴に記録（「最近の検索」チップ用。検索結果ページのみ）
   if (context === 'search') recordSearchKeyword();
   window.waitForElement(SEARCH_RESULT_FILTER_LIST_SELECTOR, (list) => {
-    list.oujFilterContext = context;
-    list.oujSortMode = 'default';
-    list.oujSortLoading = false;
-    const observer = startSearchFilterObserver(context);
-    list.__oujFilterGate = observer.__oujGate;
-    renderFilterBar(list);
-    registerItemsForClassification(observer, list);
+    setupSearchFilterBarOnList(list, context);
 
-    // 無限スクロールで追加される項目にも監視対象を広げる
-    if (list.oujFilterObserverAttached) return;
-    list.oujFilterObserverAttached = true;
-    const mutationObserver = new MutationObserver(() => {
-      registerItemsForClassification(observer, list);
-    });
-    mutationObserver.observe(list, { childList: true });
+    // 科目一覧(ca=)など、前ページの空の#common-list-contentが残っている状態から検索へ
+    // 遷移すると、waitForElementはその古い空リストへ即コールバックする。Angularはその後
+    // #common-list-content要素を検索結果用の新しい要素に「置き換える」ため、古い要素へ挿した
+    // バーは新要素には無いまま残る(古い要素はDOMから外れる)。そこで描画が落ち着くまでの数秒間、
+    // 同一URL(=まだこの検索ページ)である限り、現在の#common-list-contentにバーが無ければ
+    // その時点の要素に対して貼り直す。別ページへ移動したらURLが変わるので何もしない
+    // (content.js側が正しいバーを作り直す)。
+    const startUrl = window.location.href;
+    [120, 350, 700, 1400, 2800].forEach((ms) => setTimeout(() => {
+      if (window.location.href !== startUrl) return;
+      if (document.getElementById('search-result-filter-bar')) return;
+      const current = document.querySelector(SEARCH_RESULT_FILTER_LIST_SELECTOR);
+      if (current) setupSearchFilterBarOnList(current, context);
+    }, ms));
   });
 }
 
