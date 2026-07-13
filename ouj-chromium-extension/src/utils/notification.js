@@ -125,6 +125,11 @@ const showNotification = (message, type = 'info', duration = 3000, options = {})
     // ドキュメントに追加
     document.body.appendChild(notification);
 
+    // 閉じる時にこの画面外のtransformへ戻すため保存しておく(文字列置換で復元すると、
+    // top-center/bottom-centerのようにtranslateX(-50%)等の別の%値を含む場合に
+    // 誤って別の箇所を書き換えてしまうため、値そのものを保持する)
+    notification.dataset.oujOffscreenTransform = posStyle.transform;
+
     // アニメーション開始
     setTimeout(() => {
         notification.style.opacity = '1';
@@ -169,7 +174,7 @@ const closeNotification = (notification) => {
     if (!notification || !notification.parentNode) return;
 
     notification.style.opacity = '0';
-    notification.style.transform = notification.style.transform.replace('0%', '100%');
+    notification.style.transform = notification.dataset.oujOffscreenTransform || notification.style.transform.replace('0%', '100%');
 
     setTimeout(() => {
         if (notification.parentNode) {
