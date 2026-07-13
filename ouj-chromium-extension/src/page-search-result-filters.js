@@ -261,8 +261,19 @@ async function applySearchResultSort(list) {
     // 未分類の項目だけをまとめて分類する。既存のgateを共有し同時実行数を抑える
     const gate = list.__oujFilterGate || window.createConcurrencyGate(4);
     const context = list.oujFilterContext || 'search';
-    const unclassified = items.filter((item) => item.dataset.oujClassified !== 'done' && item.dataset.oujClassified !== 'unavailable');
-    await Promise.all(unclassified.map((item) => classifySearchResultItem(item, gate, context)));
+    // IntersectionObserverによって既に分類中(pending)の項目は、ここで再度
+    // classifySearchResultItemを呼ぶと同じcontentIdへの分類リクエストが二重に走って
+    // しまう。既存の分類Promiseがあればそれを待ち、無い項目だけ新規に分類する
+    const needsClassification = items.filter((item) => item.dataset.oujClassified !== 'done' && item.dataset.oujClassified !== 'unavailable');
+    await Promise.all(needsClassification.map((item) => {
+      if (item.dataset.oujClassified === 'pending' && item.__oujClassifyPromise) {
+        return item.__oujClassifyPromise;
+      }
+      item.dataset.oujClassified = 'pending';
+      const promise = classifySearchResultItem(item, gate, context);
+      item.__oujClassifyPromise = promise;
+      return promise;
+    }));
   }
 
   // 視聴状況の優先度で並べ替える。同順位内はサイト表示順を保つ
@@ -555,7 +566,9 @@ function startSearchFilterObserver(context = 'search') {
         if (item.dataset.oujClassified) return;
         item.dataset.oujClassified = 'pending';
         observer.unobserve(item);
-        classifySearchResultItem(item, gate, context);
+        // applySearchResultSort等、他の呼び出し元が同じ項目を再分類せず
+        // このPromiseを待てるように保持しておく
+        item.__oujClassifyPromise = classifySearchResultItem(item, gate, context);
       });
     },
     { root: null, rootMargin: '150px 0px', threshold: 0 }
