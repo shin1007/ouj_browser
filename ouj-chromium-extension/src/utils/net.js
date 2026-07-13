@@ -1,6 +1,6 @@
 /**
  * ネットワーク／キャッシュ関連のユーティリティ。
- * fetchWithCache / fetchFromNetwork / fetchWithoutCache / createConcurrencyGate。
+ * fetchWithCache / fetchFromNetwork / createConcurrencyGate。
  */
 
 // サイトAPIのエラーコード: CODE_401_NOT_FOUND_SESSION。
@@ -105,29 +105,6 @@ const fetchFromNetwork = async (url) => {
         }
     }
 };
-// TODO: fetchWithoutCacheはwindow.*に公開されておらず、src/内から呼び出し箇所も見当たらない
-// (未使用の可能性が高い)。401005リトライも入れていないので、使う場合はfetchFromNetwork経由に
-// 揃えるか同様のリトライを足す必要がある。今回のログイン周り修正の対象外のため未着手。
-const fetchWithoutCache = async (url,cacheKey) => {
-    try {
-        const response = await fetch(url);
-        if (response.ok) {
-            const data = await response.json();
-            // 成功した場合のみキャッシュを更新
-            const cacheData = {
-                data: data,
-                timestamp: new Date().toISOString()
-            };
-            await chrome.storage.local.set({ [cacheKey]: cacheData });
-            return data;
-        }
-        return response.json();
-    } catch (error) {
-        console.warn(`fetchWithoutCache: ${url} のネットワークからのデータ取得に失敗しました。エラー: ${error.message}`);
-        return null;
-    }
-};
-
 // グローバル関数として公開
 window.fetchWithCache = fetchWithCache;
 window.createConcurrencyGate = createConcurrencyGate;
