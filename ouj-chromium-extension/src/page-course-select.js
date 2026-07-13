@@ -8,7 +8,13 @@ async function addFavoriteButtonsToCategoryList() {
   if (!ca) {
     return;
   }
+  // getChildIdsのawait中に別の科目一覧ページへ遷移すると、childCategories(古いページの
+  // カテゴリ)とitems(新しいページのDOM)がインデックスでずれ、お気に入り星が別科目に
+  // 誤って紐付いてしまう。取得開始時点のURLを記録し、変わっていたら描画をやめる
+  // (遷移先のページはcontent.js経由で改めてこの関数が呼ばれる)
+  const startUrl = window.location.href;
   const childCategories = await window.getChildIds(ca);
+  if (window.location.href !== startUrl) return;
   const favorites = typeof window.getFavorites === 'function' ? window.getFavorites() : [];
 
   // ion-list#common-list-content内のion-itemを全て取得

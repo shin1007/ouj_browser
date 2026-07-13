@@ -296,10 +296,15 @@ async function initializeCourseListFilters() {
   }
   const ca = window.getCurrentCategoryId();
   if (!ca) return;
+  // getCategoriesData/getChildIdsのawait中に別の科目一覧ページへ遷移すると、
+  // childCategories(古いページのカテゴリ)とitems(新しいページのDOM、下のsetupCourseFilterRows)
+  // がインデックスでずれてしまう。取得開始時点のURLと変わっていたら中断する
+  const startUrl = window.location.href;
   // 子カテゴリがさらにフォルダ(summaryなし)の場合は科目一覧ではないため何もしない
   // （page-course-select-progress.js / page-course-select.js と同じ判定基準）
   const categories = await window.getCategoriesData();
   const childCategories = await window.getChildIds(ca);
+  if (window.location.href !== startUrl) return;
   const hasSummaryInChildren = childCategories.some((child) => {
     const cat = categories.find((c) => c.categoryId === child.categoryId);
     return cat && cat.summary;

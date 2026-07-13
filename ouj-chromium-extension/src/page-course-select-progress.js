@@ -151,7 +151,12 @@ async function addProgressBadgesToCategoryList() {
 
   const ca = window.getCurrentCategoryId();
   if (!ca) return;
+  // getChildIdsのawait中に別の科目一覧ページへ遷移すると、childCategories(古いページの
+  // カテゴリ)とitems(新しいページのDOM)がインデックスでずれ、進捗バッジが別科目に
+  // 誤って紐付いてしまう。取得開始時点のURLと変わっていたら描画をやめる
+  const startUrl = window.location.href;
   const childCategories = await window.getChildIds(ca);
+  if (window.location.href !== startUrl) return;
   const items = document.querySelectorAll('#main div.icon-text > .icon-area');
   const minLength = Math.min(childCategories.length, items.length);
   if (minLength === 0) return;
