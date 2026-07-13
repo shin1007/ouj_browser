@@ -21,20 +21,28 @@ async function initializeVideoPlayer() {
   const categoryData = await window.getCategoryDataFromContentId(contentId);
   if (categoryData === null) {
     console.log("initializeVideoPlayer: categoryData is null")
+    // 再入防止フラグを戻し忘れると、以後このタブでinitializeVideoPlayerが
+    // 二度と実行されなくなる(再生ページの機能が全滅する)ため必ず戻す
+    window.isInitializingVideo = false;
     await window.handleHomePageAutoLogin();
     return;
   }
   // 動画リストから現在の動画IDを利用して動画タイトルを取得
   const videos = await window.getVideoListInCategory(categoryData.categoryId);
+  let found = false;
   for (const video of videos) {
     if (String(video.contentId) === String(contentId)) {
       // 見つかった
-      const currentVideo = video;
-      addFunctionPanel(currentVideo);
+      found = true;
+      addFunctionPanel(video);
       break;
     }
   }
-// タイトルがページ上に存在すれば実行
+  // 動画が見つからなかった場合も、再入防止フラグを戻す(addFunctionPanel側での
+  // リセットが呼ばれないため、ここで戻さないと以後ずっと初期化されなくなる)
+  if (!found) {
+    window.isInitializingVideo = false;
+  }
 }
 async function addFunctionPanel(currentVideo){
   console.log("addFunctionPanel", currentVideo.title);
