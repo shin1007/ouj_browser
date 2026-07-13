@@ -13,22 +13,24 @@
 //   ログアウト(.../logout/cas 経由)を捕捉できていなかった。本モジュールはURLではなく実際の
 //   ログイン状態を見るため、ログイン・ログアウト双方を一様に扱える。
 //
-// TODO: 「既にログイン済みの状態(有効なCASセッションCookie)で新規タブを開く」場合、この
-// ClasstreamIsCasLogin_1 が 'false' のまま更新されない(=見た目はログイン済みなのに未検知)
-// ケースを実機(Playwright)で確認済み。おそらくサイト側スクリプトがCASログインのリダイレクト
-// 処理の副作用としてのみこのフラグを立てており、既存Cookieでの暗黙ログインは考慮していない。
-// 本モジュールは影響する方向('user'→'guest'の誤検知でキャッシュを壊す)だけ無視して回避して
-// いるが、根本的にはDOM側の指標(例: .user-id-menu の有無)などより信頼できる判定手段への
-// 置き換えを検討する余地がある。
-// TODO: 同じ検証中、拡張自身のカテゴリ取得(fetchWithCache)がゲスト状態のページ読み込み直後に
-// 実行されると "Not found session"(401005) エラーになることがある(サイト側のセッション確立が
-// 拡張のfetch()より遅い競合と推測)。fetchWithCache側はエラーを毎回リトライする作りのため
-// 致命的ではないが、初回表示が一時的に空になる原因になり得る。
+// 既知の実機不具合: 「既にログイン済みの状態(有効なCASセッションCookie)で新規タブを開く」場合、
+// ClasstreamIsCasLogin_1 が 'false' のまま更新されないことがある(Playwrightで確認済み)。おそらく
+// サイト側スクリプトがCASログインのリダイレクト処理の副作用としてのみこのフラグを立てており、
+// 既存Cookieでの暗黙ログインは考慮していない。この誤検知(見た目はログイン済みなのに'guest'扱い)
+// を補正するため、getOujLoginState()はフラグが'false'の場合に限り、実際に画面へ描画されたDOM
+// (common-header の .user-id-menu 内、ユーザーIDラベル)も確認する。ログイン直後はAngular側の
+// 描画がこのフラグより先に済むとは限らないため、初回はDOM未描画で'guest'と判定されることもあるが、
+// その場合も後続のポーリング(startOujLoginStateWatcher、500ms間隔)でDOM描画後に'user'へ訂正され、
+// 通常のログイン検知と同じ経路でキャッシュが破棄される。
 
 // サイトのテナントID(全APIで /tenants/1/ 固定)
 const OUJ_TENANT_ID = 1;
 // CASログイン状態を保持するサイト側 sessionStorage キー
 const OUJ_IS_CAS_LOGIN_SS_KEY = `ClasstreamIsCasLogin_${OUJ_TENANT_ID}`;
+// ログイン済みの場合のみサイトが描画するユーザーIDラベルのセレクタ(tests/visual/auth.jsの
+// ログイン済み判定と同じもの)。ClasstreamIsCasLogin_1 が'false'のまま更新されない実機不具合を
+// 補正するためのDOM側フォールバックに使う。
+const OUJ_USER_ID_LABEL_SELECTOR = '.user-id-menu ion-label.user-id';
 // 前回観測したログイン状態を保持する自前キー(タブ単位=sessionStorage)。
 // 現在値と同じスコープ(タブ単位)で持つことで、複数タブでログイン状態が食い違う
 // 過渡期に「タブ間でキャッシュ破棄を撃ち合う」現象を避ける。
@@ -50,6 +52,20 @@ const OUJ_CATEGORIES_LOGIN_STATE_KEY = 'oujCategoriesLoginState';
 const OUJ_USER_SCOPED_CACHE_PREFIXES = ['videoViewingStatus_'];
 
 /**
+ * DOMに実際に描画されたユーザーIDラベルの有無からログイン状態を判定する。
+ * サイト側sessionStorageのフラグと異なり、Angular側が実際に描画した内容を見るため、
+ * 「既存Cookieでの暗黙ログイン」でも正しく検知できる。
+ * @returns {'user'|'guest'} ラベルが描画されていれば'user'、無ければ'guest'
+ */
+function getOujLoginStateFromDom() {
+  try {
+    const label = document.querySelector(OUJ_USER_ID_LABEL_SELECTOR);
+    if (label && label.textContent.trim()) return 'user';
+  } catch (e) { /* noop */ }
+  return 'guest';
+}
+
+/**
  * 現在のログイン状態を返す。
  * @returns {'user'|'guest'|'unknown'} 'user'=ログイン済み, 'guest'=未ログイン, 'unknown'=サイト未初期化
  */
@@ -61,7 +77,8 @@ function getOujLoginState() {
     return 'unknown';
   }
   if (raw === 'true') return 'user';
-  if (raw === 'false') return 'guest';
+  // 'false'は「既存Cookieでの暗黙ログイン」時に誤検知しうるため、DOM側の描画内容でも裏取りする。
+  if (raw === 'false') return getOujLoginStateFromDom();
   return 'unknown';
 }
 
@@ -150,11 +167,17 @@ async function syncOujLoginStateAndInvalidate() {
     }
     if (stamped === current) return null; // キャッシュは現在の状態と一致
     // 'guest'→'user'の食い違いのみ信頼して更新する。逆方向('user'→'guest')は反映しない。
-    // 理由: 「既にログイン済みの状態で新規タブを開く」(=このタブでの初回観測がまさにこのケース)
-    // と、サイト側のClasstreamIsCasLogin_1がfalseのまま更新されない実機不具合を確認済み
-    // (実際のカテゴリ取得は正しくログイン済み件数を返すため、実データは正しい)。この誤検知を
-    // 信じて'user'スタンプのキャッシュを'guest'扱いに書き換えてしまうと、後続の本物のゲスト
-    // タブがその(実際にはログイン済みの)キャッシュをそのまま受け取ってしまう回帰を招く。
+    // 理由: getOujLoginState()はDOM裏取り(getOujLoginStateFromDom)で大半のケースを補正するが、
+    // このタブでの最初の観測はAngular側の描画がまだ済んでおらず、実際にはログイン済みなのに
+    // 一時的に'guest'と判定されうる。この段階で'user'スタンプのキャッシュを'guest'扱いに
+    // 書き換えてしまうと、後続の本物のゲストタブがその(実際にはログイン済みの)キャッシュを
+    // そのまま受け取ってしまう回帰を招くため、信頼できる'guest'→'user'方向のみ即時反映する。
+    // TODO: 逆方向('user'スタンプの状態で、本当にログアウト済みの新規タブを開いた場合)は
+    // この初回観測では反映されず、このタブ内で改めてログイン状態が変化するまでは古い
+    // 'user'向けキャッシュが残り続ける。実害は「一時的に古い一覧が出る」程度だが、
+    // startOujLoginStateWatcherの次回ポーリング(500ms後、previous!==currentの通常経路)で
+    // DOM描画が済めば少なくとも'user'方向の誤りは訂正される。厳密に直すには、DOM裏取りが
+    // 確定するまで(例: 数回のポーリング)初回判定を保留するなどの対応が要る。
     if (current !== 'user') return null;
     await invalidateOujCachesForState(current);
     return current;

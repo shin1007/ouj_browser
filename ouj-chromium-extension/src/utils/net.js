@@ -3,6 +3,12 @@
  * fetchWithCache / fetchFromNetwork / fetchWithoutCache / createConcurrencyGate。
  */
 
+// サイトAPIのエラーコード: CODE_401_NOT_FOUND_SESSION。
+// ページ読み込み直後、拡張の fetch() がサイト側のセッション確立より先に実行されると
+// 一時的にこのエラーになることがある(login-state.js のログイン状態検証中に実機確認)。
+// 数百ms待てば解消する競合のため、この場合に限り短時間待って1回だけ再試行する。
+const OUJ_SESSION_NOT_FOUND_ERROR_CODE = 401005;
+
 /**
  * キャッシュ付きのAPIリクエストを行う関数
  * @param {string} url - APIのURL
@@ -79,7 +85,14 @@ const createConcurrencyGate = (limit) => {
 const fetchFromNetwork = async (url) => {
     try {
         const response = await fetch(url);
-        return response.json();
+        const data = await response.json();
+        if (data && data.error && data.error.code === OUJ_SESSION_NOT_FOUND_ERROR_CODE) {
+            // サイト側のセッション確立待ちの一時的な競合とみなし、少し待って1回だけ再試行する。
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const retryResponse = await fetch(url);
+            return retryResponse.json();
+        }
+        return data;
     } catch (error) {
         // 50ms待ってからリトライ
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -92,6 +105,9 @@ const fetchFromNetwork = async (url) => {
         }
     }
 };
+// TODO: fetchWithoutCacheはwindow.*に公開されておらず、src/内から呼び出し箇所も見当たらない
+// (未使用の可能性が高い)。401005リトライも入れていないので、使う場合はfetchFromNetwork経由に
+// 揃えるか同様のリトライを足す必要がある。今回のログイン周り修正の対象外のため未着手。
 const fetchWithoutCache = async (url,cacheKey) => {
     try {
         const response = await fetch(url);
