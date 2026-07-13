@@ -51,7 +51,7 @@
 | [utils/thumbnail-progress.js](src/utils/thumbnail-progress.js) | サムネイルに再生進捗バー | `extractContentIdFromThumbnail` |
 | [utils/study-time.js](src/utils/study-time.js) | 学習時間トラッキング（日別・科目別に積算） | `startStudyTimeTracking`, `getStudyTimeByDate`, `getStudyTimeTotalsByDate`, `getStudyTimeByCategory` |
 | [utils/goToLoginPage.js](src/utils/goToLoginPage.js) | ホームでの自動ログイン遷移 | `handleHomePageAutoLogin`, `tryPushLoginButton` |
-| [utils/login-state.js](src/utils/login-state.js) | ログイン状態(ゲスト/CASログイン済み)の変化を監視し、切替時に授業一覧(cachedCategoriesData)＋視聴進捗(videoViewingStatus_*)キャッシュを破棄。状態は `sessionStorage["ClasstreamIsCasLogin_1"]` で判定（`ClasstreamIsGuest_1` はサイト側バグで不可） | `getOujLoginState`, `clearOujUserScopedCaches`, `syncOujLoginStateAndInvalidate`, `startOujLoginStateWatcher` |
+| [utils/login-state.js](src/utils/login-state.js) | ログイン状態(ゲスト/CASログイン済み)の変化を監視し、切替時に授業一覧(cachedCategoriesData)＋視聴進捗(videoViewingStatus_*)キャッシュを破棄。状態は `sessionStorage["ClasstreamIsCasLogin_1"]` で判定（`ClasstreamIsGuest_1` はサイト側バグで不可）。タブごとの初回観測は `chrome.storage.local["oujCategoriesLoginState"]`(取得時ログイン状態の永続スタンプ)と突き合わせ、別タブ/別セッションで取得した古いキャッシュの取りこぼしを防ぐ('guest'→'user'方向のみ) | `getOujLoginState`, `clearOujUserScopedCaches`, `syncOujLoginStateAndInvalidate`, `startOujLoginStateWatcher` |
 | [utils/dark-mode.js](src/utils/dark-mode.js) | ダークモード制御（`document_start`で別途ロード。ポップアップからも利用） | `isOujDarkModeActive`, `get/cycleOujDarkModeSetting`, `OUJ_DARK_MODE_LABELS` |
 
 ## menu/ — 左メニューと各パネル

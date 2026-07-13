@@ -12,6 +12,18 @@
 // - 従来は「ログイン画面(sso .../cas/login)から離れた」URL遷移でのみキャッシュ破棄していたが、
 //   ログアウト(.../logout/cas 経由)を捕捉できていなかった。本モジュールはURLではなく実際の
 //   ログイン状態を見るため、ログイン・ログアウト双方を一様に扱える。
+//
+// TODO: 「既にログイン済みの状態(有効なCASセッションCookie)で新規タブを開く」場合、この
+// ClasstreamIsCasLogin_1 が 'false' のまま更新されない(=見た目はログイン済みなのに未検知)
+// ケースを実機(Playwright)で確認済み。おそらくサイト側スクリプトがCASログインのリダイレクト
+// 処理の副作用としてのみこのフラグを立てており、既存Cookieでの暗黙ログインは考慮していない。
+// 本モジュールは影響する方向('user'→'guest'の誤検知でキャッシュを壊す)だけ無視して回避して
+// いるが、根本的にはDOM側の指標(例: .user-id-menu の有無)などより信頼できる判定手段への
+// 置き換えを検討する余地がある。
+// TODO: 同じ検証中、拡張自身のカテゴリ取得(fetchWithCache)がゲスト状態のページ読み込み直後に
+// 実行されると "Not found session"(401005) エラーになることがある(サイト側のセッション確立が
+// 拡張のfetch()より遅い競合と推測)。fetchWithCache側はエラーを毎回リトライする作りのため
+// 致命的ではないが、初回表示が一時的に空になる原因になり得る。
 
 // サイトのテナントID(全APIで /tenants/1/ 固定)
 const OUJ_TENANT_ID = 1;
@@ -21,6 +33,13 @@ const OUJ_IS_CAS_LOGIN_SS_KEY = `ClasstreamIsCasLogin_${OUJ_TENANT_ID}`;
 // 現在値と同じスコープ(タブ単位)で持つことで、複数タブでログイン状態が食い違う
 // 過渡期に「タブ間でキャッシュ破棄を撃ち合う」現象を避ける。
 const OUJ_LAST_LOGIN_STATE_SS_KEY = 'oujLastKnownLoginState';
+// cachedCategoriesDataを「取得した時点のログイン状態」を保持する永続キー(chrome.storage.local)。
+// sessionStorageのタブ単位baselineだけだと、新しいタブでの初回観測は無条件でキャッシュ破棄を
+// スキップするため、「別タブ/別セッションでゲスト状態のまま取得したキャッシュ(chrome.storage.local
+// は最大12hタブをまたいで残る)を、ログイン済みの新規タブで初めて開いた」ケースを取りこぼす
+// (実際に報告されたバグ: ログアウト状態→ログインしても授業一覧が更新されない)。
+// この永続スタンプと突き合わせることでタブをまたいだ取りこぼしを防ぐ。
+const OUJ_CATEGORIES_LOGIN_STATE_KEY = 'oujCategoriesLoginState';
 
 // ログイン切替時に破棄する「ユーザー単位」キャッシュのキー接頭辞(chrome.storage.local)。
 // - videoViewingStatus_* … 視聴進捗(currentTimeRate)。ユーザーごとに異なるため切替時に破棄し、
@@ -69,8 +88,40 @@ async function clearOujUserScopedCaches() {
 }
 
 /**
+ * cachedCategoriesDataを取得した時点のログイン状態(永続スタンプ)を返す。
+ * @returns {Promise<'user'|'guest'|null>} 記録が無ければnull
+ */
+async function getStampedCategoriesLoginState() {
+  try {
+    const result = await chrome.storage.local.get([OUJ_CATEGORIES_LOGIN_STATE_KEY]);
+    return result[OUJ_CATEGORIES_LOGIN_STATE_KEY] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/** @param {'user'|'guest'} state */
+async function setStampedCategoriesLoginState(state) {
+  try {
+    await chrome.storage.local.set({ [OUJ_CATEGORIES_LOGIN_STATE_KEY]: state });
+  } catch (e) { /* 保存失敗は致命的ではない */ }
+}
+
+/**
+ * 授業一覧＋ユーザー単位キャッシュを破棄し、永続スタンプを新しい状態に更新する。
+ * @param {'user'|'guest'} newState
+ */
+async function invalidateOujCachesForState(newState) {
+  if (typeof window.clearCachedCategoriesData === 'function') {
+    await window.clearCachedCategoriesData(); // 授業一覧(cachedCategoriesData)
+  }
+  await clearOujUserScopedCaches(); // 視聴進捗(videoViewingStatus_*)
+  await setStampedCategoriesLoginState(newState); // 次回取得はnewState向けである、と記録
+}
+
+/**
  * 現在のログイン状態を前回観測値と比較し、切り替わっていれば授業一覧キャッシュを破棄する。
- * 初回観測(前回値なし)や 'unknown'(サイト未初期化)の場合は破棄しない。
+ * 'unknown'(サイト未初期化)の場合は何もしない。
  * @returns {Promise<('user'|'guest'|null)>} 切り替わったら新しい状態、変化なし/未確定なら null
  */
 async function syncOujLoginStateAndInvalidate() {
@@ -82,21 +133,37 @@ async function syncOujLoginStateAndInvalidate() {
     previous = window.sessionStorage.getItem(OUJ_LAST_LOGIN_STATE_SS_KEY);
   } catch (e) { /* 読めなければ初回扱い */ }
 
-  if (previous === current) return null; // 変化なし
-
   // 観測値を記録(初回もここで記録し、以降の比較基準にする)
   try {
     window.sessionStorage.setItem(OUJ_LAST_LOGIN_STATE_SS_KEY, current);
   } catch (e) { /* 保存失敗は致命的ではない */ }
 
-  // 初回観測(前回値なし)ならキャッシュ破棄は不要
-  if (!previous) return null;
-
-  // ログイン⇔ログアウトが切り替わった → 授業一覧＋ユーザー単位キャッシュを最新化する
-  if (typeof window.clearCachedCategoriesData === 'function') {
-    await window.clearCachedCategoriesData(); // 授業一覧(cachedCategoriesData)
+  if (!previous) {
+    // このタブでの初回観測。sessionStorage側には比較対象が無いが、
+    // 別タブ/別セッションで取得されたキャッシュ(chrome.storage.localは最大12hタブをまたいで残る)
+    // が現在のログイン状態と食い違っている可能性があるため、永続スタンプと突き合わせる。
+    const stamped = await getStampedCategoriesLoginState();
+    if (stamped === null) {
+      // 拡張の初回起動などでスタンプが無い場合は、現状のキャッシュはそのままに基準だけ記録する。
+      await setStampedCategoriesLoginState(current);
+      return null;
+    }
+    if (stamped === current) return null; // キャッシュは現在の状態と一致
+    // 'guest'→'user'の食い違いのみ信頼して更新する。逆方向('user'→'guest')は反映しない。
+    // 理由: 「既にログイン済みの状態で新規タブを開く」(=このタブでの初回観測がまさにこのケース)
+    // と、サイト側のClasstreamIsCasLogin_1がfalseのまま更新されない実機不具合を確認済み
+    // (実際のカテゴリ取得は正しくログイン済み件数を返すため、実データは正しい)。この誤検知を
+    // 信じて'user'スタンプのキャッシュを'guest'扱いに書き換えてしまうと、後続の本物のゲスト
+    // タブがその(実際にはログイン済みの)キャッシュをそのまま受け取ってしまう回帰を招く。
+    if (current !== 'user') return null;
+    await invalidateOujCachesForState(current);
+    return current;
   }
-  await clearOujUserScopedCaches(); // 視聴進捗(videoViewingStatus_*)
+
+  if (previous === current) return null; // 変化なし(同一タブ内)
+
+  // ログイン⇔ログアウトが切り替わった(同一タブ内で検知) → 授業一覧＋ユーザー単位キャッシュを最新化する
+  await invalidateOujCachesForState(current);
   return current; // 切り替わった新しい状態
 }
 
