@@ -4,6 +4,12 @@ let currentPlaybackInterval = null;
 // playlogの直接送信が一度失敗したら、このページセッション中は再試行しない
 // （毎回失敗するリクエストを送り続けて放送大学サーバーに負荷をかけないため）
 let playlogDirectFailed = false;
+// skipToNextVideo()による遷移(co=だけ差し替えたハッシュURLへの代入で、JSコンテキストは
+// 破棄されずSPA内遷移として処理される)が開始されてから実際に次の動画へ切り替わるまでの間、
+// 1秒ごとのエンディング監視(下記currentPlaybackInterval)や動画終了イベントが同じ末尾条件を
+// 再度満たし、二重にカウントダウン/遷移がトリガーされるのを防ぐフラグ。
+// StartPlaybackManagement()が動画ごとに呼ばれるたびにリセットする
+let oujSkipNavigationInProgress = false;
 
 // 再生速度を設定するグローバル関数（科目別設定があればそれを優先）
 function setPlaybackSpeed() {
@@ -85,6 +91,8 @@ function armOpeningSkip(video) {
 
 // 動画の再生管理機能
 function StartPlaybackManagement() {
+  // 新しい動画の初期化なので、前の動画のスキップ遷移中フラグを引き継がない
+  oujSkipNavigationInProgress = false;
   // 動画切り替え時に前の監視が残らないよう、既存のタイマーを止めてから開始する
   if (currentPlaybackInterval) {
     clearInterval(currentPlaybackInterval);
@@ -134,6 +142,12 @@ function StartPlaybackManagement() {
         // スリープタイマー「この回の終わりまで」の場合はここで停止して終わる
         if (typeof window.isSleepAtEpisodeEnd === 'function' && window.isSleepAtEpisodeEnd()) {
           window.consumeSleepAtEpisodeEnd();
+          i++;
+          return;
+        }
+        // 既に次の動画への遷移が開始済みなら、遷移完了(SPA切り替え)を待つだけで
+        // 二重にカウントダウン/遷移を起動しない
+        if (oujSkipNavigationInProgress) {
           i++;
           return;
         }
@@ -249,10 +263,13 @@ async function sendPlayLog(video) {
 }
 
 async function skipToNextVideo() {
+  // 既に遷移開始済みなら二重に発火させない(理由は上のoujSkipNavigationInProgress宣言部を参照)
+  if (oujSkipNavigationInProgress) return;
   if (window.nextVideoId) {
     const url = window.location.href;
     const matchCo = url.match(/co=(\d+)/);
     if (matchCo) {
+      oujSkipNavigationInProgress = true;
       let nextVideoUrl = url.replace(matchCo[0], `co=${window.nextVideoId}`);
       // お気に入りランダム再生など、次の動画が別科目の場合はca=も差し替える
       if (window.nextVideoCategoryId) {
@@ -266,3 +283,4 @@ async function skipToNextVideo() {
 window.StartPlaybackManagement = StartPlaybackManagement;
 window.setPlaybackSpeed = setPlaybackSpeed;
 window.skipToNextVideo = skipToNextVideo;
+window.isOujSkipNavigationInProgress = () => oujSkipNavigationInProgress;

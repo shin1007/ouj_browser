@@ -45,6 +45,9 @@ function removeNextVideoCountdown() {
  */
 function startNextVideoCountdown(seconds = 5) {
   if (oujCountdownActive || oujCountdownCancelled) return false;
+  // 既にskipToNextVideo()による遷移が開始済みなら、動画終了イベント等からの
+  // 再入で新しいカウントダウンを二重に出さない
+  if (typeof window.isOujSkipNavigationInProgress === 'function' && window.isOujSkipNavigationInProgress()) return false;
   if (!window.nextVideoId) return false;
   const video = document.querySelector('video');
   const container = video ? video.parentElement : null;
