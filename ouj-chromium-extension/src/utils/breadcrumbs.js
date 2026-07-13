@@ -14,12 +14,19 @@ async function addFavoriteButtonToBreadCrumbs() {
     const videoSelector =     '#main > main-player   > ion-content > div.scroll-content > player > vod-list-navigator > aside > div > ul > li:last-child';
     // #main > main-player > ion-content > div.scroll-content > player > vod-list-navigator > aside > div > ul > li:nth-child(3)
     // const selctor = document.querySelector(videoSelector) || document.querySelector(videoListSelector);
+    // 要素が見つからない間は上限なしにリトライするため、対象要素が現れないまま
+    // 別ページへ遷移した場合にタイマーが残り続けないよう、開始時点のURLと比較して打ち切る
+    // (遷移先ページの分はcontent.js経由でこの関数自体が改めて呼ばれる)
+    const startUrl = window.location.href;
     const aside = document.querySelector(videoSelector) || document.querySelector(videoListSelector);
     if (!aside) {
-        setTimeout(addFavoriteButtonToBreadCrumbs, 100);
+        setTimeout(() => {
+            if (window.location.href !== startUrl) return;
+            addFavoriteButtonToBreadCrumbs();
+        }, 100);
         return;
     }
-    
+
     // 現在のカテゴリIDを取得
     const categoryIdStr = categoryId.toString();
     

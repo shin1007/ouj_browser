@@ -76,10 +76,14 @@ async function addFavoriteButtonsToCategoryList() {
   }
 }
 
-async function waitThenAddFavBtnToCategoryList() {
+async function waitThenAddFavBtnToCategoryList(startUrl) {
+  // 上限なしにリトライするため、待っている間に別ページへ遷移したら打ち切る
+  // (遷移先ページの分はcontent.js経由でこの関数が改めて呼ばれる)
+  if (startUrl === undefined) startUrl = window.location.href;
+  if (window.location.href !== startUrl) return;
   // getChildIds関数が利用可能かチェック
   if (typeof window.getChildIds !== 'function') {
-    setTimeout(waitThenAddFavBtnToCategoryList, 100);
+    setTimeout(() => waitThenAddFavBtnToCategoryList(startUrl), 100);
     return;
   }
   const ca = window.getCurrentCategoryId();
@@ -89,6 +93,7 @@ async function waitThenAddFavBtnToCategoryList() {
   // categoryIdからsummaryを取得、なければ何もしない
   const categories = await window.getCategoriesData();
   const childCategories = await window.getChildIds(ca);
+  if (window.location.href !== startUrl) return;
   // 子カテゴリのsummaryが1つでも存在するかチェック
   const hasSummaryInChildren = childCategories.some(child => {
     const cat = categories.find(c => c.categoryId === child.categoryId);
@@ -99,12 +104,12 @@ async function waitThenAddFavBtnToCategoryList() {
   }
   // getFavorites関数が利用可能かチェック
   if (typeof window.getFavorites !== 'function') {
-    setTimeout(waitThenAddFavBtnToCategoryList, 100);
+    setTimeout(() => waitThenAddFavBtnToCategoryList(startUrl), 100);
     return;
   }
   const items = document.querySelectorAll('#main div.icon-text > .icon-area');
   if (!items.length) {
-    setTimeout(waitThenAddFavBtnToCategoryList, 100);
+    setTimeout(() => waitThenAddFavBtnToCategoryList(startUrl), 100);
     return;
   }
   await addFavoriteButtonsToCategoryList();

@@ -12,9 +12,16 @@
  */
 const waitForElement = (selector, callback, interval = 100, maxAttempts = null) => {
     let attempts = 0;
+    // maxAttempts省略の呼び出しが多く、対象要素が最後まで現れないページ(SPA遷移で
+    // 離脱した等)だとタイマーが無期限に残ってしまう。呼び出し開始時点のURLと
+    // 変わっていたら「このページはもう見ていない」とみなして打ち切る
+    // (content.jsは対象ページ向けの初期化をURL変化のたびに呼び直すため、
+    // まだ必要な監視は次の呼び出しで自然に再開される)
+    const startUrl = window.location.href;
 
     const checkElement = () => {
         attempts++;
+        if (window.location.href !== startUrl) return;
         const element = document.querySelector(selector);
 
         if (element) {
@@ -43,9 +50,12 @@ const waitForElement = (selector, callback, interval = 100, maxAttempts = null) 
  */
 const waitForCondition = (condition, callback, interval = 100, maxAttempts = null) => {
     let attempts = 0;
+    // waitForElementと同様、離脱後もポーリングが残り続けないようURL変化で打ち切る
+    const startUrl = window.location.href;
 
     const checkCondition = () => {
         attempts++;
+        if (window.location.href !== startUrl) return;
 
         if (condition()) {
             callback();

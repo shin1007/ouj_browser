@@ -289,9 +289,13 @@ function refreshCourseListFilterUI() {
   applyCourseFilters();
 }
 
-async function initializeCourseListFilters() {
+async function initializeCourseListFilters(startUrl) {
+  // 上限なしにリトライするため、待っている間に別ページへ遷移したら打ち切る
+  // (遷移先ページの分はcontent.js経由でこの関数が改めて呼ばれる)
+  if (startUrl === undefined) startUrl = window.location.href;
+  if (window.location.href !== startUrl) return;
   if (typeof window.getChildIds !== 'function' || typeof window.getCategoriesData !== 'function') {
-    setTimeout(initializeCourseListFilters, 100);
+    setTimeout(() => initializeCourseListFilters(startUrl), 100);
     return;
   }
   const ca = window.getCurrentCategoryId();
@@ -299,7 +303,6 @@ async function initializeCourseListFilters() {
   // getCategoriesData/getChildIdsのawait中に別の科目一覧ページへ遷移すると、
   // childCategories(古いページのカテゴリ)とitems(新しいページのDOM、下のsetupCourseFilterRows)
   // がインデックスでずれてしまう。取得開始時点のURLと変わっていたら中断する
-  const startUrl = window.location.href;
   // 子カテゴリがさらにフォルダ(summaryなし)の場合は科目一覧ではないため何もしない
   // （page-course-select-progress.js / page-course-select.js と同じ判定基準）
   const categories = await window.getCategoriesData();
@@ -318,7 +321,7 @@ async function initializeCourseListFilters() {
 
   const items = document.querySelectorAll(COURSE_ITEM_SELECTOR);
   if (!items.length) {
-    setTimeout(initializeCourseListFilters, 100);
+    setTimeout(() => initializeCourseListFilters(startUrl), 100);
     return;
   }
 

@@ -171,9 +171,13 @@ async function addProgressBadgesToCategoryList() {
   }
 }
 
-async function waitThenAddProgressBadgesToCategoryList() {
+async function waitThenAddProgressBadgesToCategoryList(startUrl) {
+  // 上限なしにリトライするため、待っている間に別ページへ遷移したら打ち切る
+  // (遷移先ページの分はcontent.js経由でこの関数が改めて呼ばれる)
+  if (startUrl === undefined) startUrl = window.location.href;
+  if (window.location.href !== startUrl) return;
   if (typeof window.getChildIds !== 'function' || typeof window.getCategoriesData !== 'function') {
-    setTimeout(waitThenAddProgressBadgesToCategoryList, 100);
+    setTimeout(() => waitThenAddProgressBadgesToCategoryList(startUrl), 100);
     return;
   }
   const ca = window.getCurrentCategoryId();
@@ -182,6 +186,7 @@ async function waitThenAddProgressBadgesToCategoryList() {
   // （page-course-select.jsのwaitThenAddFavBtnToCategoryListと同じ判定基準）
   const categories = await window.getCategoriesData();
   const childCategories = await window.getChildIds(ca);
+  if (window.location.href !== startUrl) return;
   const hasSummaryInChildren = childCategories.some((child) => {
     const cat = categories.find((c) => c.categoryId === child.categoryId);
     return cat && cat.summary;
@@ -190,7 +195,7 @@ async function waitThenAddProgressBadgesToCategoryList() {
 
   const items = document.querySelectorAll('#main div.icon-text > .icon-area');
   if (!items.length) {
-    setTimeout(waitThenAddProgressBadgesToCategoryList, 100);
+    setTimeout(() => waitThenAddProgressBadgesToCategoryList(startUrl), 100);
     return;
   }
   await addProgressBadgesToCategoryList();
