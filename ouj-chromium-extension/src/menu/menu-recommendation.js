@@ -266,7 +266,7 @@ async function getRecommendFromSimilar(allCategories, excludeCategoryIds) {
 
   // 類似度順に並べ、reccomendFromSimilarLength*2の数までに絞る
   candidates.sort((a, b) => b.similarity - a.similarity);
-  candidates.splice(0, candidates.length - reccomendFromSimilarLength * 2);
+  candidates.splice(reccomendFromSimilarLength * 2);
 
   // ランダムに並べ替える
   for (let i = candidates.length - 1; i > 0; i--) {
