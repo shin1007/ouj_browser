@@ -116,71 +116,84 @@ function callSafeMainOnce() {
     safeMain();
   }
 }
-if (!window.location.href.includes('ouj.ac.jp')) {
-// 'ouj.ac.jp'をURLに含まない場合は動作をしない
-// ほかのサイトで動作をしてしまう不具合があったので念のために入れている
-} else if (document.readyState === "complete" || document.readyState === "interactive") {
-  console.log("[OUJ拡張 DEBUG] DOM is already loaded");
-  callSafeMainOnce();
-} else {
-  console.log("[OUJ拡張 DEBUG] Waiting for DOM to be loaded");
-  document.addEventListener("DOMContentLoaded", callSafeMainOnce);
-}
 
-// SPA対応: URL変化を監視してsafeMain()を再実行
-if (!window.location.href.includes('ouj.ac.jp')) {
-// 'ouj.ac.jp'をURLに含まない場合は動作をしない
-// ほかのサイトで動作をしてしまう不具合があったので念のために入れている
-} else if (!window.__ouj_url_listener_added) {
-  console.log("[OUJ拡張 DEBUG] URL listener added");
-  window.__ouj_url_listener_added = true;
-  (function() {
-    let lastUrl = location.href;
-    let pollingInterval = null; // ポーリング用のインターバルID
+// content.jsは、manifest.jsonの宣言的content_scripts(document_end)と、
+// background.jsのwebNavigation.onCompletedによる再注入の両方から、同じページに対して
+// 実行されることがある(background.js側は宣言的注入の補助として残っている)。実機で
+// 検証したところ、この2つの注入経路は別々の分離ワールドとして実行され、window.*の状態
+// (oujLastMainTime等)を共有できず、ここから下がまるごと二重に実行されてしまっていた。
+// これによりmain()が多重実行され、UI要素の重複挿入(例: page-login.jsの遷移先案内
+// バナーが2つ出る不具合をPlaywrightテストで確認)やAPIリクエストの倍増を引き起こしていた。
+// window.*ではなくDOM上の属性は分離ワールド間でも共有されるため、これを
+// 「このページで下記の初期化を実行済みか」の判定に使うことで二重実行を防ぐ。
+if (!document.documentElement.hasAttribute('data-ouj-content-script-loaded')) {
+  document.documentElement.setAttribute('data-ouj-content-script-loaded', '1');
 
-    // URLの変更を検知してメイン処理を呼び出す共通関数
-    const handleUrlChange = (source) => {
-      // requestAnimationFrameを使い、DOMの更新を待ってから処理を実行
-      requestAnimationFrame(() => {
-        const currentUrl = location.href;
-        if (currentUrl !== lastUrl) {
-          // console.log(`[OUJ拡張 DEBUG] URL change detected by ${source}. last: ${lastUrl}, current: ${currentUrl}`);
-          // ログイン/ログアウトに伴う授業一覧キャッシュの破棄は、URL遷移ではなく実際の
-          // ログイン状態の変化を見る login-state.js の監視(startOujLoginStateWatcher)に一本化した。
-          // ログアウトは .../logout/cas 経由でログイン画面URLを通らず、従来のURL判定では
-          // 捕捉できなかったため。
+  if (!window.location.href.includes('ouj.ac.jp')) {
+  // 'ouj.ac.jp'をURLに含まない場合は動作をしない
+  // ほかのサイトで動作をしてしまう不具合があったので念のために入れている
+  } else if (document.readyState === "complete" || document.readyState === "interactive") {
+    console.log("[OUJ拡張 DEBUG] DOM is already loaded");
+    callSafeMainOnce();
+  } else {
+    console.log("[OUJ拡張 DEBUG] Waiting for DOM to be loaded");
+    document.addEventListener("DOMContentLoaded", callSafeMainOnce);
+  }
 
-          lastUrl = currentUrl;
-          window.oujLastMainTime = 0;
-          callSafeMainOnce();
-        }
-      });
-    };
+  // SPA対応: URL変化を監視してsafeMain()を再実行
+  if (!window.location.href.includes('ouj.ac.jp')) {
+  // 'ouj.ac.jp'をURLに含まない場合は動作をしない
+  // ほかのサイトで動作をしてしまう不具合があったので念のために入れている
+  } else {
+    console.log("[OUJ拡張 DEBUG] URL listener added");
+    (function() {
+      let lastUrl = location.href;
+      let pollingInterval = null; // ポーリング用のインターバルID
 
-    // history.pushState/replaceStateをフック
-    ["pushState", "replaceState"].forEach(type => {
-      const original = history[type];
-      history[type] = function() {
-        const result = original.apply(this, arguments);
-        handleUrlChange(`history.${type}`);
-        return result;
+      // URLの変更を検知してメイン処理を呼び出す共通関数
+      const handleUrlChange = (source) => {
+        // requestAnimationFrameを使い、DOMの更新を待ってから処理を実行
+        requestAnimationFrame(() => {
+          const currentUrl = location.href;
+          if (currentUrl !== lastUrl) {
+            // console.log(`[OUJ拡張 DEBUG] URL change detected by ${source}. last: ${lastUrl}, current: ${currentUrl}`);
+            // ログイン/ログアウトに伴う授業一覧キャッシュの破棄は、URL遷移ではなく実際の
+            // ログイン状態の変化を見る login-state.js の監視(startOujLoginStateWatcher)に一本化した。
+            // ログアウトは .../logout/cas 経由でログイン画面URLを通らず、従来のURL判定では
+            // 捕捉できなかったため。
+
+            lastUrl = currentUrl;
+            window.oujLastMainTime = 0;
+            callSafeMainOnce();
+          }
+        });
       };
-    });
 
-    // popstate (戻る/進む) と hashchange (ハッシュ変更) を監視
-    window.addEventListener("popstate", () => handleUrlChange("popstate"));
-    window.addEventListener("hashchange", () => handleUrlChange("hashchange"));
+      // history.pushState/replaceStateをフック
+      ["pushState", "replaceState"].forEach(type => {
+        const original = history[type];
+        history[type] = function() {
+          const result = original.apply(this, arguments);
+          handleUrlChange(`history.${type}`);
+          return result;
+        };
+      });
 
-    // ★★★ フォールバックとしてURLのポーリングを追加 ★★★
-    const startPolling = () => {
-      if (pollingInterval) return; // 既に開始している場合は何もしない
-      pollingInterval = setInterval(() => {
-        if (location.href !== lastUrl) {
-          handleUrlChange('polling');
-        }
-      }, 250); // 250ミリ秒ごとにチェック
-    };
+      // popstate (戻る/進む) と hashchange (ハッシュ変更) を監視
+      window.addEventListener("popstate", () => handleUrlChange("popstate"));
+      window.addEventListener("hashchange", () => handleUrlChange("hashchange"));
 
-    startPolling();
-  })();
+      // ★★★ フォールバックとしてURLのポーリングを追加 ★★★
+      const startPolling = () => {
+        if (pollingInterval) return; // 既に開始している場合は何もしない
+        pollingInterval = setInterval(() => {
+          if (location.href !== lastUrl) {
+            handleUrlChange('polling');
+          }
+        }, 250); // 250ミリ秒ごとにチェック
+      };
+
+      startPolling();
+    })();
+  }
 }

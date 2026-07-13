@@ -46,6 +46,13 @@ async function insertReferTo() {
     }
     const nextElement = document.querySelector('#usernameSection > label');
     if (nextElement) {
+        const message = await getReferToMessage();
+        // このawait中に別の呼び出し(insertReferToが同時に複数回走った場合)が先に
+        // 挿入している可能性があるため、実際にDOMへ挿入する直前で再チェックする
+        // (冒頭のチェックだけだとawaitを挟む分のTOCTOUで二重挿入しうる)
+        if (document.querySelector('#ouj-login-redirect-info')) {
+            return;
+        }
         const infoDiv = document.createElement('div');
         infoDiv.style.marginTop = '8px';
         infoDiv.style.marginBottom = '8px';
@@ -53,7 +60,7 @@ async function insertReferTo() {
         infoDiv.style.color = '#555';
         // id
         infoDiv.id = 'ouj-login-redirect-info';
-        infoDiv.textContent = `遷移先：${await getReferToMessage()}`;
+        infoDiv.textContent = `遷移先：${message}`;
         nextElement.parentNode.insertBefore(infoDiv, nextElement);
     }
 }
