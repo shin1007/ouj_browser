@@ -42,6 +42,12 @@ const OUJ_LAST_LOGIN_STATE_SS_KEY = 'oujLastKnownLoginState';
 // (実際に報告されたバグ: ログアウト状態→ログインしても授業一覧が更新されない)。
 // この永続スタンプと突き合わせることでタブをまたいだ取りこぼしを防ぐ。
 const OUJ_CATEGORIES_LOGIN_STATE_KEY = 'oujCategoriesLoginState';
+// 初回観測で'user'スタンプ→'guest'方向の判定を保留する際、信頼するまでに要する連続確認回数
+// (1回=約500msのポーリング間隔)。既存Cookieでの暗黙ログイン直後はAngular側の描画が
+// 初回観測に間に合わないことがあるため、即断せず数回連続で'guest'が観測できてから信頼する。
+const OUJ_GUEST_CONFIRM_POLLS = 2;
+// 上記の連続確認カウンタ(タブ内メモリ、複数タブでは独立)。
+let oujPendingGuestConfirmCount = 0;
 
 // ログイン切替時に破棄する「ユーザー単位」キャッシュのキー接頭辞(chrome.storage.local)。
 // - videoViewingStatus_* … 視聴進捗(currentTimeRate)。ユーザーごとに異なるため切替時に破棄し、
@@ -150,11 +156,6 @@ async function syncOujLoginStateAndInvalidate() {
     previous = window.sessionStorage.getItem(OUJ_LAST_LOGIN_STATE_SS_KEY);
   } catch (e) { /* 読めなければ初回扱い */ }
 
-  // 観測値を記録(初回もここで記録し、以降の比較基準にする)
-  try {
-    window.sessionStorage.setItem(OUJ_LAST_LOGIN_STATE_SS_KEY, current);
-  } catch (e) { /* 保存失敗は致命的ではない */ }
-
   if (!previous) {
     // このタブでの初回観測。sessionStorage側には比較対象が無いが、
     // 別タブ/別セッションで取得されたキャッシュ(chrome.storage.localは最大12hタブをまたいで残る)
@@ -162,26 +163,45 @@ async function syncOujLoginStateAndInvalidate() {
     const stamped = await getStampedCategoriesLoginState();
     if (stamped === null) {
       // 拡張の初回起動などでスタンプが無い場合は、現状のキャッシュはそのままに基準だけ記録する。
+      oujPendingGuestConfirmCount = 0;
+      try { window.sessionStorage.setItem(OUJ_LAST_LOGIN_STATE_SS_KEY, current); } catch (e) { /* 保存失敗は致命的ではない */ }
       await setStampedCategoriesLoginState(current);
       return null;
     }
-    if (stamped === current) return null; // キャッシュは現在の状態と一致
-    // 'guest'→'user'の食い違いのみ信頼して更新する。逆方向('user'→'guest')は反映しない。
-    // 理由: getOujLoginState()はDOM裏取り(getOujLoginStateFromDom)で大半のケースを補正するが、
-    // このタブでの最初の観測はAngular側の描画がまだ済んでおらず、実際にはログイン済みなのに
-    // 一時的に'guest'と判定されうる。この段階で'user'スタンプのキャッシュを'guest'扱いに
-    // 書き換えてしまうと、後続の本物のゲストタブがその(実際にはログイン済みの)キャッシュを
-    // そのまま受け取ってしまう回帰を招くため、信頼できる'guest'→'user'方向のみ即時反映する。
-    // TODO: 逆方向('user'スタンプの状態で、本当にログアウト済みの新規タブを開いた場合)は
-    // この初回観測では反映されず、このタブ内で改めてログイン状態が変化するまでは古い
-    // 'user'向けキャッシュが残り続ける。実害は「一時的に古い一覧が出る」程度だが、
-    // startOujLoginStateWatcherの次回ポーリング(500ms後、previous!==currentの通常経路)で
-    // DOM描画が済めば少なくとも'user'方向の誤りは訂正される。厳密に直すには、DOM裏取りが
-    // 確定するまで(例: 数回のポーリング)初回判定を保留するなどの対応が要る。
-    if (current !== 'user') return null;
+    if (stamped === current) {
+      // キャッシュは現在の状態と一致
+      oujPendingGuestConfirmCount = 0;
+      try { window.sessionStorage.setItem(OUJ_LAST_LOGIN_STATE_SS_KEY, current); } catch (e) { /* 保存失敗は致命的ではない */ }
+      return null;
+    }
+    // 'guest'→'user'の食い違いは、getOujLoginState()側のDOM裏取り(getOujLoginStateFromDom)込みの
+    // 判定のため即座に信頼して更新する。
+    if (current === 'user') {
+      oujPendingGuestConfirmCount = 0;
+      try { window.sessionStorage.setItem(OUJ_LAST_LOGIN_STATE_SS_KEY, current); } catch (e) { /* 保存失敗は致命的ではない */ }
+      await invalidateOujCachesForState(current);
+      return current;
+    }
+    // 逆方向('user'スタンプの状態で現在'guest'と判定された)。
+    // 理由: このタブでの最初の観測はAngular側の描画がまだ済んでおらず、既存Cookieでの
+    // 暗黙ログインの場合、実際にはログイン済みなのに一時的に'guest'と判定されうる。
+    // この段階で即座に'user'スタンプのキャッシュを'guest'扱いに書き換えてしまうと、
+    // 後続の本物のゲストタブがその(実際にはログイン済みの)キャッシュをそのまま受け取って
+    // しまう回帰を招く。そのため、sessionStorageへのベースライン確定を保留し(=次回も
+    // 「初回観測」として再評価させる)、OUJ_GUEST_CONFIRM_POLLS回連続で'guest'が観測できた
+    // 場合のみ、本当のログアウト済み新規タブとみなしてキャッシュを破棄する。
+    oujPendingGuestConfirmCount++;
+    if (oujPendingGuestConfirmCount < OUJ_GUEST_CONFIRM_POLLS) return null;
+    oujPendingGuestConfirmCount = 0;
+    try { window.sessionStorage.setItem(OUJ_LAST_LOGIN_STATE_SS_KEY, current); } catch (e) { /* 保存失敗は致命的ではない */ }
     await invalidateOujCachesForState(current);
     return current;
   }
+
+  oujPendingGuestConfirmCount = 0;
+  try {
+    window.sessionStorage.setItem(OUJ_LAST_LOGIN_STATE_SS_KEY, current);
+  } catch (e) { /* 保存失敗は致命的ではない */ }
 
   if (previous === current) return null; // 変化なし(同一タブ内)
 
