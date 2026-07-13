@@ -27,6 +27,13 @@ let oujVolumeNormLimiter = null;
 let oujVolumeNormVideoEl = null;
 let oujVolumeNormPendingVideo = null;
 let oujVolumeNormGestureListenerAdded = false;
+// このページ(document)内で実ユーザー操作を一度でも観測したか。
+// Chromeの自動再生ポリシーは「ページ内で一度でも実操作があったか」を基準にしており、
+// 一度満たせば同じページ内(SPA内遷移でJSコンテキストが継続する間)は追加の操作なしに
+// AudioContextを使い始められる。これが無いと、動画終了時の自動連続再生(ユーザー操作を
+// 伴わない)のたびに新しいジェスチャーを待つことになり、2本目以降で音量正規化が
+// 効かなくなってしまう
+let oujVolumeNormGestureOccurred = false;
 
 function isVolumeNormalizationEnabled() {
   return window.getBooleanSetting ? window.getBooleanSetting('volumeNormalizationEnabled', false) : false;
@@ -121,12 +128,24 @@ function buildAudioGraphIfNeeded(video) {
 // ページ上での最初の実ユーザー操作(クリック/タップ/キー入力)を待って、
 // その時点で初めて音声グラフを構築する。自動再生ポリシー対策。
 function ensureGestureTriggeredSetup() {
+  // 既にこのページ内で一度ジェスチャーを経ていれば、次の動画(自動連続再生を含む)でも
+  // 追加の操作を待たずにその場で音声グラフを構築・接続する
+  if (oujVolumeNormGestureOccurred) {
+    if (!isVolumeNormalizationEnabled()) return;
+    const video = oujVolumeNormPendingVideo || document.querySelector('video');
+    if (video) {
+      buildAudioGraphIfNeeded(video);
+      applyVolumeNormalizationSetting(true);
+    }
+    return;
+  }
   if (oujVolumeNormGestureListenerAdded) return;
   oujVolumeNormGestureListenerAdded = true;
   const onGesture = () => {
     document.removeEventListener('pointerdown', onGesture, true);
     document.removeEventListener('keydown', onGesture, true);
     oujVolumeNormGestureListenerAdded = false;
+    oujVolumeNormGestureOccurred = true;
     if (!isVolumeNormalizationEnabled()) return;
     const video = oujVolumeNormPendingVideo || document.querySelector('video');
     if (video) {
