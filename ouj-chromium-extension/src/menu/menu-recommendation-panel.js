@@ -93,8 +93,15 @@ function handleRecommendPanelOpen() {
       wireItemEvents();
     }
 
+    // 3つのプルダウンを連続で変更すると、それぞれのrefresh()呼び出しが並行して
+    // createRecommendListData()を実行する。完了順は開始順と限らないため、トークンで
+    // 「一番新しい呼び出しの結果だけ」を反映する(先に開始したが後に完了した古い
+    // 呼び出しの結果で、選択中の値と対応しない表示に上書きされるのを防ぐ)
+    let refreshToken = 0;
     const refresh = () => {
+      const myToken = ++refreshToken;
       window.createRecommendListData().then((recommendList) => {
+        if (myToken !== refreshToken) return;
         window.oujRecommendCache = { data: recommendList, lastFetched: Date.now() };
         if (!document.body.contains(overlay)) return;
         renderList(recommendList);
