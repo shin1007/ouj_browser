@@ -19,10 +19,18 @@ const showConfirmDialog = (message, title = '確認', options = {}) => {
             cancelButtonClass = 'confirm-cancel'
         } = options;
 
-        // 既存の確認ダイアログがあれば削除
+        // 既存の確認ダイアログがあれば削除する。単にDOMから消すだけだと、その
+        // ダイアログのkeydownリスナーがdocumentに残ったままPromiseも未解決のまま
+        // 宙に浮き、後から別のダイアログでEnterを押した際に誤って古いPromiseが
+        // resolve(true)されてしまう(古い呼び出し元が意図せず処理を進めてしまう)。
+        // 強制クローズ用の後始末関数を経由して確実にリスナー解除・Promise解決する。
         const existingDialog = document.getElementById('confirm-dialog');
         if (existingDialog) {
-            existingDialog.remove();
+            if (typeof existingDialog._oujForceClose === 'function') {
+                existingDialog._oujForceClose();
+            } else {
+                existingDialog.remove();
+            }
         }
 
         // ダイアログ要素を作成
@@ -117,6 +125,7 @@ const showConfirmDialog = (message, title = '確認', options = {}) => {
         const closeDialog = (result) => {
             // イベントリスナーを削除
             document.removeEventListener('keydown', handleKeydown);
+            dialog._oujForceClose = null;
 
             overlay.style.opacity = '0';
             content.style.transform = 'scale(0.95)';
@@ -126,6 +135,14 @@ const showConfirmDialog = (message, title = '確認', options = {}) => {
                 }
                 resolve(result);
             }, 300);
+        };
+        // 次のshowConfirmDialog呼び出しに、このダイアログを即座に(アニメーション無しで)
+        // 後始末させるためのフック。キャンセル相当の結果で解決する
+        dialog._oujForceClose = () => {
+            document.removeEventListener('keydown', handleKeydown);
+            dialog._oujForceClose = null;
+            if (dialog.parentNode) dialog.remove();
+            resolve(false);
         };
 
         okButton.addEventListener('click', () => closeDialog(true));
@@ -174,9 +191,15 @@ const showPromptDialog = (message, title = '入力', options = {}) => {
             cancelText = 'キャンセル'
         } = options;
 
-        // 既存のダイアログがあれば削除
+        // 既存のダイアログがあれば削除する（理由はshowConfirmDialogのコメント参照）
         const existingDialog = document.getElementById('prompt-dialog');
-        if (existingDialog) existingDialog.remove();
+        if (existingDialog) {
+            if (typeof existingDialog._oujForceClose === 'function') {
+                existingDialog._oujForceClose();
+            } else {
+                existingDialog.remove();
+            }
+        }
 
         const dialog = document.createElement('div');
         dialog.id = 'prompt-dialog';
@@ -225,12 +248,21 @@ const showPromptDialog = (message, title = '入力', options = {}) => {
 
         const closeDialog = (result) => {
             document.removeEventListener('keydown', handleKeydown);
+            dialog._oujForceClose = null;
             overlay.style.opacity = '0';
             content.style.transform = 'scale(0.95)';
             setTimeout(() => {
                 if (dialog.parentNode) dialog.remove();
                 resolve(result);
             }, 300);
+        };
+        // 次のshowPromptDialog呼び出しに、このダイアログを即座に(アニメーション無しで)
+        // 後始末させるためのフック。キャンセル相当の結果で解決する
+        dialog._oujForceClose = () => {
+            document.removeEventListener('keydown', handleKeydown);
+            dialog._oujForceClose = null;
+            if (dialog.parentNode) dialog.remove();
+            resolve(null);
         };
 
         content.querySelector('.prompt-ok').addEventListener('click', () => closeDialog(input.value));
