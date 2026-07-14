@@ -37,6 +37,7 @@ async function main() {
   window.insertHeaderDarkModeToggle();
   window.insertHeaderCollapseToggle();
   window.startMenuOpeningMutationObserver();
+  restoreOujOpenNativePanelIfAny();
   // 検索ボックス(#searchText)フォーカス時のクイック絞り込みパネル（全ページ共通）
   if (typeof window.initSearchBoxFilterPanel === 'function') {
     window.initSearchBoxFilterPanel();
@@ -82,6 +83,33 @@ async function main() {
   } else {
     // その他の処理
   };
+}
+
+// 拡張機能のパネル(お気に入り/履歴/おすすめ等、menu-native-shell.jsの
+// オーバーレイ)は画面更新(F5)するとDOM/JSごと消え、パネルが開いていたはずが
+// いつの間にか元のネイティブ画面に戻ってしまう不具合があった。開いていた
+// パネルのidはsessionStorageに記録してある(menu-native-shell.js)ので、
+// リロード後にここで読み直して同じパネルを自動的に開き直す。SPA内の通常の
+// 画面遷移では遷移時点でオーバーレイ側が自分でこの記録を消すため、ここでは
+// 「本当に画面更新等で開きっぱなしのまま来た場合」だけが復元対象になる。
+function restoreOujOpenNativePanelIfAny() {
+  if (typeof window.getOujOpenNativePanelId !== 'function') return;
+  const pendingPanelId = window.getOujOpenNativePanelId();
+  if (!pendingPanelId || window.isOujNativeOverlayOpen()) return;
+  const panelOpenHandlers = {
+    favorites: window.handleFavoritesPanelOpen,
+    watchlater: window.handleWatchLaterPanelOpen,
+    bookmarks: window.handleBookmarksPanelOpen,
+    history: window.handleHistoryPanelOpen,
+    recommend: window.handleRecommendPanelOpen,
+    studytime: window.handleStudyTimePanelOpen,
+    whatsnew: window.handleWhatsNewPanelOpen
+  };
+  const openPanel = panelOpenHandlers[pendingPanelId];
+  if (typeof openPanel !== 'function') return;
+  // オーバーレイの挿入先(#main)はAngular/Ionic側の描画が終わるまで存在しない
+  // ことがあるため、現れるまで待ってから開く
+  window.waitForElement('#main', openPanel, 100, 50);
 }
 
 function safeMain() {

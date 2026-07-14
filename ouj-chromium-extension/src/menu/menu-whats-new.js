@@ -115,7 +115,7 @@ function handleWhatsNewPanelOpen() {
         </div>
       `
     });
-  });
+  }, 'whatsnew');
 }
 
 // グローバルwindowに関数を公開

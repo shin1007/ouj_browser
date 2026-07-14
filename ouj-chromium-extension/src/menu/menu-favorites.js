@@ -367,7 +367,7 @@ function handleFavoritesPanelOpen() {
       allItems = items;
       renderList();
     });
-  });
+  }, 'favorites');
 }
 
 // グローバルwindowに関数を公開

@@ -143,7 +143,7 @@ function handleRecommendPanelOpen() {
         refresh();
       }
     });
-  });
+  }, 'recommend');
 }
 
 // グローバルwindowに関数を公開

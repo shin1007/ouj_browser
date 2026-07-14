@@ -166,7 +166,7 @@ function handleHistoryPanelOpen() {
       validItems = validVideoItems;
       renderList();
     });
-  });
+  }, 'history');
 }
 
 // グローバルwindowに関数を公開

@@ -4,13 +4,37 @@
 // 拡張機能の追加パネルではなく画面の一部のように見せる。
 
 const NATIVE_OVERLAY_ID = 'ouj-native-overlay';
+// 画面更新(F5)すると拡張機能のオーバーレイはDOM/JSごと消えてしまい、パネルを
+// 開いていたはずが元のネイティブ画面に戻ってしまう。sessionStorageに「今開いて
+// いるパネルのid」を持たせておき、リロード後にcontent.js側で読み直して同じ
+// パネルを自動的に開き直すことで復元する(タブを閉じれば消える想定でlocalStorage
+// ではなくsessionStorageを使う)。
+const OUJ_OPEN_PANEL_STORAGE_KEY = 'oujOpenNativePanelId';
 
 let oujNativeOverlayCleanup = null;
 let oujNativeOverlayOutsideClickTimeout = null;
 
+function setOujOpenNativePanelId(panelId) {
+  try {
+    if (panelId) sessionStorage.setItem(OUJ_OPEN_PANEL_STORAGE_KEY, panelId);
+    else sessionStorage.removeItem(OUJ_OPEN_PANEL_STORAGE_KEY);
+  } catch (e) {
+    // プライベートモード等でsessionStorageが使えない場合は復元機能を諦めるだけでよい
+  }
+}
+
+function getOujOpenNativePanelId() {
+  try {
+    return sessionStorage.getItem(OUJ_OPEN_PANEL_STORAGE_KEY);
+  } catch (e) {
+    return null;
+  }
+}
+
 function removeNativeOverlay() {
   const overlay = document.getElementById(NATIVE_OVERLAY_ID);
   if (overlay) overlay.remove();
+  setOujOpenNativePanelId(null);
   // 前のオーバーレイ用に予約されていた「外側クリック監視の設定」がまだ
   // 実行されていなければキャンセルする。これをしないと、100ms以内に
   // 別のオーバーレイを開いた場合、古いオーバーレイ用のクリックハンドラが
@@ -28,8 +52,9 @@ function removeNativeOverlay() {
 /**
  * ネイティブ風オーバーレイを開く。同時に開けるオーバーレイは1つだけ。
  * @param {(overlay: HTMLElement) => void} render - オーバーレイのDOMに描画する処理
+ * @param {string} [panelId] - 画面更新後の復元用に記録するパネルID（省略時は復元しない）
  */
-function openNativeOverlay(render) {
+function openNativeOverlay(render, panelId) {
   removeNativeOverlay();
   const mainEl = document.getElementById('main');
   if (!mainEl) return null;
@@ -55,6 +80,7 @@ function openNativeOverlay(render) {
   mainEl.appendChild(overlay);
 
   render(overlay);
+  setOujOpenNativePanelId(panelId);
 
   const closeOnNavigate = () => removeNativeOverlay();
   window.addEventListener('hashchange', closeOnNavigate);
@@ -317,6 +343,8 @@ function buildCategoryPathText(categories, categoryId) {
 // グローバルwindowに関数を公開
 window.openNativeOverlay = openNativeOverlay;
 window.removeNativeOverlay = removeNativeOverlay;
+window.getOujOpenNativePanelId = getOujOpenNativePanelId;
+window.isOujNativeOverlayOpen = () => !!document.getElementById(NATIVE_OVERLAY_ID);
 window.renderNativeShellHtml = renderNativeShellHtml;
 window.buildNativeSearchBoxHtml = buildNativeSearchBoxHtml;
 window.renderNativeVideoListMainHtml = renderNativeVideoListMainHtml;

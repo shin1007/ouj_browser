@@ -265,7 +265,7 @@ function renderStudyTimePanel(overlay, periodDays) {
 function handleStudyTimePanelOpen() {
   window.openNativeOverlay((overlay) => {
     renderStudyTimePanel(overlay, 7);
-  });
+  }, 'studytime');
 }
 
 // グローバルwindowに関数を公開

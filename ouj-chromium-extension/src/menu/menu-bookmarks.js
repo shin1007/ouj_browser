@@ -110,7 +110,7 @@ function handleBookmarksPanelOpen() {
     }
 
     renderList();
-  });
+  }, 'bookmarks');
 }
 
 // グローバルwindowに関数を公開

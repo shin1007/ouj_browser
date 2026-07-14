@@ -110,7 +110,7 @@ function handleWatchLaterPanelOpen() {
       validItems = items;
       renderList();
     });
-  });
+  }, 'watchlater');
 }
 
 // グローバルwindowに関数を公開

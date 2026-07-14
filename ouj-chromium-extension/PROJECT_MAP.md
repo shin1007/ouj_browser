@@ -29,7 +29,7 @@
 | ファイル | 役割 | 主な公開IF |
 |---|---|---|
 | [src/background.js](src/background.js) | service worker。`webNavigation.onCompleted` で content.js 注入を補助 | — |
-| [src/content.js](src/content.js) | **オーケストレーター**。ページ種別で分岐し各機能を起動。SPAのURL変化監視 | `main()` / `safeMain()`（内部） |
+| [src/content.js](src/content.js) | **オーケストレーター**。ページ種別で分岐し各機能を起動。SPAのURL変化監視／画面更新後のネイティブ風パネル復元 | `main()` / `safeMain()`（内部）、`restoreOujOpenNativePanelIfAny()`（内部） |
 
 ## utils/ — 基盤ユーティリティ（最初にロード）
 
@@ -59,7 +59,7 @@
 | ファイル | 役割 | 主な公開IF（window.*） |
 |---|---|---|
 | [menu/menu.js](src/menu/menu.js) | メニュー本体。左メニュー挿入・`MENU_CONFIG`・開閉監視 | `insertLeftMenu`, `startMenuOpeningMutationObserver`, `getIconHtml` |
-| [menu/menu-native-shell.js](src/menu/menu-native-shell.js) | **各パネル共通のネイティブ風右ペイン基盤**（お気に入り/履歴/おすすめ等が共用） | `openNativeOverlay`, `removeNativeOverlay`, `renderNativeShellHtml`, `buildNative*Html` 系多数 |
+| [menu/menu-native-shell.js](src/menu/menu-native-shell.js) | **各パネル共通のネイティブ風右ペイン基盤**（お気に入り/履歴/おすすめ等が共用）。開いているパネルのidをsessionStorageに記録し、画面更新(F5)でオーバーレイが消えても content.js が読み直して同じパネルを自動的に開き直す（SPA内遷移では従来通り自動で閉じ、記録も消える） | `openNativeOverlay(render, panelId)`, `removeNativeOverlay`, `getOujOpenNativePanelId`, `isOujNativeOverlayOpen`, `renderNativeShellHtml`, `buildNative*Html` 系多数 |
 | [menu/menu-favorites.js](src/menu/menu-favorites.js) | お気に入りパネル（手動並び替え・「▶続き」・視聴回数バッジ） | `handleFavoritesPanelOpen`, `createFavoriteListData` |
 | [menu/menu-watch-later.js](src/menu/menu-watch-later.js) | あとで見るパネル | `handleWatchLaterPanelOpen` |
 | [menu/menu-bookmarks.js](src/menu/menu-bookmarks.js) | しおり一覧パネル（位置＋メモへジャンプ） | `handleBookmarksPanelOpen` |
