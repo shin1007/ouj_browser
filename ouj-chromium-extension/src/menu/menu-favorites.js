@@ -30,7 +30,8 @@ async function createFavoriteListData() {
   const categories = await window.getCategoriesData();
   let items = await fetchFavoriteItems(favorites, categories);
   // キャッシュが古く科目名が引けなかった場合は強制的に再取得して1回だけ再試行する
-  if (items[0] && items[0].name.startsWith('不明な科目')) {
+  // (先頭以外の項目だけが未解決のケースも拾えるよう、全件を確認する)
+  if (items.some((item) => item.name.startsWith('不明な科目'))) {
     const freshCategories = await window.getCategoriesData(0);
     items = await fetchFavoriteItems(favorites, freshCategories);
   }
