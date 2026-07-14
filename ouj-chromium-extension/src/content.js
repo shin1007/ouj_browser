@@ -164,6 +164,11 @@ if (!document.documentElement.hasAttribute('data-ouj-content-script-loaded')) {
 
             lastUrl = currentUrl;
             window.oujLastMainTime = 0;
+            // pushState/replaceStateによる遷移はネイティブのhashchange/popstateを
+            // 発火しないため、それらだけを監視している他の機能(menu-native-shell.jsの
+            // オーバーレイ自動クローズ等)がこの種の遷移を取りこぼす。ここで検知した
+            // URL変化を汎用イベントとして流し、そちら側でも拾えるようにする
+            window.dispatchEvent(new Event('ouj:locationchange'));
             callSafeMainOnce();
           }
         });

@@ -59,6 +59,12 @@ function openNativeOverlay(render) {
   const closeOnNavigate = () => removeNativeOverlay();
   window.addEventListener('hashchange', closeOnNavigate);
   window.addEventListener('popstate', closeOnNavigate);
+  // このSPAは内部遷移にhistory.pushState/replaceStateを使っており、それらは
+  // ネイティブのhashchange/popstateを発火しない(content.js側もこの理由で別途
+  // pushState/replaceStateをフックしている)。クリックを伴わない遷移(オーバーレイ
+  // 内のリンク経由等)ではhashchange/popstateだけでは閉じ漏れるため、content.jsが
+  // URL変化を検知するたびに発行する汎用イベントでも閉じるようにする
+  window.addEventListener('ouj:locationchange', closeOnNavigate);
   const closeOnOutsideClick = (event) => {
     // event.targetではなくcomposedPath()を使う。表示切り替え時にinnerHTMLを
     // 書き換えてクリック元の要素がDOMから切り離されるため、その後に発火する
@@ -76,6 +82,7 @@ function openNativeOverlay(render) {
   oujNativeOverlayCleanup = () => {
     window.removeEventListener('hashchange', closeOnNavigate);
     window.removeEventListener('popstate', closeOnNavigate);
+    window.removeEventListener('ouj:locationchange', closeOnNavigate);
     document.removeEventListener('click', closeOnOutsideClick);
   };
 
