@@ -8,10 +8,18 @@ async function handleHomePageAutoLogin() {
     if (autoLogin === undefined) return;
     if (autoLogin.autoLogin === false) return;    
   }
-  // ログインボタンが表示されるまで最大10秒待機し、表示されたらクリックする
+  // ログインボタンが表示されるまで最大10秒待機し、表示されたらクリックする。
+  // 呼び出し開始時点のURLと比較し、待機中に別ページへ遷移していたら打ち切る
+  // (他のポーリングループと同様。ここが無いと、ホームを離れて別ページを見ている
+  // 最中でもそのページのログインボタンを見つけて強制的にログイン画面へ飛ばしてしまう)
+  const startUrl = window.location.href;
   let retryCount = 0;
   const maxRetries = 10;
   const interval = setInterval(() => {
+    if (window.location.href !== startUrl) {
+      clearInterval(interval);
+      return;
+    }
     retryCount++;
     const loginResult = tryPushLoginButton();
     if (loginResult) {
