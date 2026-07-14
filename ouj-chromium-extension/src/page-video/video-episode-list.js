@@ -10,11 +10,20 @@ async function insertEpisodeListMenu(titleElement) {
   const list = await window.getVideoListInCategory(categoryId);
   const currentVideoId = window.getCurrentVideoId();
 
+  // categoryIdをawaitの前に確定しているため、await中に別科目の動画へ遷移すると
+  // listは古い科目のものになりうる。insertPrevNextLinksと同様、現在の動画が
+  // listに含まれない場合は別科目への遷移中の古い呼び出しとみなし、DOMに
+  // 触れずに抜ける(ここでold.remove()してしまうと、新しい呼び出しが正しく
+  // 挿入した回一覧を古いデータで上書き/消去してしまう)。
+  if (!Array.isArray(list) || list.findIndex(item => String(item.contentId) === String(currentVideoId)) < 0) {
+    return;
+  }
+
   // 既存のメニューがあれば一度消す(SPA遷移での再構築対策)
   const old = document.getElementById('episode-list-menu');
   if (old) old.remove();
 
-  if (!Array.isArray(list) || list.length < 2) {
+  if (list.length < 2) {
     return;
   }
 
