@@ -104,13 +104,19 @@ async function isCaptionAvailable(contentId) {
 }
 // ラジオ番組判定関数
 async function checkIfRadioProgram() {
+  // isRadioProgram()はカテゴリAPI取得や動画メタデータ読み込み待ち(最大5秒)を
+  // 挟むため、待機中に次の動画へ遷移しうる。呼び出し開始時点のURLを記録し、
+  // 判定結果が出た時点で既に別ページ/別動画へ移っていれば、古い判定結果で
+  // 新しい動画にラジオ番組UIを誤挿入しないよう破棄する
+  const startUrl = window.location.href;
   try {
     // ラジオ番組はUIを表示
     if (await isRadioProgram()) {
-      showRadioProgramUI();
+      if (window.location.href !== startUrl) return;
+      showRadioProgramUI(startUrl);
     // テレビ番組の場合は何もしない
     } else {
-    }    
+    }
   } catch (error) {
     // console.error('checkIfRadioProgram: ラジオ番組判定でエラーが発生しました:', error);
   }
@@ -118,20 +124,27 @@ async function checkIfRadioProgram() {
 
 
 // ラジオ番組用のUI表示関数
-function showRadioProgramUI() {
-  
+// startUrlを省略した場合(直接呼び出し時等)は現在のURLを基準にする
+function showRadioProgramUI(startUrl) {
+  if (typeof startUrl !== 'string') startUrl = window.location.href;
+
   // 既にラジオ番組UIが表示されている場合は何もしない
   if (document.getElementById('radio-program-ui')) {
     return;
   }
-  
+
   // 動画要素を待ってUIを挿入
   if (typeof window.waitForElement !== 'function') {
-    setTimeout(showRadioProgramUI, 100);
+    setTimeout(() => showRadioProgramUI(startUrl), 100);
     return;
   }
-  
+
   window.waitForElement('video', (video) => {
+    // video要素が既に存在する場合はwaitForElementが即座に同期的にコールバックを
+    // 呼ぶため、waitForElement自身のURLガードが実質働かない。ここでも念のため
+    // 再確認してから挿入する
+    if (window.location.href !== startUrl) return;
+    if (document.getElementById('radio-program-ui')) return;
     // ラジオ番組用のUI要素を作成
     const radioUI = document.createElement('div');
     radioUI.id = 'radio-program-ui';
