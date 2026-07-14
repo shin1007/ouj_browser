@@ -70,10 +70,13 @@ function stopStudyTimeTracking() {
 }
 
 // SPA遷移で動画が切り替わるたびに呼び直される想定のため、毎回前回のリスナーを解除してから登録し直す
-function startStudyTimeTracking() {
+// categoryIdはAPI由来の値(currentVideo.categoryId)を優先して受け取る。履歴/お気に入り等
+// 経由の遷移や再ログイン直後などURLに ca= が無い/壊れているケースがあり、URL解析
+// (window.getCurrentCategoryId())だけに頼ると科目別内訳が欠落するため
+function startStudyTimeTracking(categoryId) {
   stopStudyTimeTracking();
   // この動画の科目IDを覚えておく（科目別の学習時間内訳に使う）
-  studyTimeCategoryId = window.getCurrentCategoryId ? window.getCurrentCategoryId() : null;
+  studyTimeCategoryId = categoryId || (window.getCurrentCategoryId ? window.getCurrentCategoryId() : null);
   const myToken = ++studyTimeCallToken;
   window.waitForElement('video', (video) => {
     // 待っている間により新しい呼び出しが発生していれば、この呼び出しの分は

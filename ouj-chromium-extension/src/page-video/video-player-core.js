@@ -109,8 +109,8 @@ async function addFunctionPanel(currentVideo, startUrl){
   // 番組間の音量差を抑える音量正規化の音声グラフを準備する
   window.startVolumeNormalizationManagement();
 
-  // 学習時間トラッキングを開始
-  window.startStudyTimeTracking();
+  // 学習時間トラッキングを開始（科目IDはURL解析より信頼できるAPI由来の値を渡す）
+  window.startStudyTimeTracking(currentVideo.categoryId);
 
   // 動画自動再生設定の取得
   const autoPlayEnabled = window.getBooleanSetting ? window.getBooleanSetting('autoPlayEnabled', false) : false;
