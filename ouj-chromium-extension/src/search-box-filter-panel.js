@@ -50,22 +50,22 @@ function buildPanelSectionLabel(text) {
 }
 
 // フォールバック用の簡易チップ生成（page-search-result-filters.jsが未ロードの場合）
-function buildPanelChipFallback(label, isActive, onClick) {
+function buildPanelChipFallback(label, isActive, onClick, activeColor = '#1976d2') {
   const chip = document.createElement('button');
   chip.type = 'button';
   chip.textContent = label;
   chip.style.cssText = `
     display:inline-flex;align-items:center;padding:6px 14px;margin:0 8px 8px 0;
     border-radius:16px;font-size:13px;cursor:pointer;
-    border:1px solid ${isActive ? '#1976d2' : '#ddd'};
-    background:${isActive ? '#1976d2' : '#fff'};color:${isActive ? '#fff' : '#333'};
+    border:1px solid ${isActive ? activeColor : '#ddd'};
+    background:${isActive ? activeColor : '#fff'};color:${isActive ? '#fff' : '#333'};
   `;
   chip.onclick = onClick;
   return chip;
 }
-function makePanelChip(label, isActive, onClick) {
+function makePanelChip(label, isActive, onClick, activeColor) {
   const builder = window.buildOujFilterChip || buildPanelChipFallback;
-  return builder(label, isActive, onClick);
+  return builder(label, isActive, onClick, activeColor);
 }
 
 // --- セクション1: 最近の検索 ---
@@ -194,7 +194,14 @@ function buildPresetSection() {
 
 function renderPresetBody(body, keys, onChange) {
   body.innerHTML = '';
-  const media = window.getSetting(keys.media, 'all');
+  const getMedia = window.getOujMediaFilterState || ((key) => {
+    const raw = window.getSetting(key, null);
+    if (raw && typeof raw === 'object') return { tv: !!raw.tv, radio: !!raw.radio };
+    if (raw === 'tv') return { tv: true, radio: false };
+    if (raw === 'radio') return { tv: false, radio: true };
+    return { tv: false, radio: false };
+  });
+  const media = getMedia(keys.media);
   const captionOnly = window.getBooleanSetting(keys.captionOnly, false);
   const incompleteOnly = window.getBooleanSetting(keys.incompleteOnly, false);
   const partialOnly = window.getBooleanSetting(keys.partialOnly, false);
@@ -202,16 +209,16 @@ function renderPresetBody(body, keys, onChange) {
   const chips = document.createElement('div');
   chips.style.cssText = 'display:flex;flex-wrap:wrap;';
 
-  [
-    { value: 'all', label: 'すべて' },
-    { value: 'tv', label: 'テレビのみ' },
-    { value: 'radio', label: 'ラジオのみ' },
-  ].forEach(({ value, label }) => {
-    chips.appendChild(makePanelChip(label, media === value, () => {
-      window.saveSetting(keys.media, value);
-      onChange();
-    }));
-  });
+  // テレビ/ラジオは他のAND条件チップと違いOR条件なので独立トグルにし、色も変えて区別する
+  const mediaChipColor = window.OUJ_MEDIA_FILTER_CHIP_COLOR || '#00897b';
+  chips.appendChild(makePanelChip('テレビ番組', media.tv, () => {
+    window.saveSetting(keys.media, { tv: !media.tv, radio: media.radio });
+    onChange();
+  }, mediaChipColor));
+  chips.appendChild(makePanelChip('ラジオ番組', media.radio, () => {
+    window.saveSetting(keys.media, { tv: media.tv, radio: !media.radio });
+    onChange();
+  }, mediaChipColor));
 
   chips.appendChild(makePanelChip('字幕ありのみ', captionOnly, () => {
     window.saveSetting(keys.captionOnly, !captionOnly);

@@ -24,13 +24,34 @@
 const SEARCH_RESULT_FILTER_LIST_SELECTOR = '#common-list-content';
 
 const SEARCH_FILTER_SETTINGS_KEYS = {
-  media: 'searchFilterMedia', // 'all' | 'tv' | 'radio'
+  media: 'searchFilterMedia', // {tv: boolean, radio: boolean}。テレビ/ラジオはOR条件（両方ON/両方OFFは実質「すべて」）
   captionOnly: 'searchFilterCaptionOnly',
   // 「未完了のみ」= 視聴が完了していない(done以外)を表示。キー名は旧「未視聴のみ」の
   // ものを流用し、既存ユーザーの選択状態を引き継ぐ
   incompleteOnly: 'searchFilterUnwatchedOnly',
   partialOnly: 'searchFilterPartialOnly',
 };
+
+// テレビ/ラジオはAND条件の他フィルタと違いOR条件（どちらか一方でも合致すれば表示）なので、
+// チップの色も変えて区別する
+const MEDIA_FILTER_CHIP_COLOR = '#00897b';
+
+// 媒体(テレビ/ラジオ)絞り込みの現在値を読む。{tv, radio}の真偽値で、両方ON/両方OFFは
+// どちらも「すべて表示」として扱う(OR条件)。旧形式('all'|'tv'|'radio'の単一選択だった
+// 頃の設定値)が残っていれば新形式に読み替える
+function getMediaFilterState(mediaKey) {
+  const raw = window.getSetting(mediaKey, null);
+  if (raw && typeof raw === 'object') return { tv: !!raw.tv, radio: !!raw.radio };
+  if (raw === 'tv') return { tv: true, radio: false };
+  if (raw === 'radio') return { tv: false, radio: true };
+  return { tv: false, radio: false };
+}
+
+// 分類済み項目の媒体が現在の絞り込みで隠れる対象か(未選択時は常にfalse=OR条件で何も絞らない)
+function isMediaFilterHidden(itemMedia, mediaState) {
+  if (!mediaState.tv && !mediaState.radio) return false;
+  return !((mediaState.tv && itemMedia === 'tv') || (mediaState.radio && itemMedia === 'radio'));
+}
 
 // 検索キーワード履歴（最近の検索チップ用）
 const SEARCH_KEYWORD_HISTORY_KEY = 'searchKeywordHistory';
@@ -46,10 +67,10 @@ function getSearchFilterState(list) {
   // 消えるだけ(例: プリセットで「ラジオのみ」を選んだままテレビ科目を開くと空になる)なので、
   // 保存済みの設定値に関わらず無効化し、視聴状況フィルタのみ効かせる
   if (list && list.oujFilterContext === 'video-select') {
-    return { media: 'all', captionOnly: false, incompleteOnly, partialOnly, year: '', courseId: '' };
+    return { media: { tv: false, radio: false }, captionOnly: false, incompleteOnly, partialOnly, year: '', courseId: '' };
   }
   return {
-    media: window.getSetting(SEARCH_FILTER_SETTINGS_KEYS.media, 'all'),
+    media: getMediaFilterState(SEARCH_FILTER_SETTINGS_KEYS.media),
     captionOnly: window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.captionOnly, false),
     incompleteOnly,
     partialOnly,
@@ -169,7 +190,7 @@ function applyFiltersToItem(item, state) {
     return;
   }
   let hidden = false;
-  if (state.media !== 'all' && item.dataset.oujMedia !== state.media) hidden = true;
+  if (isMediaFilterHidden(item.dataset.oujMedia, state.media)) hidden = true;
   if (state.captionOnly && item.dataset.oujCaption !== '1') hidden = true;
   // 「未完了のみ」は視聴が完了していない(done以外＝未視聴＋視聴途中)を表示する
   if (state.incompleteOnly && item.dataset.oujWatchState === 'done') hidden = true;
@@ -314,7 +335,7 @@ async function applySearchResultSort(list) {
   sorted.forEach((item) => list.appendChild(item));
 }
 
-function buildFilterChip(label, isActive, onClick) {
+function buildFilterChip(label, isActive, onClick, activeColor = '#1976d2') {
   const chip = document.createElement('button');
   chip.type = 'button';
   chip.textContent = label;
@@ -326,8 +347,8 @@ function buildFilterChip(label, isActive, onClick) {
     border-radius: 16px;
     font-size: 13px;
     cursor: pointer;
-    border: 1px solid ${isActive ? '#1976d2' : '#ddd'};
-    background: ${isActive ? '#1976d2' : '#fff'};
+    border: 1px solid ${isActive ? activeColor : '#ddd'};
+    background: ${isActive ? activeColor : '#fff'};
     color: ${isActive ? '#fff' : '#333'};
     transition: background 0.2s, border-color 0.2s;
   `;
@@ -335,7 +356,7 @@ function buildFilterChip(label, isActive, onClick) {
     if (!isActive) chip.style.background = '#f0f0f0';
   };
   chip.onmouseleave = () => {
-    chip.style.background = isActive ? '#1976d2' : '#fff';
+    chip.style.background = isActive ? activeColor : '#fff';
   };
   chip.onclick = onClick;
   return chip;
@@ -359,20 +380,21 @@ function renderFilterBar(list) {
 
   // 媒体・字幕・年度・科目・最近の検索は video-select(1科目の回一覧)では意味がないので出さない
   if (!isVideoSelect) {
-    const mediaOptions = [
-      { value: 'all', label: 'すべて' },
-      { value: 'tv', label: 'テレビのみ' },
-      { value: 'radio', label: 'ラジオのみ' },
-    ];
-    mediaOptions.forEach(({ value, label }) => {
-      bar.appendChild(
-        buildFilterChip(label, state.media === value, () => {
-          window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.media, value);
-          renderFilterBar(list);
-          applyFilters();
-        })
-      );
-    });
+    // テレビ/ラジオは他のAND条件チップと違いOR条件(どちらかON、両方ONで両方表示)なので独立トグルにする
+    bar.appendChild(
+      buildFilterChip('テレビ番組', state.media.tv, () => {
+        window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.media, { tv: !state.media.tv, radio: state.media.radio });
+        renderFilterBar(list);
+        applyFilters();
+      }, MEDIA_FILTER_CHIP_COLOR)
+    );
+    bar.appendChild(
+      buildFilterChip('ラジオ番組', state.media.radio, () => {
+        window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.media, { tv: state.media.tv, radio: !state.media.radio });
+        renderFilterBar(list);
+        applyFilters();
+      }, MEDIA_FILTER_CHIP_COLOR)
+    );
 
     bar.appendChild(
       buildFilterChip('字幕ありのみ', state.captionOnly, () => {
@@ -660,3 +682,5 @@ window.refreshSearchResultFilterUI = refreshSearchResultFilterUI;
 window.OUJ_SEARCH_FILTER_KEYS = SEARCH_FILTER_SETTINGS_KEYS;
 window.OUJ_SEARCH_KEYWORD_HISTORY_KEY = SEARCH_KEYWORD_HISTORY_KEY;
 window.buildOujFilterChip = buildFilterChip;
+window.getOujMediaFilterState = getMediaFilterState;
+window.OUJ_MEDIA_FILTER_CHIP_COLOR = MEDIA_FILTER_CHIP_COLOR;

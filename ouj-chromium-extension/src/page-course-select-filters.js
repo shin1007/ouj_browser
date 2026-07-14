@@ -42,10 +42,21 @@ function getCourseFilterKeys() {
   };
 }
 
+// 媒体(テレビ/ラジオ)絞り込みの現在値を読む。page-search-result-filters.jsが公開する
+// 実装があればそれを使い、読み込み順の都合で未定義でも動くようフォールバックを持つ
+function getMediaFilterState(mediaKey) {
+  if (typeof window.getOujMediaFilterState === 'function') return window.getOujMediaFilterState(mediaKey);
+  const raw = window.getSetting(mediaKey, null);
+  if (raw && typeof raw === 'object') return { tv: !!raw.tv, radio: !!raw.radio };
+  if (raw === 'tv') return { tv: true, radio: false };
+  if (raw === 'radio') return { tv: false, radio: true };
+  return { tv: false, radio: false };
+}
+
 function getCourseFilterState() {
   const keys = getCourseFilterKeys();
   return {
-    media: window.getSetting(keys.media, 'all'),
+    media: getMediaFilterState(keys.media),
     captionOnly: window.getBooleanSetting(keys.captionOnly, false),
     incompleteOnly: window.getBooleanSetting(keys.incompleteOnly, false),
     partialOnly: window.getBooleanSetting(keys.partialOnly, false),
@@ -65,9 +76,14 @@ function parseCourseMediaCaption(subText) {
   return { media, caption };
 }
 
-// 媒体・字幕フィルタで隠れる行か。分類できた確定情報でのみ隠し、不明な行は隠さない
+// 媒体・字幕フィルタで隠れる行か。分類できた確定情報でのみ隠し、不明な行は隠さない。
+// テレビ/ラジオはOR条件(どちらか一方でも合致すれば表示)
 function isCourseMediaCaptionHidden(row, state) {
-  if (state.media !== 'all' && row.dataset.oujCourseMedia && row.dataset.oujCourseMedia !== state.media) return true;
+  const media = state.media;
+  if ((media.tv || media.radio) && row.dataset.oujCourseMedia &&
+      !((media.tv && row.dataset.oujCourseMedia === 'tv') || (media.radio && row.dataset.oujCourseMedia === 'radio'))) {
+    return true;
+  }
   if (state.captionOnly && row.dataset.oujCourseCaption === '0') return true;
   return false;
 }
@@ -188,14 +204,14 @@ function getCourseListContainer() {
   return item.closest('ion-list') || (item.closest('ion-item') && item.closest('ion-item').parentElement) || null;
 }
 
-function makeCourseChip(label, isActive, onClick) {
+function makeCourseChip(label, isActive, onClick, activeColor = '#1976d2') {
   const builder = window.buildOujFilterChip;
-  if (typeof builder === 'function') return builder(label, isActive, onClick);
+  if (typeof builder === 'function') return builder(label, isActive, onClick, activeColor);
   // page-search-result-filters.js未ロード時のフォールバック
   const chip = document.createElement('button');
   chip.type = 'button';
   chip.textContent = label;
-  chip.style.cssText = `display:inline-flex;align-items:center;padding:6px 14px;margin:0 8px 8px 0;border-radius:16px;font-size:13px;cursor:pointer;border:1px solid ${isActive ? '#1976d2' : '#ddd'};background:${isActive ? '#1976d2' : '#fff'};color:${isActive ? '#fff' : '#333'};`;
+  chip.style.cssText = `display:inline-flex;align-items:center;padding:6px 14px;margin:0 8px 8px 0;border-radius:16px;font-size:13px;cursor:pointer;border:1px solid ${isActive ? activeColor : '#ddd'};background:${isActive ? activeColor : '#fff'};color:${isActive ? '#fff' : '#333'};`;
   chip.onclick = onClick;
   return chip;
 }
@@ -228,16 +244,16 @@ function renderCourseFilterBar() {
   label.style.cssText = 'font-size:13px;color:#666;margin-right:8px;';
   bar.appendChild(label);
 
-  [
-    { value: 'all', label: 'すべて' },
-    { value: 'tv', label: 'テレビのみ' },
-    { value: 'radio', label: 'ラジオのみ' },
-  ].forEach(({ value, label: optionLabel }) => {
-    bar.appendChild(makeCourseChip(optionLabel, state.media === value, () => {
-      window.saveSetting(keys.media, value);
-      onChange();
-    }));
-  });
+  // テレビ/ラジオは他のAND条件チップと違いOR条件なので独立トグルにし、色も変えて区別する
+  const mediaChipColor = window.OUJ_MEDIA_FILTER_CHIP_COLOR || '#00897b';
+  bar.appendChild(makeCourseChip('テレビ番組', state.media.tv, () => {
+    window.saveSetting(keys.media, { tv: !state.media.tv, radio: state.media.radio });
+    onChange();
+  }, mediaChipColor));
+  bar.appendChild(makeCourseChip('ラジオ番組', state.media.radio, () => {
+    window.saveSetting(keys.media, { tv: state.media.tv, radio: !state.media.radio });
+    onChange();
+  }, mediaChipColor));
 
   bar.appendChild(makeCourseChip('字幕ありのみ', state.captionOnly, () => {
     window.saveSetting(keys.captionOnly, !state.captionOnly);
