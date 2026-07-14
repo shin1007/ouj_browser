@@ -172,6 +172,53 @@ function buildBrowseSection() {
   return section;
 }
 
+// カテゴリIDから、その階層パス(例: "教養学部 > 基盤科目")を作る。
+// getCategoriesData()はfetchWithCacheでキャッシュ済みのため、呼ぶたびのネットワーク負荷はない
+async function buildCategoryBreadcrumbPath(categoryId) {
+  if (!categoryId || typeof window.getCategoriesData !== 'function') return null;
+  const categories = await window.getCategoriesData();
+  if (!Array.isArray(categories)) return null;
+  const byId = new Map(categories.map((c) => [c.categoryId, c]));
+  const trim = (name) => (typeof window.trimCourseName === 'function') ? window.trimCourseName(name) : name;
+  const chain = [];
+  let current = byId.get(categoryId);
+  let guard = 0; // カテゴリデータの循環参照に備えた保険
+  while (current && guard < 10) {
+    chain.unshift(trim(current.name));
+    current = current.parentId ? byId.get(current.parentId) : null;
+    guard++;
+  }
+  return chain.length ? chain.join(' > ') : null;
+}
+
+// このプリセット絞り込みが今どのページに効くかを示すラベルを作る。左側のカテゴリ折りたたみ等を
+// 経由して意図せず違うカテゴリを開いたまま絞り込むと「なぜか対象が少ない」ように見えるため、
+// 適用先を明示する。検索結果(se=)ならキーワード、科目一覧・回一覧(ca=)ならカテゴリの階層パス。
+// 対象ページ自体を開いていない(ホーム等)場合はnullを返す
+async function getCurrentFilterTargetLabel() {
+  try {
+    if (typeof window.detectOujPageType !== 'function') return null;
+    const pageType = await window.detectOujPageType(window.location.href);
+    if (pageType.page === 'search-result') {
+      const match = window.location.href.match(/[?&]se=([^&]+)/);
+      if (!match) return null;
+      let keyword = match[1];
+      try { keyword = window.decodeURLComponentSafe(`se=${match[1]}`); } catch (e) { /* デコード失敗時はそのまま */ }
+      return `検索結果「${keyword}」`;
+    }
+    if (pageType.page === 'series-select' || pageType.page === 'video-select') {
+      const path = await buildCategoryBreadcrumbPath(pageType.categoryId);
+      if (!path) return null;
+      // 回一覧(video-select)は科目内の各回が対象で媒体・字幕は全回共通のため、
+      // テレビ/ラジオ・字幕ありのみはそこでは効かない(page-search-result-filters.jsのcontext='video-select'参照)
+      return pageType.page === 'video-select' ? `${path}（テレビ/ラジオ・字幕ありのみは対象外）` : path;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // --- セクション3: 検索結果フィルタのプリセット ---
 // 既存の検索結果フィルタ(page-search-result-filters.js)・科目一覧フィルタ
 // (page-course-select-filters.js)と同じ設定キーを読み書きするため、ここで設定した
@@ -182,6 +229,15 @@ function buildPresetSection() {
 
   const section = document.createElement('div');
   section.appendChild(buildPanelSectionLabel('絞り込み（検索結果・科目一覧に適用）'));
+
+  const targetLabel = document.createElement('div');
+  targetLabel.style.cssText = 'font-size:11px;color:#999;margin:-4px 0 6px 0;';
+  targetLabel.textContent = '現在地を確認中...';
+  section.appendChild(targetLabel);
+  getCurrentFilterTargetLabel().then((label) => {
+    if (!section.isConnected) return; // パネルが閉じている/作り直された場合は何もしない
+    targetLabel.textContent = label ? `適用先: ${label}` : '対象の検索結果・科目一覧を開いていません（設定だけ保存されます）';
+  });
 
   const body = document.createElement('div');
   section.appendChild(body);
