@@ -15,6 +15,11 @@ let studyTimeHandler = null;
 let studyTimeLastCurrentTime = null;
 // トラッキング開始時点の科目ID（科目別内訳に使う）
 let studyTimeCategoryId = null;
+// startStudyTimeTracking()が短時間に2回呼ばれ、1回目のwaitForElement('video', ...)が
+// 解決する前に2回目が始まった場合、両方のコールバックが後でリスナーを登録してしまうと
+// 片方が二重登録のまま解除されずに残る(video-settings.jsと同じ理由)。呼び出しごとに
+// トークンを発行し、最後に開始した呼び出しのコールバックだけがリスナー登録するようにする
+let studyTimeCallToken = 0;
 
 function getDateKey(date) {
   const year = date.getFullYear();
@@ -69,7 +74,11 @@ function startStudyTimeTracking() {
   stopStudyTimeTracking();
   // この動画の科目IDを覚えておく（科目別の学習時間内訳に使う）
   studyTimeCategoryId = window.getCurrentCategoryId ? window.getCurrentCategoryId() : null;
+  const myToken = ++studyTimeCallToken;
   window.waitForElement('video', (video) => {
+    // 待っている間により新しい呼び出しが発生していれば、この呼び出しの分は
+    // リスナー登録せずに破棄する(新しい呼び出し側が自分のvideo要素に登録する)
+    if (myToken !== studyTimeCallToken) return;
     studyTimeVideoEl = video;
     studyTimeLastCurrentTime = video.currentTime;
     studyTimeHandler = () => {
