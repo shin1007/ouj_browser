@@ -53,6 +53,12 @@ function updateRemainingTimeDisplay(video) {
 // オープニングの自動スキップ。科目別の「動画の最初をスキップ」秒数が設定されていて、
 // かつ再生がほぼ先頭から始まった場合のみシークする。
 // サーバー側のレジューム（前回の続きから再生）が働いた場合は、その位置を尊重して何もしない
+// TODO: 同一動画への二重登録は防いでいるが、動画切り替え時に前の動画用の
+// handlerがすぐには外れない(次のtimeupdateでdone===trueの時だけ自己解除する)。
+// 前の動画がdone=falseのまま切り替わった場合(再生開始直後に次の動画へ遷移した等)、
+// 新しい動画のtimeupdateに対して前のhandlerがそのまま反応し、意図しないシークを
+// 行う可能性がある。実害は稀だが、video-ab-repeat.jsのように動画切り替え時に
+// 即座にremoveEventListenerする方式に揃えるとより安全。
 function armOpeningSkip(video) {
   const contentId = window.getCurrentVideoId ? window.getCurrentVideoId() : null;
   if (!contentId) return;

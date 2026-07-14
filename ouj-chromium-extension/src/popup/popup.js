@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 自動ログイン設定の変更を保存
+    // TODO: chrome.storage.sync.setはsync容量超過等で失敗しうるが、
+    // chrome.runtime.lastErrorを確認していないため失敗に気づけない。
+    // net.js(fetchWithCache)のlocalストレージ保存では既にtry/catchで対応済みなので
+    // 同様の対応を入れるならここと下のdarkMode保存(38行目付近)も合わせて直す。
     autoLoginCheckbox.addEventListener('change', function() {
         chrome.storage.sync.set({
             autoLogin: autoLoginCheckbox.checked

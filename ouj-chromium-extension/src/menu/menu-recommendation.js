@@ -317,6 +317,11 @@ window.oujRecommendCache = {
   lastFetched: 0
 };
 
+// TODO: 短時間に複数回呼ばれた場合(お気に入りの連続トグル等)、後から開始した
+// 呼び出しが先に完了するとは限らないため、先に開始したが後に完了した古い呼び出しの
+// 結果でoujRecommendCacheが上書きされ、一時的に古いおすすめが残ることがある。
+// 表示のみで実害は小さいため据え置くが、直すなら呼び出しごとにトークンを発行し
+// 最新のものだけ反映する(video-settings.jsのoujVideoSettingsPanelTokenと同じ方式)。
 async function prefetchRecommendListData() {
   window.oujRecommendCache.data = await createRecommendListData();
   window.oujRecommendCache.lastFetched = Date.now();
