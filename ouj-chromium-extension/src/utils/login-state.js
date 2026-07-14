@@ -235,3 +235,4 @@ window.getOujLoginState = getOujLoginState;
 window.clearOujUserScopedCaches = clearOujUserScopedCaches;
 window.syncOujLoginStateAndInvalidate = syncOujLoginStateAndInvalidate;
 window.startOujLoginStateWatcher = startOujLoginStateWatcher;
+window.getStampedCategoriesLoginState = getStampedCategoriesLoginState;

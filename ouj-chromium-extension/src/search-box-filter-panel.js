@@ -18,18 +18,27 @@ const OUJ_VOD_BASE_URL = 'https://v.ouj.ac.jp/view/ouj/#/navi/vod';
 //  - yearBuckets: 年度セレクトの選択肢（createYearListData／utils/year.js）
 //  - courseGroups: コースセレクトの選択肢（getCourseGroups／utils/categories.js。学部・大学院等でグループ化）
 // ただし、ログイン/ログアウトで取得できる科目数が変わる(login-state.jsがcachedCategoriesData
-// 自体は破棄・再取得する)ため、取得時点のログイン状態を記録しておき、次回呼び出し時に
-// 状態が変わっていればこのPromiseも作り直す(そうしないとログイン前に一度パネルを開いた
-// だけで、以降ログインしても年度・コースの選択肢がゲスト時点のまま固定されてしまう)。
+// 自体は破棄・再取得する)ため、cachedCategoriesDataが「どのログイン状態時点のものか」を示す
+// 永続スタンプ(login-state.jsのgetStampedCategoriesLoginState)と突き合わせ、前回取得時から
+// スタンプが変わっていればこのPromiseも作り直す。
+//
+// 以前はwindow.getOujLoginState()(このタブ自身が見ているログイン状態)と比較していたが、
+// それだと「別タブでのログイン/ログアウトによりcachedCategoriesDataが書き換わったが、この
+// タブ自身の見た目のログイン状態は変化していない」ケースを取りこぼしていた(実際に報告された
+// バグ: ログイン済みなのに検索のコース選択欄が数件しか出ないことがある)。cachedCategoriesData
+// と同じスタンプを見ることで、どのタブがいつログイン/ログアウトしたかによらず、実際に
+// キャッシュが更新されたかどうかだけを正しく検知できる。
 let oujBrowseDataPromise = null;
-let oujBrowseDataLoginState = null;
-function getBrowseData() {
-  const currentLoginState = (typeof window.getOujLoginState === 'function') ? window.getOujLoginState() : null;
-  if (oujBrowseDataPromise && currentLoginState && currentLoginState !== 'unknown' && currentLoginState !== oujBrowseDataLoginState) {
+let oujBrowseDataCategoriesStamp = null;
+async function getBrowseData() {
+  const currentStamp = (typeof window.getStampedCategoriesLoginState === 'function')
+    ? await window.getStampedCategoriesLoginState()
+    : null;
+  if (oujBrowseDataPromise && currentStamp && currentStamp !== oujBrowseDataCategoriesStamp) {
     oujBrowseDataPromise = null;
   }
   if (!oujBrowseDataPromise) {
-    oujBrowseDataLoginState = currentLoginState;
+    oujBrowseDataCategoriesStamp = currentStamp;
     const yearP = (typeof window.createYearListData === 'function')
       ? window.createYearListData().then((r) => (r && Array.isArray(r.yearBuckets)) ? r.yearBuckets : []).catch(() => [])
       : Promise.resolve([]);
