@@ -246,7 +246,7 @@ function buildNativeVideoItemHtml({ contentId, categoryId, title, summary, categ
                     <div class="thumb-content">
                       <div class="thumb-main">
                         <img class="thumb-img" src="${thumb}" onerror="this.style.display='none';">
-                        ${showProgress ? `<div style="position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,0.4);"><div style="height:100%;width:${progressPercent}%;background:#3b82f6;"></div></div>` : ''}
+                        ${showProgress ? `<div class="progress-bar-container"><div class="progress-bar" style="width:${progressPercent}%;"></div></div>` : ''}
                         <div aria-hidden="true" class="thumb-footer">
                           <div aria-hidden="true" class="thumb-label">${durationLabel}</div>
                         </div>
