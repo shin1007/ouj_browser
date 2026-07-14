@@ -44,7 +44,11 @@ async function initializeVideoPlayer() {
     window.isInitializingVideo = false;
   }
 }
-async function addFunctionPanel(currentVideo){
+async function addFunctionPanel(currentVideo, startUrl){
+  // waitForElement/waitForConditionと同様、呼び出し開始時点のURLを記録し、
+  // 離脱後(別ページ/別動画への遷移後)もポーリングが残り続けないよう打ち切る
+  if (typeof startUrl !== 'string') startUrl = window.location.href;
+  if (window.location.href !== startUrl) return;
   console.log("addFunctionPanel", currentVideo.title);
   const titleElement = document.querySelector('#content-detail-area > div.title');
   if (!titleElement || !titleElement.textContent.includes(currentVideo.title)) {
@@ -54,7 +58,7 @@ async function addFunctionPanel(currentVideo){
     const pageChange = window.tryPushLoginButton();
     if (!pageChange){
       console.log("タイトル未反映、100ms後に再試行");
-      setTimeout(addFunctionPanel, 100, currentVideo);
+      setTimeout(addFunctionPanel, 100, currentVideo, startUrl);
     }
     return;
   }
