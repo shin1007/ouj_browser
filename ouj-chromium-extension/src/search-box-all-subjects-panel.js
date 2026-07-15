@@ -58,10 +58,11 @@ async function getAllSubjectItems() {
 }
 
 // 媒体・字幕・年度の絞り込み。不明(空文字)な項目は隠さない安全側の判定
-// (page-course-select-filters.jsのisCourseMediaCaptionHidden/isCourseYearHiddenと同じ基準)
+// (page-course-select-filters.jsのisCourseMediaCaptionHidden/isCourseYearHiddenと同じ基準)。
+// テレビ/ラジオ両方ONは絞り込み無し、両方OFFは確定済みの項目が全て対象外になる(0件)
 function passesAllSubjectsStaticFilters(item, state) {
   const media = state.media;
-  if ((media.tv || media.radio) && item.media &&
+  if (item.media &&
       !((media.tv && item.media === 'tv') || (media.radio && item.media === 'radio'))) {
     return false;
   }
@@ -143,8 +144,11 @@ function buildAllSubjectsGroupedListHtml(items) {
 
 function buildAllSubjectsFilterSummaryText(state, count) {
   const parts = [];
-  if (state.media.tv) parts.push('テレビ番組');
-  if (state.media.radio) parts.push('ラジオ番組');
+  // テレビ/ラジオ両方ONは絞り込み無し(既定値)を表すため、ラベルには出さない。
+  // 片方のみON、または両方OFF(0件)の時だけ状態が分かるように出す
+  if (state.media.tv && !state.media.radio) parts.push('テレビ番組');
+  if (state.media.radio && !state.media.tv) parts.push('ラジオ番組');
+  if (!state.media.tv && !state.media.radio) parts.push('テレビ番組・ラジオ番組とも非表示');
   if (state.captionOnly) parts.push('字幕ありのみ');
   if (state.incompleteOnly) parts.push('未完了のみ');
   if (state.partialOnly) parts.push('視聴途中のみ');

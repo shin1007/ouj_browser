@@ -29,7 +29,7 @@
 const SEARCH_RESULT_FILTER_LIST_SELECTOR = '#common-list-content';
 
 const SEARCH_FILTER_SETTINGS_KEYS = {
-  media: 'searchFilterMedia', // {tv: boolean, radio: boolean}。テレビ/ラジオはOR条件（両方ON/両方OFFは実質「すべて」）
+  media: 'searchFilterMedia', // {tv: boolean, radio: boolean}。テレビ/ラジオはOR条件。既定(未操作時)は両方ONで「すべて」、両方OFFにすると0件になる
   captionOnly: 'searchFilterCaptionOnly',
   // 「未完了のみ」= 視聴が完了していない(done以外)を表示。キー名は旧「未視聴のみ」の
   // ものを流用し、既存ユーザーの選択状態を引き継ぐ
@@ -41,20 +41,22 @@ const SEARCH_FILTER_SETTINGS_KEYS = {
 // チップの色も変えて区別する
 const MEDIA_FILTER_CHIP_COLOR = '#00897b';
 
-// 媒体(テレビ/ラジオ)絞り込みの現在値を読む。{tv, radio}の真偽値で、両方ON/両方OFFは
-// どちらも「すべて表示」として扱う(OR条件)。旧形式('all'|'tv'|'radio'の単一選択だった
-// 頃の設定値)が残っていれば新形式に読み替える
+// 媒体(テレビ/ラジオ)絞り込みの現在値を読む。{tv, radio}の真偽値。テレビ/ラジオは
+// 全項目がどちらかに分類される排他的なOR条件なので、両方ONは「すべて表示」、
+// 両方OFFは「どちらも要らない」＝0件表示になる。一度も操作していない(設定未保存=raw===null)
+// 場合だけは両方ONを既定値にし、初回訪問時にいきなり0件になるのを防ぐ。旧形式
+// ('all'|'tv'|'radio'の単一選択だった頃の設定値)が残っていれば新形式に読み替える
 function getMediaFilterState(mediaKey) {
   const raw = window.getSetting(mediaKey, null);
   if (raw && typeof raw === 'object') return { tv: !!raw.tv, radio: !!raw.radio };
   if (raw === 'tv') return { tv: true, radio: false };
   if (raw === 'radio') return { tv: false, radio: true };
-  return { tv: false, radio: false };
+  return { tv: true, radio: true };
 }
 
-// 分類済み項目の媒体が現在の絞り込みで隠れる対象か(未選択時は常にfalse=OR条件で何も絞らない)
+// 分類済み項目の媒体が現在の絞り込みで隠れる対象か。テレビ/ラジオ両方ONなら常に表示、
+// 両方OFFなら('tv'/'radio'いずれとも一致しないため)常に隠れる
 function isMediaFilterHidden(itemMedia, mediaState) {
-  if (!mediaState.tv && !mediaState.radio) return false;
   return !((mediaState.tv && itemMedia === 'tv') || (mediaState.radio && itemMedia === 'radio'));
 }
 
@@ -70,9 +72,10 @@ function getSearchFilterState(list) {
   const partialOnly = window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.partialOnly, false);
   // video-select(1科目の回一覧)では媒体/字幕/年度/コースは全回共通。これらで絞ると全件が
   // 消えるだけ(例: プリセットで「ラジオのみ」を選んだままテレビ科目を開くと空になる)なので、
-  // 保存済みの設定値に関わらず無効化し、視聴状況フィルタのみ効かせる
+  // 保存済みの設定値に関わらず無効化し、視聴状況フィルタのみ効かせる。media は両方ONが
+  // 「絞り込み無し」を表す値なので、無効化にはそちらを使う(両方OFFは0件を表す値になった)
   if (list && list.oujFilterContext === 'video-select') {
-    return { media: { tv: false, radio: false }, captionOnly: false, incompleteOnly, partialOnly, year: [], courseId: [] };
+    return { media: { tv: true, radio: true }, captionOnly: false, incompleteOnly, partialOnly, year: [], courseId: [] };
   }
   return {
     media: getMediaFilterState(SEARCH_FILTER_SETTINGS_KEYS.media),
@@ -190,9 +193,10 @@ async function classifySearchResultItem(item, gate, context = 'search') {
 }
 
 // 何らかのフィルタ条件が有効になっているか(絞り込みが1つも掛かっていない「すべて表示」
-// 状態かどうか)。未分類項目の暫定表示可否の判定に使う
+// 状態かどうか)。未分類項目の暫定表示可否の判定に使う。media は両方ON(=絞り込み無し)の
+// 時だけ「有効でない」扱いにする(片方だけON、または両方OFF＝0件はどちらも絞り込みが効いている)
 function isAnyResultFilterActive(state) {
-  return state.media.tv || state.media.radio || state.captionOnly ||
+  return !(state.media.tv && state.media.radio) || state.captionOnly ||
     state.incompleteOnly || state.partialOnly || state.year.length > 0 || state.courseId.length > 0;
 }
 

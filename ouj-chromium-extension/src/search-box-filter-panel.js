@@ -284,7 +284,7 @@ function renderPresetBody(body, keys, onChange) {
     if (raw && typeof raw === 'object') return { tv: !!raw.tv, radio: !!raw.radio };
     if (raw === 'tv') return { tv: true, radio: false };
     if (raw === 'radio') return { tv: false, radio: true };
-    return { tv: false, radio: false };
+    return { tv: true, radio: true };
   });
   const media = getMedia(keys.media);
   const captionOnly = window.getBooleanSetting(keys.captionOnly, false);

@@ -43,14 +43,15 @@ function getCourseFilterKeys() {
 }
 
 // 媒体(テレビ/ラジオ)絞り込みの現在値を読む。page-search-result-filters.jsが公開する
-// 実装があればそれを使い、読み込み順の都合で未定義でも動くようフォールバックを持つ
+// 実装があればそれを使い、読み込み順の都合で未定義でも動くようフォールバックを持つ。
+// 未操作(raw===null)時は両方ONを既定値にする(両方OFFは0件を表す値のため)
 function getMediaFilterState(mediaKey) {
   if (typeof window.getOujMediaFilterState === 'function') return window.getOujMediaFilterState(mediaKey);
   const raw = window.getSetting(mediaKey, null);
   if (raw && typeof raw === 'object') return { tv: !!raw.tv, radio: !!raw.radio };
   if (raw === 'tv') return { tv: true, radio: false };
   if (raw === 'radio') return { tv: false, radio: true };
-  return { tv: false, radio: false };
+  return { tv: true, radio: true };
 }
 
 function getCourseFilterState() {
@@ -77,10 +78,11 @@ function parseCourseMediaCaption(subText) {
 }
 
 // 媒体・字幕フィルタで隠れる行か。分類できた確定情報でのみ隠し、不明な行は隠さない。
-// テレビ/ラジオはOR条件(どちらか一方でも合致すれば表示)
+// テレビ/ラジオはOR条件(どちらか一方でも合致すれば表示。両方ONは絞り込み無し、
+// 両方OFFはどちらとも一致しないため確定済みの行は全て隠れる＝0件)
 function isCourseMediaCaptionHidden(row, state) {
   const media = state.media;
-  if ((media.tv || media.radio) && row.dataset.oujCourseMedia &&
+  if (row.dataset.oujCourseMedia &&
       !((media.tv && row.dataset.oujCourseMedia === 'tv') || (media.radio && row.dataset.oujCourseMedia === 'radio'))) {
     return true;
   }
