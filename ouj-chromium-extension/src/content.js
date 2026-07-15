@@ -45,10 +45,10 @@ async function main() {
 
   // SPA遷移対策: 前ページで挿入したフィルターバーが、Ionicの#common-list-content等の
   // DOM再利用によって残ることがある。ページ切り替えのたびに一旦除去し、必要なページ
-  // (検索結果/回一覧 は search-result-filter-bar、科目一覧 は course-list-filter-bar)だけが
-  // 下の分岐で作り直す。これによりコース一覧(例: ca=3 大学院)に検索結果フィルタバーが
-  // 残ってしまう問題を防ぐ。
-  ['search-result-filter-bar', 'course-list-filter-bar'].forEach((id) => {
+  // (検索結果/回一覧 は search-result-filter-bar、科目一覧 は course-list-filter-bar、
+  // フォルダツリーページ は course-folder-browse-bar)だけが下の分岐で作り直す。これにより
+  // コース一覧(例: ca=3 大学院)に検索結果フィルタバーが残ってしまう問題を防ぐ。
+  ['search-result-filter-bar', 'course-list-filter-bar', 'course-folder-browse-bar'].forEach((id) => {
     const staleBar = document.getElementById(id);
     if (staleBar) staleBar.remove();
   });

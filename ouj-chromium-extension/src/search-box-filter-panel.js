@@ -1,67 +1,15 @@
-// 検索ボックス(#searchText)にフォーカスした時に、検索ボックス直下へ出すクイック絞り込みパネル。
+// 検索ボックス(#searchText)にフォーカスした時に、検索ボックス直下へ出す「最近の検索」パネル。
 //
-// 放送大学サイトのキーワード検索はキーワードが空だと0件になり、年度や科目だけでは
-// 絞り込めない。そこでキーワードを打たなくても、
-//   1.「最近の検索」からの再検索
-//   2. 年度→科目(カテゴリ)を選んでそのカテゴリの動画一覧(ca=)へ直接ジャンプ
-//   3. 検索結果フィルタ(テレビ/ラジオ・字幕あり・未完了のみ等)の事前セット
-// ができるようにする。
+// 以前はここに年度・コースのジャンプ選択や検索結果フィルタの事前セットも同居していたが、
+// キーワード検索の文脈と無関係な機能だったため、動画のフォルダ一覧ページ(series-select、
+// 科目一覧より上の階層)に常時表示するバーへ移設した(page-course-select-filters.jsの
+// renderFolderBrowseBar)。ここには「最近の検索」からの再検索だけが残る。
 //
 // ヘッダーの#searchTextは全ページ共通で存在し、SPA遷移で作り直されることがあるため、
 // 個々の要素にリスナーを付けず、document階層のfocusin委譲で捕捉する（再バインド不要）。
 
 const SEARCH_BOX_PANEL_ID = 'ouj-search-box-panel';
 const OUJ_VOD_BASE_URL = 'https://v.ouj.ac.jp/view/ouj/#/navi/vod';
-
-// 年度・コースデータはカテゴリAPI(キャッシュ約12時間)を叩くため、パネルを開くたびに
-// 取り直さず、最初に開いた時のPromiseを使い回す。
-//  - yearBuckets: 年度セレクトの選択肢（createYearListData／utils/year.js）
-//  - courseGroups: コースセレクトの選択肢（getCourseGroups／utils/categories.js。学部・大学院等でグループ化）
-// ただし、ログイン/ログアウトで取得できる科目数が変わる(login-state.jsがcachedCategoriesData
-// 自体は破棄・再取得する)ため、cachedCategoriesDataが「どのログイン状態時点のものか」を示す
-// 永続スタンプ(login-state.jsのgetStampedCategoriesLoginState)と突き合わせ、前回取得時から
-// スタンプが変わっていればこのPromiseも作り直す。
-//
-// 以前はwindow.getOujLoginState()(このタブ自身が見ているログイン状態)と比較していたが、
-// それだと「別タブでのログイン/ログアウトによりcachedCategoriesDataが書き換わったが、この
-// タブ自身の見た目のログイン状態は変化していない」ケースを取りこぼしていた(実際に報告された
-// バグ: ログイン済みなのに検索のコース選択欄が数件しか出ないことがある)。cachedCategoriesData
-// と同じスタンプを見ることで、どのタブがいつログイン/ログアウトしたかによらず、実際に
-// キャッシュが更新されたかどうかだけを正しく検知できる。
-//
-// 上記だけでは塞げない別の競合が残っていた: login-state.jsの監視(500ms間隔ポーリング)は
-// ページ読み込み直後に一度check()を実行するが、content.jsのmain()はこれをawaitせず
-// 後続処理(initSearchBoxFilterPanel等)を続ける。そのため「ページを開いた直後、ログイン
-// 検知→cachedCategoriesData破棄が完了しきる前」にこのパネルを開くと、まだ古いスタンプ
-// (前回ゲスト時点等)のままの永続キャッシュを新鮮なものとして読み込んでしまう
-// (実機・Playwrightで再現確認済み: seedしたゲスト時点の小さいキャッシュが、ログイン
-// 済みタブでも一瞬そのまま表示された)。そこでスタンプを読む前に
-// syncOujLoginStateAndInvalidate()自体をここでも呼び、進行中/未着手の無効化処理を
-// 先に完了させてから判定する(既に処理済みなら即nullを返すだけなので軽い)。
-let oujBrowseDataPromise = null;
-let oujBrowseDataCategoriesStamp = null;
-async function getBrowseData() {
-  if (typeof window.syncOujLoginStateAndInvalidate === 'function') {
-    await window.syncOujLoginStateAndInvalidate();
-  }
-  const currentStamp = (typeof window.getStampedCategoriesLoginState === 'function')
-    ? await window.getStampedCategoriesLoginState()
-    : null;
-  if (oujBrowseDataPromise && currentStamp && currentStamp !== oujBrowseDataCategoriesStamp) {
-    oujBrowseDataPromise = null;
-  }
-  if (!oujBrowseDataPromise) {
-    oujBrowseDataCategoriesStamp = currentStamp;
-    const yearP = (typeof window.createYearListData === 'function')
-      ? window.createYearListData().then((r) => (r && Array.isArray(r.yearBuckets)) ? r.yearBuckets : []).catch(() => [])
-      : Promise.resolve([]);
-    const courseP = (typeof window.getCourseGroups === 'function')
-      ? window.getCourseGroups().catch(() => [])
-      : Promise.resolve([]);
-    oujBrowseDataPromise = Promise.all([yearP, courseP]).then(([yearBuckets, courseGroups]) => ({ yearBuckets, courseGroups }));
-  }
-  return oujBrowseDataPromise;
-}
 
 // パネル内の見出し(小さなラベル)を作る
 function buildPanelSectionLabel(text) {
@@ -112,225 +60,6 @@ function buildRecentSearchSection() {
   return section;
 }
 
-// --- セクション2: 年度・コースで探す（キーワードなし） ---
-// コース(生活と福祉コース・臨床心理学プログラム等)を選ぶと、そのコースの科目一覧(ca=)へ遷移する。
-// 年度も選んでいれば、遷移先の科目一覧をその年度だけに絞り込む（window.__oujPendingCourseYear
-// でpage-course-select-filters.jsへ受け渡す）。年度とコースは独立で、年度はコース候補を絞らない。
-function buildBrowseSection() {
-  const section = document.createElement('div');
-  section.style.cssText = 'margin-bottom:10px;';
-  section.appendChild(buildPanelSectionLabel('キーワードなしで探す（年度・コース）'));
-
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:8px;';
-  const selectStyle = 'font-size:13px;padding:6px 8px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#333;max-width:100%;';
-
-  const yearSelect = document.createElement('select');
-  yearSelect.style.cssText = selectStyle;
-  yearSelect.appendChild(new Option('年度: すべて', ''));
-  yearSelect.disabled = true;
-
-  const courseSelect = document.createElement('select');
-  courseSelect.style.cssText = `${selectStyle}flex:1;min-width:200px;`;
-  courseSelect.appendChild(new Option('読み込み中...', ''));
-  courseSelect.disabled = true;
-
-  row.appendChild(yearSelect);
-  row.appendChild(courseSelect);
-  section.appendChild(row);
-
-  const hint = document.createElement('div');
-  hint.style.cssText = 'font-size:11px;color:#999;margin-top:4px;';
-  hint.textContent = 'コースを選ぶとそのコースへ移動します（年度も選ぶと科目一覧をその年度で絞り込み）';
-  section.appendChild(hint);
-
-  const trim = (name) => (typeof window.trimCourseName === 'function') ? window.trimCourseName(name) : name;
-
-  getBrowseData().then(({ yearBuckets, courseGroups }) => {
-    // パネルが閉じている/作り直された場合は何もしない
-    if (!section.isConnected) return;
-
-    // 年度セレクト: 各年度を選択肢にする
-    if (Array.isArray(yearBuckets) && yearBuckets.length > 0) {
-      yearSelect.disabled = false;
-      yearBuckets.forEach((b) => yearSelect.appendChild(new Option(`${b.year}年度`, String(b.year))));
-    }
-
-    // コースセレクト: 学部/大学院等でグループ化（optgroup）して選択肢にする
-    courseSelect.innerHTML = '';
-    if (!Array.isArray(courseGroups) || courseGroups.length === 0) {
-      courseSelect.appendChild(new Option('コースデータを取得できませんでした', ''));
-      return;
-    }
-    const totalCourses = courseGroups.reduce((n, g) => n + g.courses.length, 0);
-    courseSelect.appendChild(new Option(`コースを選ぶ（${totalCourses}件）`, ''));
-    courseGroups.forEach((group) => {
-      const optgroup = document.createElement('optgroup');
-      optgroup.label = trim(group.parentName);
-      group.courses.forEach((c) => optgroup.appendChild(new Option(trim(c.name), String(c.categoryId))));
-      courseSelect.appendChild(optgroup);
-    });
-    courseSelect.disabled = false;
-
-    courseSelect.addEventListener('change', () => {
-      const categoryId = courseSelect.value;
-      if (!categoryId) return;
-      // 年度も選ばれていれば、遷移先の科目一覧をその年度で初期絞り込みするための一時フラグ。
-      // 同一ドキュメント内のハッシュ遷移なのでwindow変数で受け渡せる（遷移先で読み取り後にクリア）
-      window.__oujPendingCourseYear = yearSelect.value || '';
-      window.location.href = `${OUJ_VOD_BASE_URL}?ca=${categoryId}`;
-    });
-  });
-
-  return section;
-}
-
-// カテゴリIDから、その階層パス(例: "教養学部 > 基盤科目")を作る。
-// getCategoriesData()はfetchWithCacheでキャッシュ済みのため、呼ぶたびのネットワーク負荷はない
-async function buildCategoryBreadcrumbPath(categoryId) {
-  if (!categoryId || typeof window.getCategoriesData !== 'function') return null;
-  const categories = await window.getCategoriesData();
-  if (!Array.isArray(categories)) return null;
-  const byId = new Map(categories.map((c) => [c.categoryId, c]));
-  const trim = (name) => (typeof window.trimCourseName === 'function') ? window.trimCourseName(name) : name;
-  const chain = [];
-  let current = byId.get(categoryId);
-  let guard = 0; // カテゴリデータの循環参照に備えた保険
-  while (current && guard < 10) {
-    chain.unshift(trim(current.name));
-    current = current.parentId ? byId.get(current.parentId) : null;
-    guard++;
-  }
-  return chain.length ? chain.join(' > ') : null;
-}
-
-// このプリセット絞り込みが今どのページに効くかを示すラベルを作る。左側のカテゴリ折りたたみ等を
-// 経由して意図せず違うカテゴリを開いたまま絞り込むと「なぜか対象が少ない」ように見えるため、
-// 適用先を明示する。検索結果(se=)ならキーワード、科目一覧・回一覧(ca=)ならカテゴリの階層パス。
-// 対象ページ自体を開いていない(ホーム等)場合はnullを返す
-async function getCurrentFilterTargetLabel() {
-  try {
-    if (typeof window.detectOujPageType !== 'function') return null;
-    const pageType = await window.detectOujPageType(window.location.href);
-    if (pageType.page === 'search-result') {
-      const match = window.location.href.match(/[?&]se=([^&]+)/);
-      if (!match) return null;
-      let keyword = match[1];
-      try { keyword = window.decodeURLComponentSafe(`se=${match[1]}`); } catch (e) { /* デコード失敗時はそのまま */ }
-      return `検索結果「${keyword}」`;
-    }
-    if (pageType.page === 'series-select' || pageType.page === 'video-select') {
-      const path = await buildCategoryBreadcrumbPath(pageType.categoryId);
-      if (!path) return null;
-      // 回一覧(video-select)は科目内の各回が対象で媒体・字幕は全回共通のため、
-      // テレビ/ラジオ・字幕ありのみはそこでは効かない(page-search-result-filters.jsのcontext='video-select'参照)
-      return pageType.page === 'video-select' ? `${path}（テレビ/ラジオ・字幕ありのみは対象外）` : path;
-    }
-    return null;
-  } catch (e) {
-    return null;
-  }
-}
-
-// --- セクション3: 検索結果フィルタのプリセット ---
-// 既存の検索結果フィルタ(page-search-result-filters.js)・科目一覧フィルタ
-// (page-course-select-filters.js)と同じ設定キーを読み書きするため、ここで設定した
-// トグルは次に検索結果・科目一覧・回一覧を開いた時にそのまま適用される。
-//
-// 検索結果ページ(se=)・科目一覧ページ(ca=)には、この関数と同じ絞り込みチップを持つ
-// 専用バーが既にページ本体に常時表示されている(page-search-result-filters.js /
-// page-course-select-filters.js)。そのページでこのセクションも出すと、見た目がほぼ同じ
-// チップがもう一組出て二重表示になり紛らわしい(実際に報告された不具合)ため、専用バーが
-// 存在するページではこのセクション自体を省略する。専用バーが無いページ(ホーム等)や、
-// バーがまだ描画され切っていない一瞬の間だけこのセクションが担当する
-function buildPresetSection() {
-  const keys = window.OUJ_SEARCH_FILTER_KEYS;
-  if (!keys) return null; // フィルタ本体が未ロードなら出さない
-  if (document.getElementById('search-result-filter-bar') || document.getElementById('course-list-filter-bar')) {
-    return null;
-  }
-
-  const section = document.createElement('div');
-  section.appendChild(buildPanelSectionLabel('絞り込み（検索結果・科目一覧に適用）'));
-
-  const targetLabel = document.createElement('div');
-  targetLabel.style.cssText = 'font-size:11px;color:#999;margin:-4px 0 6px 0;';
-  targetLabel.textContent = '現在地を確認中...';
-  section.appendChild(targetLabel);
-  getCurrentFilterTargetLabel().then((label) => {
-    if (!section.isConnected) return; // パネルが閉じている/作り直された場合は何もしない
-    targetLabel.textContent = label ? `適用先: ${label}` : '対象の検索結果・科目一覧を開いていません（設定だけ保存されます）';
-  });
-
-  const body = document.createElement('div');
-  section.appendChild(body);
-
-  const rerenderAndSync = () => {
-    renderPresetBody(body, keys, rerenderAndSync);
-    // 検索結果ページ・回一覧ページ(video-select)を開いていれば即座に反映する
-    if (typeof window.refreshSearchResultFilterUI === 'function') {
-      window.refreshSearchResultFilterUI();
-    }
-    // 科目フォルダ一覧ページ(series-select)を開いていれば即座に反映する
-    if (typeof window.refreshCourseListFilterUI === 'function') {
-      window.refreshCourseListFilterUI();
-    }
-    // キーワード欄が空のままチップを操作した場合は、検索結果ページ等が無くフィルタが
-    // 反映される先が無いため、代わりに全科目対象のネイティブ風パネル(search-box-all-subjects-panel.js)
-    // をその場で開く/更新する
-    const keyword = (oujPanelInput && oujPanelInput.value || '').trim();
-    if (!keyword && typeof window.handleAllSubjectsFilterPanelOpen === 'function') {
-      window.handleAllSubjectsFilterPanelOpen();
-    }
-  };
-  renderPresetBody(body, keys, rerenderAndSync);
-  return section;
-}
-
-function renderPresetBody(body, keys, onChange) {
-  body.innerHTML = '';
-  const getMedia = window.getOujMediaFilterState || ((key) => {
-    const raw = window.getSetting(key, null);
-    if (raw && typeof raw === 'object') return { tv: !!raw.tv, radio: !!raw.radio };
-    if (raw === 'tv') return { tv: true, radio: false };
-    if (raw === 'radio') return { tv: false, radio: true };
-    return { tv: true, radio: true };
-  });
-  const media = getMedia(keys.media);
-  const captionOnly = window.getBooleanSetting(keys.captionOnly, false);
-  const incompleteOnly = window.getBooleanSetting(keys.incompleteOnly, false);
-  const partialOnly = window.getBooleanSetting(keys.partialOnly, false);
-
-  const chips = document.createElement('div');
-  chips.style.cssText = 'display:flex;flex-wrap:wrap;';
-
-  // テレビ/ラジオは他のAND条件チップと違いOR条件なので独立トグルにし、色も変えて区別する
-  const mediaChipColor = window.OUJ_MEDIA_FILTER_CHIP_COLOR || '#00897b';
-  chips.appendChild(makePanelChip('テレビ番組', media.tv, () => {
-    window.saveSetting(keys.media, { tv: !media.tv, radio: media.radio });
-    onChange();
-  }, mediaChipColor));
-  chips.appendChild(makePanelChip('ラジオ番組', media.radio, () => {
-    window.saveSetting(keys.media, { tv: media.tv, radio: !media.radio });
-    onChange();
-  }, mediaChipColor));
-
-  chips.appendChild(makePanelChip('字幕ありのみ', captionOnly, () => {
-    window.saveSetting(keys.captionOnly, !captionOnly);
-    onChange();
-  }));
-  chips.appendChild(makePanelChip('未完了のみ', incompleteOnly, () => {
-    window.saveSetting(keys.incompleteOnly, !incompleteOnly);
-    onChange();
-  }));
-  chips.appendChild(makePanelChip('視聴途中のみ', partialOnly, () => {
-    window.saveSetting(keys.partialOnly, !partialOnly);
-    onChange();
-  }));
-
-  body.appendChild(chips);
-}
-
 // --- パネル本体 ---
 function getSearchBoxPanel() {
   let panel = document.getElementById(SEARCH_BOX_PANEL_ID);
@@ -357,12 +86,9 @@ function getSearchBoxPanel() {
 
 function renderSearchBoxPanelContent(panel) {
   panel.innerHTML = '';
-  const sections = [
-    buildRecentSearchSection(),
-    buildBrowseSection(),
-    buildPresetSection(),
-  ].filter(Boolean);
+  const sections = [buildRecentSearchSection()].filter(Boolean);
   sections.forEach((s) => panel.appendChild(s));
+  return sections.length > 0;
 }
 
 function positionSearchBoxPanel(panel, input) {
@@ -395,8 +121,13 @@ function repositionOpenPanel() {
 
 function showSearchBoxPanel(input) {
   const panel = getSearchBoxPanel();
+  // 最近の検索が1件も無ければ出す内容が無いため、空のパネルは開かない
+  if (!renderSearchBoxPanelContent(panel)) {
+    panel.style.display = 'none';
+    oujPanelInput = null;
+    return;
+  }
   oujPanelInput = input;
-  renderSearchBoxPanelContent(panel);
   positionSearchBoxPanel(panel, input);
   panel.style.display = 'block';
 }
