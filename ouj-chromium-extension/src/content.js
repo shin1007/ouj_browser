@@ -103,7 +103,8 @@ function restoreOujOpenNativePanelIfAny() {
     history: window.handleHistoryPanelOpen,
     recommend: window.handleRecommendPanelOpen,
     studytime: window.handleStudyTimePanelOpen,
-    whatsnew: window.handleWhatsNewPanelOpen
+    whatsnew: window.handleWhatsNewPanelOpen,
+    'all-subjects-filter': window.handleAllSubjectsFilterPanelOpen
   };
   const openPanel = panelOpenHandlers[pendingPanelId];
   if (typeof openPanel !== 'function') return;

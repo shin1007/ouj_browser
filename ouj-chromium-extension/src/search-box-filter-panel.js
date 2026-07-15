@@ -265,6 +265,13 @@ function buildPresetSection() {
     if (typeof window.refreshCourseListFilterUI === 'function') {
       window.refreshCourseListFilterUI();
     }
+    // キーワード欄が空のままチップを操作した場合は、検索結果ページ等が無くフィルタが
+    // 反映される先が無いため、代わりに全科目対象のネイティブ風パネル(search-box-all-subjects-panel.js)
+    // をその場で開く/更新する
+    const keyword = (oujPanelInput && oujPanelInput.value || '').trim();
+    if (!keyword && typeof window.handleAllSubjectsFilterPanelOpen === 'function') {
+      window.handleAllSubjectsFilterPanelOpen();
+    }
   };
   renderPresetBody(body, keys, rerenderAndSync);
   return section;

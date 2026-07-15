@@ -270,6 +270,9 @@ function renderCourseFilterBar() {
 
   // 年度セレクト（このコースに含まれる年度のみ）。年度が1つも取れない場合は出さない。
   // 値の変更はバー全体を作り直さず applyCourseFilters のみ呼ぶ（selectの選択状態を保つ）
+  // TODO: 検索結果ページ(page-search-result-filters.jsのbuildMultiSelectDropdown)と同様に
+  // 複数年度選択に対応させる余地がある。今回は検索結果ページのみ対応（要望範囲外のため見送り）。
+  // 対応する場合はcourseYearFilterを配列化し、isCourseYearHiddenをOR条件に変更する
   const years = collectCourseYears();
   if (years.length > 0) {
     const yearSelect = document.createElement('select');
@@ -356,3 +359,6 @@ async function initializeCourseListFilters(startUrl) {
 
 window.initializeCourseListFilters = initializeCourseListFilters;
 window.refreshCourseListFilterUI = refreshCourseListFilterUI;
+// search-box-all-subjects-panel.js が category.summary の同一形式のテキストから
+// テレビ/ラジオ・字幕を判定するために再利用する
+window.parseCourseMediaCaption = parseCourseMediaCaption;

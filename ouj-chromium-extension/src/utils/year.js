@@ -82,3 +82,5 @@ async function createYearListData() {
 // グローバルwindowに関数を公開
 window.extractYearFromCategoryName = extractYearFromCategoryName;
 window.createYearListData = createYearListData;
+// search-box-all-subjects-panel.js が全科目一覧の重複除去に再利用する
+window.extractCategoryAliasNumber = extractCategoryAliasNumber;

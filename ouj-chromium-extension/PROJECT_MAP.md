@@ -104,6 +104,7 @@
 | [page-search-result.js](src/page-search-result.js) | 検索結果の重複講義を非表示 | `startSearchResultDedupObserver`, `updateSearchResultItemVisibility` |
 | [page-search-result-filters.js](src/page-search-result-filters.js) | 検索結果の絞り込み/並び替え。回一覧(video-select)でも`context`引数で流用（視聴状況フィルタ＋並び替えのみ／媒体・字幕・年度・科目・最近の検索は出さない） | `initializeSearchResultFilters(context)`, `refreshSearchResultFilterUI`, `buildOujFilterChip`, `OUJ_SEARCH_*_KEY` |
 | [search-box-filter-panel.js](src/search-box-filter-panel.js) | 検索ボックスのクイック絞り込みパネル（全ページ共通）。「最近の検索」／「年度・コースで探す（コースを選ぶとそのコースへ遷移、年度も選べば遷移先を年度絞り込み）」／絞り込みプリセット | `initSearchBoxFilterPanel` |
+| [search-box-all-subjects-panel.js](src/search-box-all-subjects-panel.js) | 上記パネルでキーワード欄が空のまま絞り込みプリセットのチップを操作した瞬間に開く/更新するネイティブ風パネル。カテゴリAPIのsummary/name欄だけで媒体・字幕・年度を全科目分即時判定（追加通信なし）、視聴状況のみ画面内に入った科目だけ遅延取得 | `handleAllSubjectsFilterPanelOpen` |
 
 ## popup/ — ポップアップ兼オプションページ
 

@@ -89,6 +89,7 @@
         "page-search-result.js",
         "page-search-result-filters.js",
         "search-box-filter-panel.js",
+        "search-box-all-subjects-panel.js",
         "page-video-select.js",
         "page-home-continue.js",
         "content.js"
