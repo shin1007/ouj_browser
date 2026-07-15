@@ -2,6 +2,14 @@
 // カテゴリ関連の関数
 const CATEGORIES_API_URL = 'https://v.ouj.ac.jp/v1/tenants/1/categories';
 const CATEGORIES_STORAGE_KEY = 'cachedCategoriesData'; // カテゴリデータを保存する際のキー
+// カテゴリ一覧の最小妥当件数。実測でゲスト274件・ログイン529件と、常に大量の階層が
+// 返ってくるはずのエンドポイントのため、これを大きく下回る結果は「200 OKだがサイト側の
+// 一時的な不調で内容が空に近い」壊れた応答とみなし、12hキャッシュに焼き付けないようにする
+// (実際に報告されたバグ: ログイン済みなのにコース選択欄が数件しか出ないことがある)
+const CATEGORIES_MIN_VALID_LENGTH = 50;
+function isCategoriesDataValid(data) {
+  return Array.isArray(data) && data.length >= CATEGORIES_MIN_VALID_LENGTH;
+}
 
 /**
  * 指定したcontentIdからカテゴリデータを取得する
@@ -40,7 +48,7 @@ async function getVideoData(contentId) {
 }
 
 async function getCategoriesData(minute=720) {
-  return await fetchWithCache(CATEGORIES_API_URL, CATEGORIES_STORAGE_KEY, minute);
+  return await fetchWithCache(CATEGORIES_API_URL, CATEGORIES_STORAGE_KEY, minute, isCategoriesDataValid);
 }
 
 async function getChildIds(categoryNum) {
