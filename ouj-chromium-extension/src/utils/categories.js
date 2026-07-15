@@ -211,6 +211,25 @@ async function getCourseGroups() {
 }
 
 
+/**
+ * 指定した科目(categoryId)が属するコース（生活と福祉コース・臨床心理学プログラム等、
+ * 直接の親カテゴリ）の{categoryId, name}を返す。放送大学の階層は
+ * 学部/大学院 → コース/プログラム → 科目 → 回 なので、科目の親をそのまま使えばよい。
+ * 該当なし（親が無い/取得できない）場合はnull。
+ * 検索結果ページのコース絞り込み(page-search-result-filters.js)で使う。
+ * @param {number|string} categoryId - 科目のcategoryId
+ * @returns {Promise<{categoryId:number, name:string}|null>}
+ */
+async function getCourseForSubjectId(categoryId) {
+  const categories = await getCategoriesData();
+  if (!Array.isArray(categories)) return null;
+  const byId = new Map(categories.map((c) => [c.categoryId, c]));
+  const subject = byId.get(parseInt(categoryId, 10));
+  if (!subject || !subject.parentId) return null;
+  const course = byId.get(subject.parentId);
+  return course ? { categoryId: course.categoryId, name: course.name } : null;
+}
+
 async function getVideoProgress(contentId) {
   try {
     const url = `https://v.ouj.ac.jp/v1/tenants/1/vod-contents/${contentId}/viewinglog/latest`;
@@ -249,6 +268,7 @@ window.getCurrentCategoryId = getCurrentCategoryId;
 window.getParentCategoryName = getParentCategoryName;
 window.categoriesUsedAsParent = categoriesUsedAsParent;
 window.getCourseGroups = getCourseGroups;
+window.getCourseForSubjectId = getCourseForSubjectId;
 window.getVideoListInCategory = getVideoListInCategory;
 window.getVideoData = getVideoData;
 window.getCategoryDataFromContentId = getCategoryDataFromContentId;

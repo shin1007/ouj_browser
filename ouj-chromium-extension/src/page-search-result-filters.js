@@ -1,15 +1,15 @@
-// 検索結果ページの絞り込み機能(テレビ/ラジオ・字幕ありのみ・未完了のみ・視聴途中のみ・年度・科目)
+// 検索結果ページの絞り込み機能(テレビ/ラジオ・字幕ありのみ・未完了のみ・視聴途中のみ・年度・コース)
 //
-// 種別/字幕/視聴状況/年度/科目の判定にはcontentId単位のAPIリクエストが必要になるため、
+// 種別/字幕/視聴状況/年度/コースの判定にはcontentId単位のAPIリクエストが必要になるため、
 // page-course-select-progress.jsと同様にIntersectionObserverで画面内に入った
 // 項目だけを対象に、同時実行数を制限しながら遅延分類する。未分類の項目は
 // フィルターで隠さず表示し続け、分類が完了した時点で個別に再評価する。
 //
 // 検索結果ページ(se=)だけでなく、動画一覧ページ(ca=の回一覧＝video-select)も同じ
 // #common-list-content > ion-item[role="listitem"] 構造なので、この機構を流用する。
-// video-selectは1科目内の回一覧のため媒体/字幕/年度/科目は全回で共通になり、これらで
+// video-selectは1科目内の回一覧のため媒体/字幕/年度/コースは全回で共通になり、これらで
 // 絞ると全件が消えるだけになる。そこで video-select では視聴状況(未完了/視聴途中)フィルタ
-// と並び替えのみを有効にし、媒体/字幕/年度/科目・最近の検索は出さない。分岐はlist要素上の
+// と並び替えのみを有効にし、媒体/字幕/年度/コース・最近の検索は出さない。分岐はlist要素上の
 // oujFilterContext('search' | 'video-select')で行う(getSearchFilterState / renderFilterBar /
 // classifySearchResultItem)。科目フォルダの一覧(series-select)は別DOMのため
 // page-course-select-filters.jsで対応する。
@@ -57,25 +57,25 @@ function isMediaFilterHidden(itemMedia, mediaState) {
 const SEARCH_KEYWORD_HISTORY_KEY = 'searchKeywordHistory';
 const SEARCH_KEYWORD_HISTORY_MAX = 8;
 
-// 年度・科目の絞り込みは検索ごとに選択肢が変わる（別検索に持ち越すと意図せず全件が
-// 隠れる）ため、設定には保存せずlist要素上のプロパティ(oujYearFilter/oujCourseFilter)で
-// 現在の検索結果表示中のみ保持する
+// 年度・コースの絞り込みは検索ごとに選択肢が変わる（別検索に持ち越すと意図せず全件が
+// 隠れる）ため、設定には保存せずlist要素上のプロパティ(oujYearFilter/oujCourseFilter、
+// いずれも選択値の配列。複数選択可能で、空配列は「すべて」)で現在の検索結果表示中のみ保持する
 function getSearchFilterState(list) {
   const incompleteOnly = window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.incompleteOnly, false);
   const partialOnly = window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.partialOnly, false);
-  // video-select(1科目の回一覧)では媒体/字幕/年度/科目は全回共通。これらで絞ると全件が
+  // video-select(1科目の回一覧)では媒体/字幕/年度/コースは全回共通。これらで絞ると全件が
   // 消えるだけ(例: プリセットで「ラジオのみ」を選んだままテレビ科目を開くと空になる)なので、
   // 保存済みの設定値に関わらず無効化し、視聴状況フィルタのみ効かせる
   if (list && list.oujFilterContext === 'video-select') {
-    return { media: { tv: false, radio: false }, captionOnly: false, incompleteOnly, partialOnly, year: '', courseId: '' };
+    return { media: { tv: false, radio: false }, captionOnly: false, incompleteOnly, partialOnly, year: [], courseId: [] };
   }
   return {
     media: getMediaFilterState(SEARCH_FILTER_SETTINGS_KEYS.media),
     captionOnly: window.getBooleanSetting(SEARCH_FILTER_SETTINGS_KEYS.captionOnly, false),
     incompleteOnly,
     partialOnly,
-    year: (list && list.oujYearFilter) || '',
-    courseId: (list && list.oujCourseFilter) || '',
+    year: (list && Array.isArray(list.oujYearFilter)) ? list.oujYearFilter : [],
+    courseId: (list && Array.isArray(list.oujCourseFilter)) ? list.oujCourseFilter : [],
   };
 }
 
@@ -126,7 +126,7 @@ function applyBadgesToItem(item) {
 
 // 検索結果1件を分類する。分類できた項目のみdataset.oujClassified='done'になる。
 // gateは呼び出し元(startSearchFilterObserver)がページ全体で共有する同時実行数ゲート。
-// contextが'video-select'のときは媒体/字幕/年度/科目のフィルタが無効(全回共通のため)なので、
+// contextが'video-select'のときは媒体/字幕/年度/コースのフィルタが無効(全回共通のため)なので、
 // それらの判定用リクエスト(isCaptionAvailableはDRMチケット発行を伴い重い)は省き、
 // 視聴状況(getVideoViewingStatus)だけを取得する
 async function classifySearchResultItem(item, gate, context = 'search') {
@@ -160,15 +160,25 @@ async function classifySearchResultItem(item, gate, context = 'search') {
     // 既存の並び替え処理との互換用（未視聴を優先ソートで使用）
     item.dataset.oujUnwatched = status && status.isFinished ? '0' : '1';
     if (needMediaCaptionYear) {
-      // 年度・科目はキャッシュ済みのvod-content(上のisRadio等が既に取得済み)から得るので基本キャッシュヒット。
-      // 年度(西暦下2桁)と科目(categoryId＋科目名)。detailの1行目が「科目名（'YY）」形式
+      // 年度・コースはキャッシュ済みのvod-content(上のisRadio等が既に取得済み)から得るので基本キャッシュヒット。
+      // 年度(西暦下2桁)はdetailの1行目「科目名（'YY）」形式から抽出。年度の数字は全角のことが
+      // 多い(utils/year.jsのextractYearFromCategoryNameと同じ判定基準)ため、半角\dだけの
+      // 正規表現では拾えず年度絞り込みの選択肢が常に空になる不具合があった。
+      // コースは動画の科目(categoryId)からさらに親カテゴリ(コース)を辿って求める
+      // (getCourseForSubjectId。学部/大学院 → コース → 科目 → 回の階層で、科目単体より
+      // 粒度の粗いコース単位で絞り込みたいという要望のため科目そのものは使わない)
       const videoData = await gate.run(() => window.getVideoData(contentId));
       if (videoData) {
         const detailLine = (videoData.detail || '').split('\n')[0] || '';
-        const yearMatch = detailLine.match(/（['’‘]?(\d{2})）/);
-        item.dataset.oujCourseId = String(videoData.categoryId || '');
-        item.dataset.oujCourseName = detailLine.replace(/（['’‘]?\d{2}）\s*$/, '').trim() || String(videoData.title || '');
-        if (yearMatch) item.dataset.oujYear = yearMatch[1];
+        const yearMatch = detailLine.match(/[（(][’'‘`]?([0-9０-９]{2})[）)]/);
+        if (yearMatch) item.dataset.oujYear = yearMatch[1].replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xFEE0));
+        const course = videoData.categoryId ? await window.getCourseForSubjectId(videoData.categoryId) : null;
+        if (course) {
+          item.dataset.oujCourseId = String(course.categoryId);
+          // コース名先頭の"01 "等の連番は表示上不要なので、他箇所(search-box-filter-panel.js等)と
+          // 同じくtrimCourseNameで除く
+          item.dataset.oujCourseName = (typeof window.trimCourseName === 'function') ? window.trimCourseName(course.name) : course.name;
+        }
       }
     }
     item.dataset.oujClassified = 'done';
@@ -177,7 +187,7 @@ async function classifySearchResultItem(item, gate, context = 'search') {
   }
   applyFiltersToItem(item);
   applyBadgesToItem(item);
-  // 年度・科目の選択肢は分類が進むにつれて増えるため、都度追記する(video-selectでは選択自体が無いので何もしない)
+  // 年度・コースの選択肢は分類が進むにつれて増えるため、都度追記する(video-selectでは選択自体が無いので何もしない)
   if (needMediaCaptionYear) refreshYearCourseOptions();
 }
 
@@ -196,10 +206,10 @@ function applyFiltersToItem(item, state) {
   if (state.incompleteOnly && item.dataset.oujWatchState === 'done') hidden = true;
   // 「視聴途中のみ」は途中まで見たものだけを表示する
   if (state.partialOnly && item.dataset.oujWatchState !== 'partial') hidden = true;
-  // 年度で絞り込み
-  if (state.year && item.dataset.oujYear !== state.year) hidden = true;
-  // 科目で絞り込み
-  if (state.courseId && item.dataset.oujCourseId !== state.courseId) hidden = true;
+  // 年度で絞り込み（複数選択可。選択した年度のいずれかに合致すれば表示＝OR条件）
+  if (state.year.length && !state.year.includes(item.dataset.oujYear)) hidden = true;
+  // コースで絞り込み（複数選択可。選択したコースのいずれかに合致すれば表示＝OR条件）
+  if (state.courseId.length && !state.courseId.includes(item.dataset.oujCourseId)) hidden = true;
   item.dataset.oujFilterHidden = hidden ? 'true' : 'false';
   window.updateSearchResultItemVisibility(item);
 }
@@ -211,10 +221,10 @@ function applyFilters() {
   list.querySelectorAll(':scope > ion-item[role="listitem"]').forEach((item) => applyFiltersToItem(item, state));
 }
 
-// 分類済み項目から年度・科目の一覧を集める（絞り込みセレクトの選択肢用）
+// 分類済み項目から年度・コースの一覧を集める（絞り込みセレクトの選択肢用）
 function collectYearsAndCourses(list) {
   const years = new Set();
-  const courses = new Map(); // categoryId -> 科目名
+  const courses = new Map(); // categoryId -> コース名
   list.querySelectorAll(':scope > ion-item[role="listitem"]').forEach((item) => {
     if (item.dataset.oujClassified !== 'done') return;
     if (item.dataset.oujYear) years.add(item.dataset.oujYear);
@@ -229,29 +239,19 @@ function collectYearsAndCourses(list) {
   return { yearList, courseList };
 }
 
-// 年度・科目セレクトの選択肢を、現在分類済みの項目から作り直す（選択中の値は保持）
+// 年度・コースドロップダウンの選択肢を、現在分類済みの項目から作り直す（選択中の値は保持）
 function refreshYearCourseOptions() {
   const list = document.querySelector(SEARCH_RESULT_FILTER_LIST_SELECTOR);
   if (!list) return;
-  const yearSelect = document.getElementById('search-filter-year');
-  const courseSelect = document.getElementById('search-filter-course');
-  if (!yearSelect && !courseSelect) return;
+  const yearDropdown = document.getElementById('search-filter-year');
+  const courseDropdown = document.getElementById('search-filter-course');
+  if (!yearDropdown && !courseDropdown) return;
   const { yearList, courseList } = collectYearsAndCourses(list);
-  if (yearSelect) {
-    const cur = yearSelect.value;
-    yearSelect.innerHTML = '';
-    yearSelect.appendChild(new Option('年度: すべて', ''));
-    yearList.forEach((y) => yearSelect.appendChild(new Option(`20${y}年度`, y)));
-    yearSelect.value = cur;
-    if (yearSelect.selectedIndex === -1) yearSelect.value = '';
+  if (yearDropdown && yearDropdown.oujSetOptions) {
+    yearDropdown.oujSetOptions(yearList.map((y) => ({ value: y, label: `20${y}年度` })));
   }
-  if (courseSelect) {
-    const cur = courseSelect.value;
-    courseSelect.innerHTML = '';
-    courseSelect.appendChild(new Option('科目: すべて', ''));
-    courseList.forEach((c) => courseSelect.appendChild(new Option(c.name, c.id)));
-    courseSelect.value = cur;
-    if (courseSelect.selectedIndex === -1) courseSelect.value = '';
+  if (courseDropdown && courseDropdown.oujSetOptions) {
+    courseDropdown.oujSetOptions(courseList.map((c) => ({ value: c.id, label: c.name })));
   }
 }
 
@@ -378,7 +378,7 @@ function renderFilterBar(list) {
     align-items: center;
   `;
 
-  // 媒体・字幕・年度・科目・最近の検索は video-select(1科目の回一覧)では意味がないので出さない
+  // 媒体・字幕・年度・コース・最近の検索は video-select(1科目の回一覧)では意味がないので出さない
   if (!isVideoSelect) {
     // テレビ/ラジオは他のAND条件チップと違いOR条件(どちらかON、両方ONで両方表示)なので独立トグルにする
     bar.appendChild(
@@ -447,45 +447,138 @@ function hideNativeSortControl() {
   });
 }
 
-// 年度・科目の絞り込みセレクト行。選択肢は画面内に入って分類済みになった項目から集める
-// （スクロールに応じてrefreshYearCourseOptionsで追記される）
+// 年度・コースのチェックボックス複数選択ドロップダウン。選択肢が5〜30件程度と多く、
+// テレビ/ラジオのような独立チップ方式では並べきれないため、ボタンをクリックすると
+// チェックボックス一覧が開くカスタムドロップダウンにする。
+// options: [{value, label}] / selected: 選択値の配列（呼び出し元が保持する配列を直接
+// 書き換える。参照を保つことで、renderFilterBarを経由しない再描画(oujSetOptions)でも
+// 選択状態を見失わない）
+function buildMultiSelectDropdown({ label, options, selected, onChange }) {
+  let currentOptions = options;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'ouj-multiselect';
+  wrapper.style.cssText = 'position:relative;display:inline-block;';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.style.cssText = 'font-size:13px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#333;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;text-align:left;';
+
+  const panel = document.createElement('div');
+  panel.className = 'ouj-multiselect-panel';
+  panel.style.cssText = 'display:none;position:absolute;top:100%;left:0;z-index:100;margin-top:2px;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);max-height:260px;overflow-y:auto;min-width:180px;padding:4px 0;';
+
+  function updateButtonText() {
+    if (selected.length === 0) button.textContent = `${label}: すべて`;
+    else if (selected.length === 1) {
+      const opt = currentOptions.find((o) => o.value === selected[0]);
+      button.textContent = `${label}: ${opt ? opt.label : selected[0]}`;
+    } else button.textContent = `${label}: ${selected.length}件選択中`;
+  }
+
+  function renderPanelRows() {
+    panel.innerHTML = '';
+    if (currentOptions.length === 0) {
+      const empty = document.createElement('div');
+      empty.textContent = '選択肢がありません';
+      empty.style.cssText = 'padding:6px 12px;font-size:13px;color:#999;';
+      panel.appendChild(empty);
+      return;
+    }
+    currentOptions.forEach((opt) => {
+      const row = document.createElement('label');
+      row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:13px;color:#333;cursor:pointer;white-space:nowrap;';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = selected.includes(opt.value);
+      checkbox.addEventListener('change', () => {
+        const idx = selected.indexOf(opt.value);
+        if (checkbox.checked && idx === -1) selected.push(opt.value);
+        else if (!checkbox.checked && idx !== -1) selected.splice(idx, 1);
+        updateButtonText();
+        onChange();
+      });
+      row.appendChild(checkbox);
+      const text = document.createElement('span');
+      text.textContent = opt.label;
+      row.appendChild(text);
+      panel.appendChild(row);
+    });
+  }
+
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const willOpen = panel.style.display === 'none';
+    // 他に開いているドロップダウンがあれば閉じる（年度・コースを同時に開かせない）
+    document.querySelectorAll('.ouj-multiselect-panel').forEach((p) => { p.style.display = 'none'; });
+    panel.style.display = willOpen ? 'block' : 'none';
+  });
+
+  wrapper.appendChild(button);
+  wrapper.appendChild(panel);
+  updateButtonText();
+  renderPanelRows();
+  ensureMultiSelectOutsideClickHandler();
+
+  // 分類が進むにつれて選択肢が増えるため、外部(refreshYearCourseOptions)から
+  // 開閉状態を保ったまま選択肢一覧だけ更新できるようにする
+  wrapper.oujSetOptions = (newOptions) => {
+    currentOptions = newOptions;
+    updateButtonText();
+    renderPanelRows();
+  };
+
+  return wrapper;
+}
+
+// ドロップダウンの外側をクリックしたら開いているパネルを閉じる。パネルは
+// renderFilterBarのたびに作り直されるため、リスナーはページに1つだけ登録する
+function ensureMultiSelectOutsideClickHandler() {
+  if (window.__oujMultiSelectOutsideClickInit) return;
+  window.__oujMultiSelectOutsideClickInit = true;
+  document.addEventListener('mousedown', (event) => {
+    document.querySelectorAll('.ouj-multiselect-panel').forEach((panel) => {
+      if (panel.style.display === 'none') return;
+      const wrapper = panel.parentElement;
+      if (wrapper && wrapper.contains(event.target)) return;
+      panel.style.display = 'none';
+    });
+  }, true);
+}
+
+// 年度・コースの絞り込み行。選択肢は画面内に入って分類済みになった項目から集める
+// （スクロールに応じてrefreshYearCourseOptionsで追記される）。複数選択可（OR条件）
 function buildYearCourseRow(list) {
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;margin-top:4px;';
 
   const { yearList, courseList } = collectYearsAndCourses(list);
-  const selectStyle = 'font-size:13px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#333;max-width:220px;';
 
   const label = document.createElement('span');
   label.textContent = '絞り込み:';
   label.style.cssText = 'font-size:13px;color:#666;';
   row.appendChild(label);
 
-  const yearSelect = document.createElement('select');
-  yearSelect.id = 'search-filter-year';
-  yearSelect.style.cssText = selectStyle;
-  yearSelect.appendChild(new Option('年度: すべて', ''));
-  yearList.forEach((y) => yearSelect.appendChild(new Option(`20${y}年度`, y)));
-  yearSelect.value = list.oujYearFilter || '';
-  if (yearSelect.selectedIndex === -1) yearSelect.value = '';
-  yearSelect.addEventListener('change', () => {
-    list.oujYearFilter = yearSelect.value;
-    applyFilters();
-  });
-  row.appendChild(yearSelect);
+  if (!Array.isArray(list.oujYearFilter)) list.oujYearFilter = [];
+  if (!Array.isArray(list.oujCourseFilter)) list.oujCourseFilter = [];
 
-  const courseSelect = document.createElement('select');
-  courseSelect.id = 'search-filter-course';
-  courseSelect.style.cssText = selectStyle;
-  courseSelect.appendChild(new Option('科目: すべて', ''));
-  courseList.forEach((c) => courseSelect.appendChild(new Option(c.name, c.id)));
-  courseSelect.value = list.oujCourseFilter || '';
-  if (courseSelect.selectedIndex === -1) courseSelect.value = '';
-  courseSelect.addEventListener('change', () => {
-    list.oujCourseFilter = courseSelect.value;
-    applyFilters();
+  const yearDropdown = buildMultiSelectDropdown({
+    label: '年度',
+    options: yearList.map((y) => ({ value: y, label: `20${y}年度` })),
+    selected: list.oujYearFilter,
+    onChange: applyFilters,
   });
-  row.appendChild(courseSelect);
+  yearDropdown.id = 'search-filter-year';
+  row.appendChild(yearDropdown);
+
+  const courseDropdown = buildMultiSelectDropdown({
+    label: 'コース',
+    options: courseList.map((c) => ({ value: c.id, label: c.name })),
+    selected: list.oujCourseFilter,
+    onChange: applyFilters,
+  });
+  courseDropdown.id = 'search-filter-course';
+  row.appendChild(courseDropdown);
 
   return row;
 }
@@ -637,7 +730,7 @@ function setupSearchFilterBarOnList(list, context) {
 }
 
 // contextは 'search'(検索結果ページ) | 'video-select'(科目内の回一覧ページ)。
-// video-selectでは検索キーワード履歴の記録・媒体/字幕/年度/科目フィルタを行わない
+// video-selectでは検索キーワード履歴の記録・媒体/字幕/年度/コースフィルタを行わない
 function initializeSearchResultFilters(context = 'search') {
   // 検索キーワードを履歴に記録（「最近の検索」チップ用。検索結果ページのみ）
   if (context === 'search') recordSearchKeyword();
