@@ -236,9 +236,19 @@ async function getCurrentFilterTargetLabel() {
 // 既存の検索結果フィルタ(page-search-result-filters.js)・科目一覧フィルタ
 // (page-course-select-filters.js)と同じ設定キーを読み書きするため、ここで設定した
 // トグルは次に検索結果・科目一覧・回一覧を開いた時にそのまま適用される。
+//
+// 検索結果ページ(se=)・科目一覧ページ(ca=)には、この関数と同じ絞り込みチップを持つ
+// 専用バーが既にページ本体に常時表示されている(page-search-result-filters.js /
+// page-course-select-filters.js)。そのページでこのセクションも出すと、見た目がほぼ同じ
+// チップがもう一組出て二重表示になり紛らわしい(実際に報告された不具合)ため、専用バーが
+// 存在するページではこのセクション自体を省略する。専用バーが無いページ(ホーム等)や、
+// バーがまだ描画され切っていない一瞬の間だけこのセクションが担当する
 function buildPresetSection() {
   const keys = window.OUJ_SEARCH_FILTER_KEYS;
   if (!keys) return null; // フィルタ本体が未ロードなら出さない
+  if (document.getElementById('search-result-filter-bar') || document.getElementById('course-list-filter-bar')) {
+    return null;
+  }
 
   const section = document.createElement('div');
   section.appendChild(buildPanelSectionLabel('絞り込み（検索結果・科目一覧に適用）'));

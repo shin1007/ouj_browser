@@ -826,5 +826,7 @@ window.refreshSearchResultFilterUI = refreshSearchResultFilterUI;
 window.OUJ_SEARCH_FILTER_KEYS = SEARCH_FILTER_SETTINGS_KEYS;
 window.OUJ_SEARCH_KEYWORD_HISTORY_KEY = SEARCH_KEYWORD_HISTORY_KEY;
 window.buildOujFilterChip = buildFilterChip;
+// page-course-select-filters.jsの年度絞り込み(複数選択)から再利用する
+window.buildOujMultiSelectDropdown = buildMultiSelectDropdown;
 window.getOujMediaFilterState = getMediaFilterState;
 window.OUJ_MEDIA_FILTER_CHIP_COLOR = MEDIA_FILTER_CHIP_COLOR;

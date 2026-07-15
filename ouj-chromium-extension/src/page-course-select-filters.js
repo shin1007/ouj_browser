@@ -1,17 +1,19 @@
 // 科目一覧ページ(series-select＝コース選択後の科目フォルダ一覧)の絞り込みバー。
 //
-// 検索結果フィルタ(page-search-result-filters.js)と同じ設定キー・チップUIを流用し、
-// 「テレビ/ラジオ・字幕ありのみ・未完了のみ・視聴途中のみ」で科目フォルダを絞り込む。
-// 検索ボックスのクイック絞り込みパネル(search-box-filter-panel.js)で設定したプリセットも
-// 同じキーを見るため、そのままこのページに反映される。
+// 検索結果フィルタ(page-search-result-filters.js)と同じ設定キー・チップUI・年度複数選択
+// (buildOujMultiSelectDropdown)・並び替え(サイト表示順/新しい順/未視聴を優先/視聴途中を優先)を
+// 流用し、機能的に同等のバーを常時表示する。検索ボックスのクイック絞り込みパネル
+// (search-box-filter-panel.js)で設定したプリセットも同じキーを見るため、そのままこのページに
+// 反映される(このページ自体に専用バーがあるため、検索ボックスパネル側は重複を避けてこのバーが
+// 出ている間は絞り込みセクションを出さない)。
 //
 // 判定材料の入手方法が2系統ある:
 //   ・媒体(テレビ/ラジオ)・字幕: 各行の (テレビ・字幕) / (ラジオ) 等の表示テキストから
 //     即座に判定できる(ネットワーク不要)。ページ表示時に全行へ適用する。
 //   ・未完了/視聴途中: 科目内の各回の視聴状況が必要。getCategoryProgress
 //     (page-course-select-progress.jsの「X/Y回視聴済み」バッジと同じキャッシュを共有)で
-//     取得するが、リクエストを伴うため「未完了のみ/視聴途中のみ」が実際にONの時だけ、
-//     同時実行数を制限しつつ遅延取得する。未取得の行は隠さず表示し続ける。
+//     取得するが、リクエストを伴うため「未完了のみ/視聴途中のみ」または並び替え(未視聴/視聴途中を
+//     優先)が実際に使われた時だけ、同時実行数を制限しつつ遅延取得する。未取得の行は隠さず表示し続ける。
 //
 // 回一覧(video-select)は検索結果と同じ#common-list-content構造のため
 // page-search-result-filters.js側(context='video-select')で対応する。こちらは科目フォルダの
@@ -25,11 +27,20 @@ const COURSE_ITEM_SELECTOR = '#main div.icon-text > .icon-area';
 // フィルタ対象の科目フォルダ行(ion-item)。setupCourseFilterRowsで作り直す
 let courseFilterRows = [];
 
-// 年度絞り込みの選択値（西暦4桁の文字列。''はすべて）。媒体/字幕/視聴状況と違い、
-// コースごとに対象年度が異なり別コースへ持ち越すと意図せず全件が隠れるため、設定には
-// 保存せずモジュール変数として現在表示中のコース内でのみ保持する（検索結果の年度絞り込みと同方針）。
-// 検索ボックスパネルから「年度＋コース」で来た場合はwindow.__oujPendingCourseYearで初期値を受け取る。
-let courseYearFilter = '';
+// 年度絞り込みの選択値（西暦4桁の文字列の配列。複数選択可・空配列はすべて）。媒体/字幕/
+// 視聴状況と違い、コースごとに対象年度が異なり別コースへ持ち越すと意図せず全件が隠れるため、
+// 設定には保存せずモジュール変数として現在表示中のコース内でのみ保持する（検索結果の年度絞り込みと
+// 同方針）。検索ボックスパネルから「年度＋コース」で来た場合はwindow.__oujPendingCourseYearで
+// 初期値を受け取る。buildOujMultiSelectDropdown(page-search-result-filters.js)に選択状態の
+// 配列をそのまま渡して直接書き換えさせるため、以後は同じ配列を使い続け(.length=0でリセット)、
+// 新しい配列に差し替えない
+let courseYearFilter = [];
+
+// 並び替え。'default'(サイト表示順) | 'newest'(新しい順) | 'unwatched'(未視聴を優先) |
+// 'partial'(視聴途中を優先)。検索結果ページ(page-search-result-filters.js)のapplySearchResultSortと
+// 同じ方針。ページ単位の状態のためモジュール変数として保持する
+let courseSortMode = 'default';
+let courseSortLoading = false;
 
 // フォールバック用の設定キー(page-search-result-filters.jsが先に読み込まれていれば
 // window.OUJ_SEARCH_FILTER_KEYSが使える。読み込み順の都合で未定義でも動くようにしておく)
@@ -99,11 +110,12 @@ function isCourseWatchHidden(row, state) {
   return false;
 }
 
-// 年度フィルタで隠れる行か。年度は科目名末尾の（'YY）から判定済み(oujCourseYear)。
-// 年度不明の科目(oujCourseYearが空)は、年度を指定すると隠れる（該当年度と確定できないため）
+// 年度フィルタで隠れる行か（複数選択可。選択した年度のいずれかに合致すれば表示＝OR条件）。
+// 年度は科目名末尾の（'YY）から判定済み(oujCourseYear)。年度不明の科目(oujCourseYearが空)は、
+// 年度を指定すると隠れる（該当年度と確定できないため）
 function isCourseYearHidden(row, state) {
-  if (!state.year) return false;
-  return row.dataset.oujCourseYear !== state.year;
+  if (!state.year.length) return false;
+  return !state.year.includes(row.dataset.oujCourseYear);
 }
 
 function applyCourseFiltersToRow(row, state) {
@@ -136,6 +148,19 @@ async function classifyCourseWatch(row, gate) {
   applyCourseFiltersToRow(row, getCourseFilterState());
 }
 
+// rowの視聴状況分類を開始する。既に分類中(pending)の行は、その場で新規に呼ぶと同じ
+// categoryIdへのリクエストが二重に走ってしまうため、既存のPromiseがあればそれを使い回す
+// (検索結果ページのclassifySearchResultItem呼び出し元と同じ方針)
+function classifyCourseWatchDeduped(row, gate) {
+  if (row.dataset.oujCourseWatchClass === 'pending' && row.__oujCourseClassifyPromise) {
+    return row.__oujCourseClassifyPromise;
+  }
+  row.dataset.oujCourseWatchClass = 'pending';
+  const promise = classifyCourseWatch(row, gate);
+  row.__oujCourseClassifyPromise = promise;
+  return promise;
+}
+
 // 視聴状況フィルタがONのとき、まだ視聴状況を取得していない行をまとめて分類する。
 // 媒体・字幕・年度で既に隠れる行は無駄なリクエストを避けるため対象外にする（サーバー負荷最小化）
 async function classifyCourseWatchForActiveFilter(rows, state) {
@@ -146,12 +171,11 @@ async function classifyCourseWatchForActiveFilter(rows, state) {
     !isCourseYearHidden(row, state)
   );
   if (targets.length === 0) return;
-  targets.forEach((row) => { row.dataset.oujCourseWatchClass = 'pending'; });
   setCourseFilterLoading(true);
   // 科目一覧全体で共有する同時実行数ゲート。科目ごとに個別の並列数を持たせると
   // 合計の同時リクエスト数が際限なく増えてしまう
   const gate = window.createConcurrencyGate(4);
-  await Promise.all(targets.map((row) => classifyCourseWatch(row, gate)));
+  await Promise.all(targets.map((row) => classifyCourseWatchDeduped(row, gate)));
   setCourseFilterLoading(false);
 }
 
@@ -162,6 +186,57 @@ function applyCourseFilters() {
     // 遅延分類(取得できた行から順に隠れていく)。完了を待つ必要はない
     classifyCourseWatchForActiveFilter(courseFilterRows, state);
   }
+}
+
+// 並び替え。「未視聴を優先」「視聴途中を優先」は全行の視聴状況(サーバーリクエスト)が必要になるため、
+// ユーザーが並び替えチップを明示的にクリックした時だけ発火させる(検索結果ページのapplySearchResultSortと同方針)
+async function applyCourseSort() {
+  const rows = courseFilterRows;
+  if (rows.length === 0) return;
+
+  if (courseSortMode === 'unwatched' || courseSortMode === 'partial') {
+    const targets = rows.filter((row) => row.dataset.oujCourseWatchClass !== 'done');
+    if (targets.length > 0) {
+      setCourseFilterLoading(true);
+      const gate = window.createConcurrencyGate(4);
+      await Promise.all(targets.map((row) => classifyCourseWatchDeduped(row, gate)));
+      setCourseFilterLoading(false);
+    }
+  }
+
+  const sortByWatchStateRank = (stateRank) =>
+    rows.slice().sort((a, b) => {
+      const rankA = stateRank(a);
+      const rankB = stateRank(b);
+      if (rankA !== rankB) return rankA - rankB;
+      return Number(a.dataset.oujCourseSiteOrder || 0) - Number(b.dataset.oujCourseSiteOrder || 0);
+    });
+
+  let sorted;
+  if (courseSortMode === 'newest') {
+    // categoryIdは新しく追加された科目ほど大きい値になる傾向があるため、追加リクエストなしで近似できる
+    sorted = rows.slice().sort((a, b) => (Number(b.oujCourseCategoryId) || 0) - (Number(a.oujCourseCategoryId) || 0));
+  } else if (courseSortMode === 'unwatched') {
+    // 未視聴 → 視聴途中 → 視聴済み の順に並べる
+    sorted = sortByWatchStateRank((row) => {
+      if (row.dataset.oujCourseWatchState === 'complete') return 2;
+      if (row.dataset.oujCourseWatchState === 'partial') return 1;
+      return 0;
+    });
+  } else if (courseSortMode === 'partial') {
+    // 視聴途中 → 未視聴 → 視聴済み の順に並べる（続きを見たいものを最優先）
+    sorted = sortByWatchStateRank((row) => {
+      if (row.dataset.oujCourseWatchState === 'partial') return 0;
+      if (row.dataset.oujCourseWatchState === 'complete') return 2;
+      return 1;
+    });
+  } else {
+    sorted = rows.slice().sort((a, b) => Number(a.dataset.oujCourseSiteOrder || 0) - Number(b.dataset.oujCourseSiteOrder || 0));
+  }
+
+  const container = getCourseListContainer();
+  if (!container) return;
+  sorted.forEach((row) => container.appendChild(row));
 }
 
 // 科目フォルダ行を集めて、媒体・字幕を確定させ、categoryIdを紐付ける
@@ -186,6 +261,8 @@ function setupCourseFilterRows(childCategories, items) {
     row.dataset.oujCourseYear = year ? String(year) : '';
     // 視聴状況は必要時に取得。再セットアップ時は既存の分類結果を保持する
     if (row.dataset.oujCourseWatchClass === undefined) row.dataset.oujCourseWatchClass = 'none';
+    // 並び替え「サイト表示順」に戻すための元の表示順インデックス
+    row.dataset.oujCourseSiteOrder = String(i);
     courseFilterRows.push(row);
   }
 }
@@ -270,25 +347,19 @@ function renderCourseFilterBar() {
     onChange();
   }));
 
-  // 年度セレクト（このコースに含まれる年度のみ）。年度が1つも取れない場合は出さない。
-  // 値の変更はバー全体を作り直さず applyCourseFilters のみ呼ぶ（selectの選択状態を保つ）
-  // TODO: 検索結果ページ(page-search-result-filters.jsのbuildMultiSelectDropdown)と同様に
-  // 複数年度選択に対応させる余地がある。今回は検索結果ページのみ対応（要望範囲外のため見送り）。
-  // 対応する場合はcourseYearFilterを配列化し、isCourseYearHiddenをOR条件に変更する
+  // 年度の複数選択ドロップダウン（このコースに含まれる年度のみ）。年度が1つも取れない場合は出さない。
+  // 検索結果ページと同じbuildOujMultiSelectDropdown(page-search-result-filters.js)を再利用し、
+  // courseYearFilter配列を直接書き換えさせる。値の変更はバー全体を作り直さずapplyCourseFiltersのみ呼ぶ
   const years = collectCourseYears();
-  if (years.length > 0) {
-    const yearSelect = document.createElement('select');
-    yearSelect.id = 'course-filter-year';
-    yearSelect.style.cssText = 'font-size:13px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#333;margin:0 8px 8px 0;';
-    yearSelect.appendChild(new Option('年度: すべて', ''));
-    years.forEach((y) => yearSelect.appendChild(new Option(`${y}年度`, y)));
-    yearSelect.value = courseYearFilter;
-    if (yearSelect.selectedIndex === -1) yearSelect.value = '';
-    yearSelect.addEventListener('change', () => {
-      courseYearFilter = yearSelect.value;
-      applyCourseFilters();
+  if (years.length > 0 && typeof window.buildOujMultiSelectDropdown === 'function') {
+    const yearDropdown = window.buildOujMultiSelectDropdown({
+      label: '年度',
+      options: years.map((y) => ({ value: y, label: `${y}年度` })),
+      selected: courseYearFilter,
+      onChange: applyCourseFilters,
     });
-    bar.appendChild(yearSelect);
+    yearDropdown.id = 'course-filter-year';
+    bar.appendChild(yearDropdown);
   }
 
   const loading = document.createElement('span');
@@ -297,7 +368,47 @@ function renderCourseFilterBar() {
   loading.style.cssText = 'font-size:12px;color:#999;margin-left:4px;display:none;';
   bar.appendChild(loading);
 
+  bar.appendChild(buildCourseSortRow());
+
   list.parentNode.insertBefore(bar, list);
+}
+
+// 並び替えチップ行。検索結果ページ(page-search-result-filters.jsのbuildSortRow)と同じ4種
+function buildCourseSortRow() {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;width:100%;margin-top:4px;';
+
+  const label = document.createElement('span');
+  label.textContent = '並び替え:';
+  label.style.cssText = 'font-size:13px;color:#666;margin-right:8px;';
+  row.appendChild(label);
+
+  const sortOptions = [
+    { value: 'default', label: 'サイト表示順' },
+    { value: 'newest', label: '新しい順' },
+    { value: 'unwatched', label: '未視聴を優先' },
+    { value: 'partial', label: '視聴途中を優先' },
+  ];
+  sortOptions.forEach(({ value, label: optionLabel }) => {
+    row.appendChild(makeCourseChip(optionLabel, courseSortMode === value, async () => {
+      if (courseSortMode === value && !courseSortLoading) return;
+      courseSortMode = value;
+      courseSortLoading = value === 'unwatched' || value === 'partial';
+      renderCourseFilterBar();
+      await applyCourseSort();
+      courseSortLoading = false;
+      renderCourseFilterBar();
+    }));
+  });
+
+  if (courseSortLoading) {
+    const loading = document.createElement('span');
+    loading.textContent = '並び替え中...';
+    loading.style.cssText = 'font-size:12px;color:#999;margin-left:8px;';
+    row.appendChild(loading);
+  }
+
+  return row;
 }
 
 // 検索ボックスのプリセットパネルなどからトグルが変わった時に、科目一覧の
@@ -348,13 +459,18 @@ async function initializeCourseListFilters(startUrl) {
 
   setupCourseFilterRows(childCategories, items);
   // 年度絞り込みは別コースへ持ち越さない。検索ボックスパネルから「年度＋コース」で来た場合のみ、
-  // その年度で初期絞り込みする（受け取ったら即クリアして次回以降に残さない）
-  courseYearFilter = window.__oujPendingCourseYear ? String(window.__oujPendingCourseYear) : '';
+  // その年度で初期絞り込みする（受け取ったら即クリアして次回以降に残さない）。courseYearFilterは
+  // buildOujMultiSelectDropdownに参照を渡し続けるため、新しい配列に差し替えず中身だけ入れ替える
+  courseYearFilter.length = 0;
+  if (window.__oujPendingCourseYear) courseYearFilter.push(String(window.__oujPendingCourseYear));
   window.__oujPendingCourseYear = '';
   // 渡された年度がこのコースに存在しない場合は「すべて」に戻す（全科目が消えて空表示になるのを防ぐ）
-  if (courseYearFilter && !collectCourseYears().includes(courseYearFilter)) {
-    courseYearFilter = '';
+  if (courseYearFilter.length && !collectCourseYears().includes(courseYearFilter[0])) {
+    courseYearFilter.length = 0;
   }
+  // 並び替えも別コースへ持ち越さない
+  courseSortMode = 'default';
+  courseSortLoading = false;
   renderCourseFilterBar();
   applyCourseFilters();
 }
