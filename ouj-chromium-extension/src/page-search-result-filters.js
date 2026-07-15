@@ -28,6 +28,13 @@
 
 const SEARCH_RESULT_FILTER_LIST_SELECTOR = '#common-list-content';
 
+// フィルタの判定結果(dataset.oujFilterHidden)に応じて表示/非表示を切り替える共通関数。
+// 以前は重複講義の非表示機能(page-search-result.js)もこのdatasetと合わせて判定していたが、
+// 重複扱いされた科目が検索結果から見えなくなるのは望ましくないとのことでその機能自体を廃止した
+function updateSearchResultItemVisibility(item) {
+    item.style.display = item.dataset.oujFilterHidden === 'true' ? 'none' : '';
+}
+
 const SEARCH_FILTER_SETTINGS_KEYS = {
   media: 'searchFilterMedia', // {tv: boolean, radio: boolean}。テレビ/ラジオはOR条件。既定(未操作時)は両方ONで「すべて」、両方OFFにすると0件になる
   captionOnly: 'searchFilterCaptionOnly',
@@ -822,6 +829,7 @@ function refreshSearchResultFilterUI() {
 
 window.initializeSearchResultFilters = initializeSearchResultFilters;
 window.refreshSearchResultFilterUI = refreshSearchResultFilterUI;
+window.updateSearchResultItemVisibility = updateSearchResultItemVisibility;
 // 検索ボックスのクイック絞り込みパネルから再利用する設定キー・履歴キー・チップ生成関数
 window.OUJ_SEARCH_FILTER_KEYS = SEARCH_FILTER_SETTINGS_KEYS;
 window.OUJ_SEARCH_KEYWORD_HISTORY_KEY = SEARCH_KEYWORD_HISTORY_KEY;

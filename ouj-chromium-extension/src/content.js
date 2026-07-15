@@ -61,7 +61,6 @@ async function main() {
     }
     await window.handleHomePageAutoLogin();
   } else if (pageType.page === 'search-result') {
-    window.startSearchResultDedupObserver();
     window.initializeSearchResultFilters();
   } else if (pageType.page === 'player') {
     window.addFavoriteButtonToBreadCrumbs();
