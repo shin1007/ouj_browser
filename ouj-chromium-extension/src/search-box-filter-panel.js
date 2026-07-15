@@ -28,9 +28,22 @@ const OUJ_VOD_BASE_URL = 'https://v.ouj.ac.jp/view/ouj/#/navi/vod';
 // バグ: ログイン済みなのに検索のコース選択欄が数件しか出ないことがある)。cachedCategoriesData
 // と同じスタンプを見ることで、どのタブがいつログイン/ログアウトしたかによらず、実際に
 // キャッシュが更新されたかどうかだけを正しく検知できる。
+//
+// 上記だけでは塞げない別の競合が残っていた: login-state.jsの監視(500ms間隔ポーリング)は
+// ページ読み込み直後に一度check()を実行するが、content.jsのmain()はこれをawaitせず
+// 後続処理(initSearchBoxFilterPanel等)を続ける。そのため「ページを開いた直後、ログイン
+// 検知→cachedCategoriesData破棄が完了しきる前」にこのパネルを開くと、まだ古いスタンプ
+// (前回ゲスト時点等)のままの永続キャッシュを新鮮なものとして読み込んでしまう
+// (実機・Playwrightで再現確認済み: seedしたゲスト時点の小さいキャッシュが、ログイン
+// 済みタブでも一瞬そのまま表示された)。そこでスタンプを読む前に
+// syncOujLoginStateAndInvalidate()自体をここでも呼び、進行中/未着手の無効化処理を
+// 先に完了させてから判定する(既に処理済みなら即nullを返すだけなので軽い)。
 let oujBrowseDataPromise = null;
 let oujBrowseDataCategoriesStamp = null;
 async function getBrowseData() {
+  if (typeof window.syncOujLoginStateAndInvalidate === 'function') {
+    await window.syncOujLoginStateAndInvalidate();
+  }
   const currentStamp = (typeof window.getStampedCategoriesLoginState === 'function')
     ? await window.getStampedCategoriesLoginState()
     : null;
