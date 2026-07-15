@@ -62,17 +62,22 @@ async function isRadioProgram(contentId) {
   // 動画IDから現在のカテゴリデータを取得
   const currentCategory = await window.getCategoryDataFromContentId(currentVideoId);
   if (!currentCategory) return false;
+
+  // 検索結果一覧など、動画要素が存在しないページでの判定はカテゴリの説明文に頼るしかない。
+  // 「ラジオ番組の字幕付加実験」配下でも、サイト上はラジオ番組として案内されている科目に
+  // 変わりはないため、一覧の絞り込み(テレビ/ラジオチップ)ではsummaryの表記をそのまま使う。
+  // 下の「テレビ番組扱いとする」上書きは、実際に映像を確認できる再生ページ限定の判定
+  // (isTvSize)に対する例外なので、ここでは適用しない
+  if (isExplicitContentId) {
+    return !!(currentCategory.summary && currentCategory.summary.startsWith('(ラジオ'));
+  }
+
   // ラジオ番組の字幕付加実験のカテゴリはテレビ番組扱いとする。
   // grandParentCategoryNameから判断（parentだと教養学部か大学院になる。）
   const parentId = currentCategory.parentId;
   const grandParentCategoryName = await window.getParentCategoryName(parentId);
   if (grandParentCategoryName && grandParentCategoryName.includes('ラジオ番組の字幕付加実験')) {
     return false;
-  }
-
-  // 検索結果一覧など、動画要素が存在しないページでの判定はカテゴリの説明文に頼るしかない
-  if (isExplicitContentId) {
-    return !!(currentCategory.summary && currentCategory.summary.startsWith('(ラジオ'));
   }
 
   // 再生中のページでは、実際の動画ストリームの解像度を判定材料にする。カテゴリの説明文が
