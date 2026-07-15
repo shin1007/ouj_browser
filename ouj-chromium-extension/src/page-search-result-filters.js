@@ -4,6 +4,9 @@
 // page-course-select-progress.jsと同様にIntersectionObserverで画面内に入った
 // 項目だけを対象に、同時実行数を制限しながら遅延分類する。未分類の項目は
 // フィルターで隠さず表示し続け、分類が完了した時点で個別に再評価する。
+// ただし年度・コースの「選択肢一覧」自体はこの遅延分類を待たない。サイト全体の
+// 授業一覧(loadYearCourseOptions)から直接求めるため、スクロールや個々の項目の
+// 分類完了を待たずに揃う(選んだ年度・コースが今回の検索結果に無ければ0件表示になる)。
 //
 // 検索結果ページ(se=)だけでなく、動画一覧ページ(ca=の回一覧＝video-select)も同じ
 // #common-list-content > ion-item[role="listitem"] 構造なので、この機構を流用する。
@@ -173,12 +176,7 @@ async function classifySearchResultItem(item, gate, context = 'search') {
         const yearMatch = detailLine.match(/[（(][’'‘`]?([0-9０-９]{2})[）)]/);
         if (yearMatch) item.dataset.oujYear = yearMatch[1].replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xFEE0));
         const course = videoData.categoryId ? await window.getCourseForSubjectId(videoData.categoryId) : null;
-        if (course) {
-          item.dataset.oujCourseId = String(course.categoryId);
-          // コース名先頭の"01 "等の連番は表示上不要なので、他箇所(search-box-filter-panel.js等)と
-          // 同じくtrimCourseNameで除く
-          item.dataset.oujCourseName = (typeof window.trimCourseName === 'function') ? window.trimCourseName(course.name) : course.name;
-        }
+        if (course) item.dataset.oujCourseId = String(course.categoryId);
       }
     }
     item.dataset.oujClassified = 'done';
@@ -187,8 +185,6 @@ async function classifySearchResultItem(item, gate, context = 'search') {
   }
   applyFiltersToItem(item);
   applyBadgesToItem(item);
-  // 年度・コースの選択肢は分類が進むにつれて増えるため、都度追記する(video-selectでは選択自体が無いので何もしない)
-  if (needMediaCaptionYear) refreshYearCourseOptions();
 }
 
 // 分類済みの項目にのみフィルター条件を適用する。未分類・分類不能の項目は隠さない
@@ -221,38 +217,42 @@ function applyFilters() {
   list.querySelectorAll(':scope > ion-item[role="listitem"]').forEach((item) => applyFiltersToItem(item, state));
 }
 
-// 分類済み項目から年度・コースの一覧を集める（絞り込みセレクトの選択肢用）
-function collectYearsAndCourses(list) {
-  const years = new Set();
-  const courses = new Map(); // categoryId -> コース名
-  list.querySelectorAll(':scope > ion-item[role="listitem"]').forEach((item) => {
-    if (item.dataset.oujClassified !== 'done') return;
-    if (item.dataset.oujYear) years.add(item.dataset.oujYear);
-    if (item.dataset.oujCourseId) {
-      courses.set(item.dataset.oujCourseId, item.dataset.oujCourseName || item.dataset.oujCourseId);
-    }
-  });
-  const yearList = Array.from(years).sort((a, b) => Number(b) - Number(a));
-  const courseList = Array.from(courses.entries())
-    .map(([id, name]) => ({ id, name }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'ja'));
-  return { yearList, courseList };
-}
+// 年度・コースの選択肢は、検索結果に実際に含まれる項目の分類状況に関わらず、サイト全体の
+// 授業一覧(カテゴリツリー)から一度だけ求めて使う。
+// 以前は画面内に入って分類が終わった項目だけから選択肢を集めていたため、スクロールしないと
+// 選択肢が増えない・全項目を分類し終えるまで「読み込み中」のままになるなど、項目数の多い
+// 検索結果で不必要に待たされる不具合があった。授業一覧から直接求めれば分類を待つ必要が無く
+// なるが、選択した年度・コースが今回の検索結果に1件も無く0件表示になることはある(許容する)。
+// 検索ボックスの絞り込みパネル(search-box-filter-panel.js)と同じ
+// createYearListData/getCourseGroups(utils/year.js・utils/categories.js)を再利用するため、
+// 両パネルで選択肢が一致する
+let cachedYearCourseOptions = null; // { yearOptions, courseOptions } (両方揃ってから確定)
+let yearCourseOptionsPromise = null;
 
-// 年度・コースドロップダウンの選択肢を、現在分類済みの項目から作り直す（選択中の値は保持）
-function refreshYearCourseOptions() {
-  const list = document.querySelector(SEARCH_RESULT_FILTER_LIST_SELECTOR);
-  if (!list) return;
-  const yearDropdown = document.getElementById('search-filter-year');
-  const courseDropdown = document.getElementById('search-filter-course');
-  if (!yearDropdown && !courseDropdown) return;
-  const { yearList, courseList } = collectYearsAndCourses(list);
-  if (yearDropdown && yearDropdown.oujSetOptions) {
-    yearDropdown.oujSetOptions(yearList.map((y) => ({ value: y, label: `20${y}年度` })));
-  }
-  if (courseDropdown && courseDropdown.oujSetOptions) {
-    courseDropdown.oujSetOptions(courseList.map((c) => ({ value: c.id, label: c.name })));
-  }
+function loadYearCourseOptions() {
+  if (cachedYearCourseOptions) return Promise.resolve(cachedYearCourseOptions);
+  if (yearCourseOptionsPromise) return yearCourseOptionsPromise;
+  yearCourseOptionsPromise = (async () => {
+    let yearOptions = [];
+    let courseOptions = [];
+    try {
+      if (typeof window.createYearListData === 'function') {
+        const { yearBuckets } = await window.createYearListData();
+        yearOptions = yearBuckets.map((b) => ({ value: String(b.year).slice(-2), label: `${b.year}年度` }));
+      }
+    } catch (e) { /* 取得失敗時は選択肢なし(=絞り込み無し)のまま */ }
+    try {
+      if (typeof window.getCourseGroups === 'function') {
+        const groups = await window.getCourseGroups();
+        const trim = (name) => (typeof window.trimCourseName === 'function') ? window.trimCourseName(name) : name;
+        groups.forEach((g) => g.courses.forEach((c) => courseOptions.push({ value: String(c.categoryId), label: trim(c.name) })));
+        courseOptions.sort((a, b) => a.label.localeCompare(b.label, 'ja'));
+      }
+    } catch (e) { /* 取得失敗時は選択肢なし(=絞り込み無し)のまま */ }
+    cachedYearCourseOptions = { yearOptions, courseOptions };
+    return cachedYearCourseOptions;
+  })();
+  return yearCourseOptionsPromise;
 }
 
 // --- 並び替え機能 ---
@@ -453,8 +453,14 @@ function hideNativeSortControl() {
 // options: [{value, label}] / selected: 選択値の配列（呼び出し元が保持する配列を直接
 // 書き換える。参照を保つことで、renderFilterBarを経由しない再描画(oujSetOptions)でも
 // 選択状態を見失わない）
-function buildMultiSelectDropdown({ label, options, selected, onChange }) {
+// isLoading: trueの間は選択肢0件でも「選択肢がありません」ではなく「読み込み中...」を出す。
+// 分類はページ内の項目を画面内に入るたびに遅延実行するため、表示直後は大半が未分類で
+// 選択肢が一時的に0件になる。この間も「選択肢がありません」と表示すると、後から分類が
+// 進んで選択肢が増えても既にドロップダウンを閉じたユーザーには「選べない」ように見えて
+// しまう(実際に報告された不具合)。分類中は区別して案内する
+function buildMultiSelectDropdown({ label, options, selected, onChange, isLoading = false }) {
   let currentOptions = options;
+  let currentIsLoading = isLoading;
 
   const wrapper = document.createElement('div');
   wrapper.className = 'ouj-multiselect';
@@ -480,7 +486,7 @@ function buildMultiSelectDropdown({ label, options, selected, onChange }) {
     panel.innerHTML = '';
     if (currentOptions.length === 0) {
       const empty = document.createElement('div');
-      empty.textContent = '選択肢がありません';
+      empty.textContent = currentIsLoading ? '読み込み中...' : '選択肢がありません';
       empty.style.cssText = 'padding:6px 12px;font-size:13px;color:#999;';
       panel.appendChild(empty);
       return;
@@ -520,10 +526,11 @@ function buildMultiSelectDropdown({ label, options, selected, onChange }) {
   renderPanelRows();
   ensureMultiSelectOutsideClickHandler();
 
-  // 分類が進むにつれて選択肢が増えるため、外部(refreshYearCourseOptions)から
-  // 開閉状態を保ったまま選択肢一覧だけ更新できるようにする
-  wrapper.oujSetOptions = (newOptions) => {
+  // 年度・コースは選択肢の取得(loadYearCourseOptions)が非同期のため、外部から
+  // 開閉状態を保ったまま選択肢一覧・読み込み中フラグを後から差し替えられるようにする
+  wrapper.oujSetOptions = (newOptions, newIsLoading = false) => {
     currentOptions = newOptions;
+    currentIsLoading = newIsLoading;
     updateButtonText();
     renderPanelRows();
   };
@@ -546,13 +553,14 @@ function ensureMultiSelectOutsideClickHandler() {
   }, true);
 }
 
-// 年度・コースの絞り込み行。選択肢は画面内に入って分類済みになった項目から集める
-// （スクロールに応じてrefreshYearCourseOptionsで追記される）。複数選択可（OR条件）
+// 年度・コースの絞り込み行。選択肢はサイト全体の授業一覧(loadYearCourseOptions)から取得する。
+// 初回はキャッシュがまだ無いため非同期取得を待つ間「読み込み中」を出し、取得できた時点で
+// 差し替える。以降は再検索してもキャッシュを再利用するため即座に選択肢が揃う。複数選択可（OR条件）
 function buildYearCourseRow(list) {
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;margin-top:4px;';
 
-  const { yearList, courseList } = collectYearsAndCourses(list);
+  const isLoaded = !!cachedYearCourseOptions;
 
   const label = document.createElement('span');
   label.textContent = '絞り込み:';
@@ -564,21 +572,30 @@ function buildYearCourseRow(list) {
 
   const yearDropdown = buildMultiSelectDropdown({
     label: '年度',
-    options: yearList.map((y) => ({ value: y, label: `20${y}年度` })),
+    options: isLoaded ? cachedYearCourseOptions.yearOptions : [],
     selected: list.oujYearFilter,
     onChange: applyFilters,
+    isLoading: !isLoaded,
   });
   yearDropdown.id = 'search-filter-year';
   row.appendChild(yearDropdown);
 
   const courseDropdown = buildMultiSelectDropdown({
     label: 'コース',
-    options: courseList.map((c) => ({ value: c.id, label: c.name })),
+    options: isLoaded ? cachedYearCourseOptions.courseOptions : [],
     selected: list.oujCourseFilter,
     onChange: applyFilters,
+    isLoading: !isLoaded,
   });
   courseDropdown.id = 'search-filter-course';
   row.appendChild(courseDropdown);
+
+  if (!isLoaded) {
+    loadYearCourseOptions().then((options) => {
+      if (yearDropdown.oujSetOptions) yearDropdown.oujSetOptions(options.yearOptions, false);
+      if (courseDropdown.oujSetOptions) courseDropdown.oujSetOptions(options.courseOptions, false);
+    });
+  }
 
   return row;
 }
