@@ -2,8 +2,10 @@
 //
 // 種別/字幕/視聴状況/年度/コースの判定にはcontentId単位のAPIリクエストが必要になるため、
 // page-course-select-progress.jsと同様にIntersectionObserverで画面内に入った
-// 項目だけを対象に、同時実行数を制限しながら遅延分類する。未分類の項目は
-// フィルターで隠さず表示し続け、分類が完了した時点で個別に再評価する。
+// 項目だけを対象に、同時実行数を制限しながら遅延分類する。フィルタが1つも有効でない間は
+// 未分類の項目も隠さず表示し続けるが、フィルタが有効な間は未分類の項目を分類完了まで
+// 一旦隠す(isAnyResultFilterActive/applyFiltersToItem)。後から対象外と判明した項目が
+// 表示済み一覧から脱落して下の項目が繰り上がる(=並びが入れ替わって見える)ことを防ぐため。
 // ただし年度・コースの「選択肢一覧」自体はこの遅延分類を待たない。サイト全体の
 // 授業一覧(loadYearCourseOptions)から直接求めるため、スクロールや個々の項目の
 // 分類完了を待たずに揃う(選んだ年度・コースが今回の検索結果に無ければ0件表示になる)。
@@ -187,11 +189,26 @@ async function classifySearchResultItem(item, gate, context = 'search') {
   applyBadgesToItem(item);
 }
 
-// 分類済みの項目にのみフィルター条件を適用する。未分類・分類不能の項目は隠さない
+// 何らかのフィルタ条件が有効になっているか(絞り込みが1つも掛かっていない「すべて表示」
+// 状態かどうか)。未分類項目の暫定表示可否の判定に使う
+function isAnyResultFilterActive(state) {
+  return state.media.tv || state.media.radio || state.captionOnly ||
+    state.incompleteOnly || state.partialOnly || state.year.length > 0 || state.courseId.length > 0;
+}
+
+// 分類済みの項目にフィルター条件を適用する。
+// フィルタが1つも有効でなければ、未分類・分類不能の項目も判定を待たずそのまま表示する
+// (絞り込みが無いなら隠す理由が無い)。
+// 一方、フィルタが有効な間は未分類の項目を暫定的に表示せず、分類完了まで隠す。
+// これは「未分類の項目もとりあえず表示し、分類完了後に対象外と判明したら隠す」という
+// 以前の実装だと、スクロールにつれて表示済みの項目が次々と脱落し、下の項目が繰り上がる
+// ことで一覧の並びが入れ替わったように見えてしまう不具合があったため
+// (実際に報告された不具合)。分類完了まで隠すことで、対象外の項目がそもそも表示されず、
+// 該当すると判明した項目だけが順次追加表示される自然な挙動になる
 function applyFiltersToItem(item, state) {
   if (!state) state = getSearchFilterState(document.querySelector(SEARCH_RESULT_FILTER_LIST_SELECTOR));
   if (item.dataset.oujClassified !== 'done') {
-    item.dataset.oujFilterHidden = 'false';
+    item.dataset.oujFilterHidden = isAnyResultFilterActive(state) ? 'true' : 'false';
     window.updateSearchResultItemVisibility(item);
     return;
   }
