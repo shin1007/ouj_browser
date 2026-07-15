@@ -245,7 +245,20 @@ function loadYearCourseOptions() {
       if (typeof window.getCourseGroups === 'function') {
         const groups = await window.getCourseGroups();
         const trim = (name) => (typeof window.trimCourseName === 'function') ? window.trimCourseName(name) : name;
-        groups.forEach((g) => g.courses.forEach((c) => courseOptions.push({ value: String(c.categoryId), label: trim(c.name) })));
+        // 未ログイン(ゲスト)時は「01 テレビ」「02 ラジオ」がそれぞれ独立した大分類になり、
+        // その下に同名の「OCW（全15回公開）」「授業科目(等)一覧（1回分のみ公開）」が
+        // 別コースとして存在する。名前だけでは区別が付かないため、同名のコースが複数ある
+        // 場合に限り所属する大分類名を付記して区別する。特定の文言(「テレビ」「OCW」等)を
+        // 直接ハードコードすると表記が変わった時に効かなくなるため、あくまで名前の衝突検出で
+        // 判定する(衝突していない通常の学部/大学院配下のコースには何も付けない)
+        const raw = [];
+        groups.forEach((g) => g.courses.forEach((c) => raw.push({ value: String(c.categoryId), label: trim(c.name), groupLabel: trim(g.parentName) })));
+        const labelCounts = new Map();
+        raw.forEach((c) => labelCounts.set(c.label, (labelCounts.get(c.label) || 0) + 1));
+        raw.forEach((c) => {
+          const label = labelCounts.get(c.label) > 1 ? `${c.label}（${c.groupLabel}）` : c.label;
+          courseOptions.push({ value: c.value, label });
+        });
         courseOptions.sort((a, b) => a.label.localeCompare(b.label, 'ja'));
       }
     } catch (e) { /* 取得失敗時は選択肢なし(=絞り込み無し)のまま */ }
