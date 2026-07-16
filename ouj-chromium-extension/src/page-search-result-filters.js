@@ -27,6 +27,13 @@
 // 2ファイルが候補。
 
 const SEARCH_RESULT_FILTER_LIST_SELECTOR = '#common-list-content';
+// TODO: menu-native-shell.jsのrenderNativeVideoListMainHtml(お気に入り/履歴/おすすめ動画パネル)
+// も同じid="common-list-content"を持つ要素を#ouj-native-overlay内に生成する。document.querySelector
+// はID重複時は文書順で最初の要素を返すため通常は本来ページ側(overlayより手前)が優先されるが、
+// page-course-select-filters.jsのCOURSE_ITEM_SELECTORで実際に確認したのと同じ理屈で、本来ページ側の
+// #common-list-contentがまだ描画され切っていない瞬間にこれらのパネルが開いていると、オーバーレイ側を
+// 誤って掴む可能性がある。今回はCOURSE_ITEM_SELECTOR側のみ実機再現・修正した(要望範囲外のため見送り)。
+// 対応するならqueryCourseItems同様、`.closest('#ouj-native-overlay')`で除外するヘルパーに置き換える。
 
 // フィルタの判定結果(dataset.oujFilterHidden)に応じて表示/非表示を切り替える共通関数。
 // 以前は重複講義の非表示機能(page-search-result.js)もこのdatasetと合わせて判定していたが、
