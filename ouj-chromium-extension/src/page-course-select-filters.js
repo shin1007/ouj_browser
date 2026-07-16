@@ -369,6 +369,16 @@ function renderCourseFilterBar() {
   bar.id = COURSE_FILTER_BAR_ID;
   bar.style.cssText = 'padding:12px 16px 4px 16px;display:flex;flex-wrap:wrap;align-items:center;';
 
+  // 全科目絞り込みパネル(search-box-all-subjects-panel.js)等、他コースの科目一覧から
+  // ここへ来ると、それまで使えていた「別コースへの絞り込み」手段が無くなったように見える
+  // (このバー自体には年度しか無く、コースはページ全体が既に1コースに絞られているため)。
+  // フォルダツリーページ(renderFolderBrowseBar)と同じ「年度・コースへジャンプ」を
+  // ここにも出し、科目一覧に居ながら別コースへ移動できるようにする。表示順(ジャンプ→
+  // 絞り込み→並び替え)もrenderFolderBrowseBarと揃える
+  const browseSection = buildBrowseSection();
+  browseSection.style.width = '100%';
+  bar.appendChild(browseSection);
+
   const onChange = () => {
     renderCourseFilterBar();
     applyCourseFilters();
