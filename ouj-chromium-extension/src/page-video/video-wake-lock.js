@@ -27,11 +27,6 @@ function releaseVideoWakeLock() {
 }
 
 // 動画のplay/pause/endedに連動してWake Lockを取得・解放する
-// TODO: addFunctionPanel経由で動画切り替えのたびに呼ばれるが、videoタグがSPA内で
-// 使い回される場合、既存リスナーを外さずに追加するため呼び出し回数分リスナーが
-// 積み重なる。ハンドラ自体はrequestVideoWakeLock/releaseVideoWakeLockとも
-// 多重実行しても実害がないため据え置くが、直すなら要素に処理済みフラグを
-// 立てて二重登録を防ぐ(addPlayerActionButtons等、他の再挿入系関数と同じ対策)。
 function startWakeLockManagement() {
   if (typeof window.waitForElement !== 'function') {
     setTimeout(startWakeLockManagement, 100);
@@ -41,6 +36,11 @@ function startWakeLockManagement() {
     if (!video.paused) {
       requestVideoWakeLock();
     }
+    // addFunctionPanel経由で動画切り替えのたびに呼ばれる。videoタグがSPA内で
+    // 使い回される場合に既存リスナーを外さず追加してしまわないよう、
+    // 処理済みフラグで二重登録を防ぐ(video-ending.jsのoujEndedListenerと同じ対策)
+    if (video.dataset.oujWakeLockListener === '1') return;
+    video.dataset.oujWakeLockListener = '1';
     video.addEventListener('play', requestVideoWakeLock);
     video.addEventListener('pause', releaseVideoWakeLock);
     video.addEventListener('ended', releaseVideoWakeLock);
