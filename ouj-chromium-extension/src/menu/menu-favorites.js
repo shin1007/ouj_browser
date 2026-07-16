@@ -57,8 +57,11 @@ function groupFavoriteItems(items) {
 
 // 視聴回数バッジ（例:「5/15回視聴済み」）のプレースホルダー。
 // 中身は表示後にIntersectionObserverで遅延計算して埋める（wireProgressBadges参照）。
+// スタイル（min-width含む）はutils/progress-badge.jsで科目一覧ページと共通化している
+// （空欄→実データで幅が変わりお気に入り星がずれる不具合が page-course-select-progress.js で
+// 過去に起きたため、同じ見た目のこのバッジも最初から同じ幅を確保する）
 function buildProgressBadgePlaceholderHtml(categoryId) {
-  return `<span class="favorite-progress-badge" data-category-id="${categoryId}" style="display:inline-flex;align-items:center;margin-left:8px;padding:2px 10px;border-radius:12px;font-size:12px;color:#666;background:#eee;white-space:nowrap;"></span>`;
+  return `<span class="favorite-progress-badge" data-category-id="${categoryId}" style="${window.oujProgressBadgeStyleText()}"></span>`;
 }
 
 // バッジ要素に集計結果を反映する。resultがnull（動画0件）ならバッジ自体を消す。
@@ -68,17 +71,7 @@ function fillFavoriteProgressBadge(badge, result) {
     return;
   }
   const { finishedCount, total, suffix } = result;
-  badge.textContent = `${finishedCount}/${total}回視聴済み${suffix}`;
-  if (finishedCount >= total) {
-    badge.style.background = '#dcedc8';
-    badge.style.color = '#33691e';
-  } else if (finishedCount > 0) {
-    badge.style.background = '#e3f2fd';
-    badge.style.color = '#1565c0';
-  } else {
-    badge.style.background = '#eee';
-    badge.style.color = '#666';
-  }
+  window.fillProgressCountBadge(badge, { finishedCount, total, suffix });
 }
 
 // 「▶続き」ボタン（その科目の最初の未視聴回へ直行）

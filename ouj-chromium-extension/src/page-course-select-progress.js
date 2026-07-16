@@ -15,20 +15,7 @@ function createCourseProgressBadgePlaceholder(categoryId) {
   const badge = document.createElement('span');
   badge.className = 'course-progress-badge';
   badge.dataset.categoryId = categoryId;
-  badge.style.cssText = `
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    min-width: 110px;
-    margin-left: 8px;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    color: #666;
-    background: #eee;
-    white-space: nowrap;
-  `;
+  badge.style.cssText = window.oujProgressBadgeStyleText();
   return badge;
 }
 
@@ -93,14 +80,7 @@ async function classifyCourseProgress(categoryId, badge, gate) {
       return;
     }
     const { finishedCount, statuses, videoList, suffix } = progress;
-    badge.textContent = `${finishedCount}/${videoList.length}回視聴済み${suffix}`;
-    if (finishedCount >= videoList.length) {
-      badge.style.background = '#dcedc8';
-      badge.style.color = '#33691e';
-    } else if (finishedCount > 0) {
-      badge.style.background = '#e3f2fd';
-      badge.style.color = '#1565c0';
-    }
+    window.fillProgressCountBadge(badge, { finishedCount, total: videoList.length, suffix });
 
     // 修了ペース予測（直近2週間の視聴履歴があるときだけツールチップで表示）
     const pace = estimateCompletionPace(videoList, finishedCount);

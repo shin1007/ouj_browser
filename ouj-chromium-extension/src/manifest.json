@@ -47,6 +47,7 @@
         "utils/page-type.js",
         "utils/favorites-helper.js",
         "utils/viewingStatus.js",
+        "utils/progress-badge.js",
         "utils/watch-later.js",
         "utils/breadcrumbs.js",
         "utils/categories.js",

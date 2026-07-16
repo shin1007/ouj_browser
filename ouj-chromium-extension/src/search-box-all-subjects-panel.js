@@ -100,8 +100,13 @@ function classifyAllSubjectsWatchState(progress) {
   return anyStarted ? 'partial' : 'unstarted';
 }
 
+// スタイル（min-width含む）はutils/progress-badge.jsで共通化している（空欄→実データで幅が
+// 変わり後続要素がずれる不具合がmenu-favorites.js/page-course-select-progress.jsで過去に
+// 起きたため）。未着手（unstarted）が一覧の大半を占めるが、ここでbadge.remove()すると
+// 結局その瞬間に幅が変わって同じ不具合を起こすため、要素は残したままvisibility:hiddenで
+// 見た目だけ消す（＝要素の追加・削除はしない）
 function buildAllSubjectsProgressBadgeHtml(categoryId) {
-  return `<span class="all-subjects-progress-badge" data-category-id="${categoryId}" style="display:inline-flex;align-items:center;margin-left:8px;padding:2px 10px;border-radius:12px;font-size:12px;color:#666;background:#eee;white-space:nowrap;"></span>`;
+  return `<span class="all-subjects-progress-badge" data-category-id="${categoryId}" style="${window.oujStateBadgeStyleText()}"></span>`;
 }
 
 function fillAllSubjectsProgressBadge(badge, watchState) {
@@ -109,12 +114,14 @@ function fillAllSubjectsProgressBadge(badge, watchState) {
     badge.textContent = '視聴済み';
     badge.style.background = '#dcedc8';
     badge.style.color = '#33691e';
+    badge.style.visibility = 'visible';
   } else if (watchState === 'partial') {
     badge.textContent = '視聴途中';
     badge.style.background = '#e3f2fd';
     badge.style.color = '#1565c0';
+    badge.style.visibility = 'visible';
   } else {
-    badge.remove();
+    badge.style.visibility = 'hidden';
   }
 }
 
