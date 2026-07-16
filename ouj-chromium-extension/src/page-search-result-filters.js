@@ -231,7 +231,13 @@ function applyFiltersToItem(item, state) {
     return;
   }
   let hidden = false;
-  if (isMediaFilterHidden(item.dataset.oujMedia, state.media)) hidden = true;
+  // video-select(1科目の回一覧)ではclassifySearchResultItemがneedMediaCaptionYear=falseの間
+  // item.dataset.oujMediaを意図的に設定しない(isRadioProgram等の追加リクエストを避けるため)。
+  // 未設定(=空文字)のままisMediaFilterHiddenに渡すと「テレビにもラジオにも一致しない」と
+  // 判定されて常にhidden=trueになってしまう(分類が終わった動画から次々消える不具合の原因だった)。
+  // search文脈ではoujClassified==='done'の時点でoujMediaは必ず設定済みのため、この判定を
+  // 追加してもsearch側の挙動(両方OFF→0件)は変わらない
+  if (item.dataset.oujMedia && isMediaFilterHidden(item.dataset.oujMedia, state.media)) hidden = true;
   if (state.captionOnly && item.dataset.oujCaption !== '1') hidden = true;
   // 「未完了のみ」は視聴が完了していない(done以外＝未視聴＋視聴途中)を表示する
   if (state.incompleteOnly && item.dataset.oujWatchState === 'done') hidden = true;
