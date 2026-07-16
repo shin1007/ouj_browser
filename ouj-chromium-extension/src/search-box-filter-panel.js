@@ -9,7 +9,11 @@
 // 個々の要素にリスナーを付けず、document階層のfocusin委譲で捕捉する（再バインド不要）。
 
 const SEARCH_BOX_PANEL_ID = 'ouj-search-box-panel';
-const OUJ_VOD_BASE_URL = 'https://v.ouj.ac.jp/view/ouj/#/navi/vod';
+// page-course-select-filters.jsも同名(OUJ_VOD_BASE_URL)の定数を持つ。content_scriptsは
+// 同じ分離ワールドを共有するため同名だと"already declared"で読み込み自体が丸ごと失敗する
+// (実際に起きていた不具合。このファイルのみ実行されず「最近の検索」が動かなくなっていた)。
+// window.には公開していないファイル内専用の定数なので、名前を分けて衝突を避ける
+const SEARCH_BOX_VOD_BASE_URL = 'https://v.ouj.ac.jp/view/ouj/#/navi/vod';
 
 // パネル内の見出し(小さなラベル)を作る
 function buildPanelSectionLabel(text) {
@@ -53,7 +57,7 @@ function buildRecentSearchSection() {
   history.forEach((item) => {
     if (!item || !item.raw) return;
     chips.appendChild(makePanelChip(item.label || item.raw, false, () => {
-      window.location.href = `${OUJ_VOD_BASE_URL}?se=${item.raw}`;
+      window.location.href = `${SEARCH_BOX_VOD_BASE_URL}?se=${item.raw}`;
     }));
   });
   section.appendChild(chips);
