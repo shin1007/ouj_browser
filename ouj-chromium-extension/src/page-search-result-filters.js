@@ -27,13 +27,17 @@
 // 2ファイルが候補。
 
 const SEARCH_RESULT_FILTER_LIST_SELECTOR = '#common-list-content';
-// TODO: menu-native-shell.jsのrenderNativeVideoListMainHtml(お気に入り/履歴/おすすめ動画パネル)
-// も同じid="common-list-content"を持つ要素を#ouj-native-overlay内に生成する。document.querySelector
-// はID重複時は文書順で最初の要素を返すため通常は本来ページ側(overlayより手前)が優先されるが、
-// page-course-select-filters.jsのCOURSE_ITEM_SELECTORで実際に確認したのと同じ理屈で、本来ページ側の
-// #common-list-contentがまだ描画され切っていない瞬間にこれらのパネルが開いていると、オーバーレイ側を
-// 誤って掴む可能性がある。今回はCOURSE_ITEM_SELECTOR側のみ実機再現・修正した(要望範囲外のため見送り)。
-// 対応するならqueryCourseItems同様、`.closest('#ouj-native-overlay')`で除外するヘルパーに置き換える。
+
+// menu-native-shell.jsのrenderNativeVideoListMainHtml(お気に入り/履歴/おすすめ動画パネル)も
+// 同じid="common-list-content"を持つ要素を#ouj-native-overlay内に生成する。document.querySelectorは
+// ID重複時に文書順で最初の要素を返すため、本来ページ側の#common-list-contentがまだ描画され切って
+// いない瞬間にこれらのパネルが開いていると、オーバーレイ側の同名ID要素を誤って掴んでしまう
+// (page-course-select-filters.jsのqueryCourseItemsで実際に確認したのと同じ理屈)。
+// オーバーレイ内の要素は常に除外し、本来のページ側だけを対象にする。
+function querySearchResultList() {
+  return Array.from(document.querySelectorAll(SEARCH_RESULT_FILTER_LIST_SELECTOR))
+    .find((el) => !el.closest('#ouj-native-overlay')) || null;
+}
 
 // フィルタの判定結果(dataset.oujFilterHidden)に応じて表示/非表示を切り替える共通関数。
 // 以前は重複講義の非表示機能(page-search-result.js)もこのdatasetと合わせて判定していたが、
@@ -224,7 +228,7 @@ function isAnyResultFilterActive(state) {
 // (実際に報告された不具合)。分類完了まで隠すことで、対象外の項目がそもそも表示されず、
 // 該当すると判明した項目だけが順次追加表示される自然な挙動になる
 function applyFiltersToItem(item, state) {
-  if (!state) state = getSearchFilterState(document.querySelector(SEARCH_RESULT_FILTER_LIST_SELECTOR));
+  if (!state) state = getSearchFilterState(querySearchResultList());
   if (item.dataset.oujClassified !== 'done') {
     item.dataset.oujFilterHidden = isAnyResultFilterActive(state) ? 'true' : 'false';
     window.updateSearchResultItemVisibility(item);
@@ -246,7 +250,7 @@ function applyFiltersToItem(item, state) {
 }
 
 function applyFilters() {
-  const list = document.querySelector(SEARCH_RESULT_FILTER_LIST_SELECTOR);
+  const list = querySearchResultList();
   if (!list) return;
   const state = getSearchFilterState(list);
   list.querySelectorAll(':scope > ion-item[role="listitem"]').forEach((item) => applyFiltersToItem(item, state));
@@ -799,11 +803,15 @@ function setupSearchFilterBarOnList(list, context) {
 function initializeSearchResultFilters(context = 'search') {
   // 検索キーワードを履歴に記録（「最近の検索」チップ用。検索結果ページのみ）
   if (context === 'search') recordSearchKeyword();
-  window.waitForElement(SEARCH_RESULT_FILTER_LIST_SELECTOR, (list) => {
+  // window.waitForElementは素のCSSセレクタ一致(document.querySelector)しかできず、
+  // #ouj-native-overlay内の同名ID要素を除外できないため、querySearchResultListで
+  // 自前にポーリングする(waitForCondition)。
+  window.waitForCondition(() => !!querySearchResultList(), () => {
+    const list = querySearchResultList();
     setupSearchFilterBarOnList(list, context);
 
     // 科目一覧(ca=)など、前ページの空の#common-list-contentが残っている状態から検索へ
-    // 遷移すると、waitForElementはその古い空リストへ即コールバックする。Angularはその後
+    // 遷移すると、waitForConditionはその古い空リストへ即コールバックする。Angularはその後
     // #common-list-content要素を検索結果用の新しい要素に「置き換える」ため、古い要素へ挿した
     // バーは新要素には無いまま残る(古い要素はDOMから外れる)。そこで描画が落ち着くまでの数秒間、
     // 同一URL(=まだこの検索ページ)である限り、現在の#common-list-contentにバーが無ければ
@@ -813,7 +821,7 @@ function initializeSearchResultFilters(context = 'search') {
     [120, 350, 700, 1400, 2800].forEach((ms) => setTimeout(() => {
       if (window.location.href !== startUrl) return;
       if (document.getElementById('search-result-filter-bar')) return;
-      const current = document.querySelector(SEARCH_RESULT_FILTER_LIST_SELECTOR);
+      const current = querySearchResultList();
       if (current) setupSearchFilterBarOnList(current, context);
     }, ms));
   });
@@ -828,7 +836,7 @@ function refreshSearchResultFilterUI() {
   // コース一覧など#common-list-contentだけ存在するページで新たにバーを出さないよう、
   // バーの有無で判定する（SPA遷移時のバー除去はcontent.jsが行う）
   if (!document.getElementById('search-result-filter-bar')) return;
-  const list = document.querySelector(SEARCH_RESULT_FILTER_LIST_SELECTOR);
+  const list = querySearchResultList();
   if (!list) return;
   renderFilterBar(list);
   applyFilters();
