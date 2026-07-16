@@ -35,6 +35,19 @@ const COURSE_ITEM_SELECTOR = '#main div.icon-text > .icon-area';
 const FOLDER_BROWSE_BAR_ID = 'course-folder-browse-bar';
 const OUJ_VOD_BASE_URL = 'https://v.ouj.ac.jp/view/ouj/#/navi/vod';
 
+// COURSE_ITEM_SELECTORをdocument.querySelector(All)で素朴に#main全体に対して使うと、
+// menu-native-shell.jsのopenNativeOverlay(#ouj-native-overlay)が#mainに重ねて表示する
+// 全科目絞り込みパネル(search-box-all-subjects-panel.js)等の項目も同じ.icon-text > .icon-area
+// 構成(buildNativeCategoryItemHtml)のため誤って拾ってしまう。ログイン状態の再検知等で
+// initializeCourseListFiltersが再実行され、かつ本来のページ側のフォルダ一覧がまだ描画され
+// 切っていない瞬間にこのオーバーレイが開いていると、本来ページ用のrenderFolderBrowseBarが
+// オーバーレイの中に誤挿入され、パネルの表示が壊れる不具合を実機再現で確認した。
+// オーバーレイ内の要素は常に除外し、本来のページ側だけを対象にする。
+function queryCourseItems() {
+  return Array.from(document.querySelectorAll(COURSE_ITEM_SELECTOR))
+    .filter((el) => !el.closest('#ouj-native-overlay'));
+}
+
 // フィルタ対象の科目フォルダ行(ion-item)。setupCourseFilterRowsで作り直す
 let courseFilterRows = [];
 
@@ -289,7 +302,7 @@ function collectCourseYears() {
 
 // フィルタバーを挿入する科目リストのコンテナ(ion-list)を得る
 function getCourseListContainer() {
-  const item = document.querySelector(COURSE_ITEM_SELECTOR);
+  const item = queryCourseItems()[0];
   if (!item) return null;
   return item.closest('ion-list') || (item.closest('ion-item') && item.closest('ion-item').parentElement) || null;
 }
@@ -644,7 +657,7 @@ async function initializeCourseListFilters(startUrl) {
     // refreshCourseListFilterUI等が誤作動しうるためクリアし、代わりにフォルダツリー用の
     // 常設バー(年度・コースへジャンプ／絞り込みプリセット)を出す
     courseFilterRows = [];
-    if (!document.querySelector(COURSE_ITEM_SELECTOR)) {
+    if (queryCourseItems().length === 0) {
       // フォルダ一覧DOMがまだ描画され切っていない(挿入先が無い)。leaf側の待ち合わせと同じ方針でリトライする
       setTimeout(() => initializeCourseListFilters(startUrl), 100);
       return;
@@ -653,7 +666,7 @@ async function initializeCourseListFilters(startUrl) {
     return;
   }
 
-  const items = document.querySelectorAll(COURSE_ITEM_SELECTOR);
+  const items = queryCourseItems();
   if (!items.length) {
     setTimeout(() => initializeCourseListFilters(startUrl), 100);
     return;
