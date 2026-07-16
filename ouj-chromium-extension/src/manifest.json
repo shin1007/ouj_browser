@@ -87,6 +87,7 @@
         "page-course-select-progress.js",
         "page-course-select-filters.js",
         "page-search-result-filters.js",
+        "page-search-result-filter-bar.js",
         "search-box-filter-panel.js",
         "search-box-all-subjects-panel.js",
         "page-video-select.js",

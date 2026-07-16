@@ -7,8 +7,9 @@
 // 一旦隠す(isAnyResultFilterActive/applyFiltersToItem)。後から対象外と判明した項目が
 // 表示済み一覧から脱落して下の項目が繰り上がる(=並びが入れ替わって見える)ことを防ぐため。
 // ただし年度・コースの「選択肢一覧」自体はこの遅延分類を待たない。サイト全体の
-// 授業一覧(loadYearCourseOptions)から直接求めるため、スクロールや個々の項目の
-// 分類完了を待たずに揃う(選んだ年度・コースが今回の検索結果に無ければ0件表示になる)。
+// 授業一覧(loadYearCourseOptions、page-search-result-filter-bar.js側)から直接求めるため、
+// スクロールや個々の項目の分類完了を待たずに揃う(選んだ年度・コースが今回の検索結果に
+// 無ければ0件表示になる)。
 //
 // 検索結果ページ(se=)だけでなく、動画一覧ページ(ca=の回一覧＝video-select)も同じ
 // #common-list-content > ion-item[role="listitem"] 構造なので、この機構を流用する。
@@ -19,12 +20,11 @@
 // classifySearchResultItem)。科目フォルダの一覧(series-select)は別DOMのため
 // page-course-select-filters.jsで対応する。
 //
-// TODO: 並列作業向けのロジック/UI分割は保留中。renderFilterBar↔applyFilters/
-// applySearchResultSort が双方向依存で、分割するとgetSearchFilterState等
-// 約8関数＋定数をwindow.*で公開して呼び出し側も書き換える必要があり、
-// window.前置が増えて可読性が下がるわりに並列作業の恩恵が小さいため見送った。
-// 分割するなら「フィルターバー描画(chip/row生成)」と「分類・絞り込み・並び替え」の
-// 2ファイルが候補。
+// 本ファイルは判定・絞り込み・並び替えロジックと初期化(IntersectionObserver等)を担当する。
+// フィルターバーの描画(チップ/年度・コースドロップダウン等のUI生成)はpage-search-result-filter-bar.js
+// に分割した。content scriptは各ファイルが独立スコープのため、双方向で参照する関数
+// (getSearchFilterState/applyFilters/applySearchResultSort ↔ renderFilterBar/hideNativeSortControl)
+// はwindow.*経由で呼び合う。
 
 const SEARCH_RESULT_FILTER_LIST_SELECTOR = '#common-list-content';
 
@@ -54,10 +54,6 @@ const SEARCH_FILTER_SETTINGS_KEYS = {
   incompleteOnly: 'searchFilterUnwatchedOnly',
   partialOnly: 'searchFilterPartialOnly',
 };
-
-// テレビ/ラジオはAND条件の他フィルタと違いOR条件（どちらか一方でも合致すれば表示）なので、
-// チップの色も変えて区別する
-const MEDIA_FILTER_CHIP_COLOR = '#00897b';
 
 // 媒体(テレビ/ラジオ)絞り込みの現在値を読む。{tv, radio}の真偽値。テレビ/ラジオは
 // 全項目がどちらかに分類される排他的なOR条件なので、両方ONは「すべて表示」、
@@ -256,57 +252,6 @@ function applyFilters() {
   list.querySelectorAll(':scope > ion-item[role="listitem"]').forEach((item) => applyFiltersToItem(item, state));
 }
 
-// 年度・コースの選択肢は、検索結果に実際に含まれる項目の分類状況に関わらず、サイト全体の
-// 授業一覧(カテゴリツリー)から一度だけ求めて使う。
-// 以前は画面内に入って分類が終わった項目だけから選択肢を集めていたため、スクロールしないと
-// 選択肢が増えない・全項目を分類し終えるまで「読み込み中」のままになるなど、項目数の多い
-// 検索結果で不必要に待たされる不具合があった。授業一覧から直接求めれば分類を待つ必要が無く
-// なるが、選択した年度・コースが今回の検索結果に1件も無く0件表示になることはある(許容する)。
-// 検索ボックスの絞り込みパネル(search-box-filter-panel.js)と同じ
-// createYearListData/getCourseGroups(utils/year.js・utils/categories.js)を再利用するため、
-// 両パネルで選択肢が一致する
-let cachedYearCourseOptions = null; // { yearOptions, courseOptions } (両方揃ってから確定)
-let yearCourseOptionsPromise = null;
-
-function loadYearCourseOptions() {
-  if (cachedYearCourseOptions) return Promise.resolve(cachedYearCourseOptions);
-  if (yearCourseOptionsPromise) return yearCourseOptionsPromise;
-  yearCourseOptionsPromise = (async () => {
-    let yearOptions = [];
-    let courseOptions = [];
-    try {
-      if (typeof window.createYearListData === 'function') {
-        const { yearBuckets } = await window.createYearListData();
-        yearOptions = yearBuckets.map((b) => ({ value: String(b.year).slice(-2), label: `${b.year}年度` }));
-      }
-    } catch (e) { /* 取得失敗時は選択肢なし(=絞り込み無し)のまま */ }
-    try {
-      if (typeof window.getCourseGroups === 'function') {
-        const groups = await window.getCourseGroups();
-        const trim = (name) => (typeof window.trimCourseName === 'function') ? window.trimCourseName(name) : name;
-        // 未ログイン(ゲスト)時は「01 テレビ」「02 ラジオ」がそれぞれ独立した大分類になり、
-        // その下に同名の「OCW（全15回公開）」「授業科目(等)一覧（1回分のみ公開）」が
-        // 別コースとして存在する。名前だけでは区別が付かないため、同名のコースが複数ある
-        // 場合に限り所属する大分類名を付記して区別する。特定の文言(「テレビ」「OCW」等)を
-        // 直接ハードコードすると表記が変わった時に効かなくなるため、あくまで名前の衝突検出で
-        // 判定する(衝突していない通常の学部/大学院配下のコースには何も付けない)
-        const raw = [];
-        groups.forEach((g) => g.courses.forEach((c) => raw.push({ value: String(c.categoryId), label: trim(c.name), groupLabel: trim(g.parentName) })));
-        const labelCounts = new Map();
-        raw.forEach((c) => labelCounts.set(c.label, (labelCounts.get(c.label) || 0) + 1));
-        raw.forEach((c) => {
-          const label = labelCounts.get(c.label) > 1 ? `${c.label}（${c.groupLabel}）` : c.label;
-          courseOptions.push({ value: c.value, label });
-        });
-        courseOptions.sort((a, b) => a.label.localeCompare(b.label, 'ja'));
-      }
-    } catch (e) { /* 取得失敗時は選択肢なし(=絞り込み無し)のまま */ }
-    cachedYearCourseOptions = { yearOptions, courseOptions };
-    return cachedYearCourseOptions;
-  })();
-  return yearCourseOptionsPromise;
-}
-
 // --- 並び替え機能 ---
 // 「未視聴を優先」「視聴途中を優先」は全項目の分類(サーバーリクエスト)が必要になるため、
 // ページ表示時に自動実行はせず、ユーザーがチップを明示的にクリックした時だけ発火させる。
@@ -387,350 +332,6 @@ async function applySearchResultSort(list) {
   sorted.forEach((item) => list.appendChild(item));
 }
 
-function buildFilterChip(label, isActive, onClick, activeColor = '#1976d2') {
-  const chip = document.createElement('button');
-  chip.type = 'button';
-  chip.textContent = label;
-  chip.style.cssText = `
-    display: inline-flex;
-    align-items: center;
-    padding: 6px 14px;
-    margin: 0 8px 8px 0;
-    border-radius: 16px;
-    font-size: 13px;
-    cursor: pointer;
-    border: 1px solid ${isActive ? activeColor : '#ddd'};
-    background: ${isActive ? activeColor : '#fff'};
-    color: ${isActive ? '#fff' : '#333'};
-    transition: background 0.2s, border-color 0.2s;
-  `;
-  chip.onmouseenter = () => {
-    if (!isActive) chip.style.background = '#f0f0f0';
-  };
-  chip.onmouseleave = () => {
-    chip.style.background = isActive ? activeColor : '#fff';
-  };
-  chip.onclick = onClick;
-  return chip;
-}
-
-function renderFilterBar(list) {
-  const old = document.getElementById('search-result-filter-bar');
-  if (old) old.remove();
-
-  const context = (list && list.oujFilterContext) || 'search';
-  const isVideoSelect = context === 'video-select';
-  const state = getSearchFilterState(list);
-  const bar = document.createElement('div');
-  bar.id = 'search-result-filter-bar';
-  bar.style.cssText = `
-    padding: 12px 16px 0 16px;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-  `;
-
-  // 媒体・字幕・年度・コース・最近の検索は video-select(1科目の回一覧)では意味がないので出さない
-  if (!isVideoSelect) {
-    // テレビ/ラジオは他のAND条件チップと違いOR条件(どちらかON、両方ONで両方表示)なので独立トグルにする
-    bar.appendChild(
-      buildFilterChip('テレビ番組', state.media.tv, () => {
-        window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.media, { tv: !state.media.tv, radio: state.media.radio });
-        renderFilterBar(list);
-        applyFilters();
-      }, MEDIA_FILTER_CHIP_COLOR)
-    );
-    bar.appendChild(
-      buildFilterChip('ラジオ番組', state.media.radio, () => {
-        window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.media, { tv: state.media.tv, radio: !state.media.radio });
-        renderFilterBar(list);
-        applyFilters();
-      }, MEDIA_FILTER_CHIP_COLOR)
-    );
-
-    bar.appendChild(
-      buildFilterChip('字幕ありのみ', state.captionOnly, () => {
-        window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.captionOnly, !state.captionOnly);
-        renderFilterBar(list);
-        applyFilters();
-      })
-    );
-  }
-
-  bar.appendChild(
-    buildFilterChip('未完了のみ', state.incompleteOnly, () => {
-      window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.incompleteOnly, !state.incompleteOnly);
-      renderFilterBar(list);
-      applyFilters();
-    })
-  );
-
-  bar.appendChild(
-    buildFilterChip('視聴途中のみ', state.partialOnly, () => {
-      window.saveSetting(SEARCH_FILTER_SETTINGS_KEYS.partialOnly, !state.partialOnly);
-      renderFilterBar(list);
-      applyFilters();
-    })
-  );
-
-  if (!isVideoSelect) bar.appendChild(buildYearCourseRow(list));
-  bar.appendChild(buildSortRow(list));
-
-  if (!isVideoSelect) {
-    const keywordRow = buildSearchKeywordHistoryRow(list);
-    if (keywordRow) bar.appendChild(keywordRow);
-  }
-
-  list.parentNode.insertBefore(bar, list);
-
-  // サイト純正の並び替えドロップダウン(ion-item.sort)を隠す。拡張の「並び替え」行と
-  // 二重になって紛らわしいため一本化する。純正のsort要素は検索結果と回一覧(=拡張の
-  // 並び替え行を出すページ)にだけ存在し、科目一覧など他ページには無いことを実機で確認済み。
-  // 純正の既定は「タイトル順」で、これが拡張の「サイト表示順」に相当するため、タイトル順の
-  // 並びは失われない。サーバー再取得を伴う純正の切替を隠すことでサーバー負荷も抑えられる。
-  hideNativeSortControl();
-}
-
-// サイト純正の並び替えUI(ion-item.sort)を非表示にする。Angularの再描画で作り直される
-// ことがあるため、都度クエリして隠す(renderFilterBarとリスト変化監視の両方から呼ぶ)。
-function hideNativeSortControl() {
-  document.querySelectorAll('ion-item.sort').forEach((el) => {
-    if (el.style.display !== 'none') el.style.display = 'none';
-  });
-}
-
-// 年度・コースのチェックボックス複数選択ドロップダウン。選択肢が5〜30件程度と多く、
-// テレビ/ラジオのような独立チップ方式では並べきれないため、ボタンをクリックすると
-// チェックボックス一覧が開くカスタムドロップダウンにする。
-// options: [{value, label}] / selected: 選択値の配列（呼び出し元が保持する配列を直接
-// 書き換える。参照を保つことで、renderFilterBarを経由しない再描画(oujSetOptions)でも
-// 選択状態を見失わない）
-// isLoading: trueの間は選択肢0件でも「選択肢がありません」ではなく「読み込み中...」を出す。
-// 分類はページ内の項目を画面内に入るたびに遅延実行するため、表示直後は大半が未分類で
-// 選択肢が一時的に0件になる。この間も「選択肢がありません」と表示すると、後から分類が
-// 進んで選択肢が増えても既にドロップダウンを閉じたユーザーには「選べない」ように見えて
-// しまう(実際に報告された不具合)。分類中は区別して案内する
-function buildMultiSelectDropdown({ label, options, selected, onChange, isLoading = false }) {
-  let currentOptions = options;
-  let currentIsLoading = isLoading;
-
-  const wrapper = document.createElement('div');
-  wrapper.className = 'ouj-multiselect';
-  wrapper.style.cssText = 'position:relative;display:inline-block;';
-
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.style.cssText = 'font-size:13px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#333;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;text-align:left;';
-
-  const panel = document.createElement('div');
-  panel.className = 'ouj-multiselect-panel';
-  panel.style.cssText = 'display:none;position:absolute;top:100%;left:0;z-index:100;margin-top:2px;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);max-height:260px;overflow-y:auto;min-width:180px;padding:4px 0;';
-
-  function updateButtonText() {
-    if (selected.length === 0) button.textContent = `${label}: すべて`;
-    else if (selected.length === 1) {
-      const opt = currentOptions.find((o) => o.value === selected[0]);
-      button.textContent = `${label}: ${opt ? opt.label : selected[0]}`;
-    } else button.textContent = `${label}: ${selected.length}件選択中`;
-  }
-
-  function renderPanelRows() {
-    panel.innerHTML = '';
-    if (currentOptions.length === 0) {
-      const empty = document.createElement('div');
-      empty.textContent = currentIsLoading ? '読み込み中...' : '選択肢がありません';
-      empty.style.cssText = 'padding:6px 12px;font-size:13px;color:#999;';
-      panel.appendChild(empty);
-      return;
-    }
-    currentOptions.forEach((opt) => {
-      const row = document.createElement('label');
-      row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:13px;color:#333;cursor:pointer;white-space:nowrap;';
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.checked = selected.includes(opt.value);
-      checkbox.addEventListener('change', () => {
-        const idx = selected.indexOf(opt.value);
-        if (checkbox.checked && idx === -1) selected.push(opt.value);
-        else if (!checkbox.checked && idx !== -1) selected.splice(idx, 1);
-        updateButtonText();
-        onChange();
-      });
-      row.appendChild(checkbox);
-      const text = document.createElement('span');
-      text.textContent = opt.label;
-      row.appendChild(text);
-      panel.appendChild(row);
-    });
-  }
-
-  button.addEventListener('click', (event) => {
-    event.stopPropagation();
-    const willOpen = panel.style.display === 'none';
-    // 他に開いているドロップダウンがあれば閉じる（年度・コースを同時に開かせない）
-    document.querySelectorAll('.ouj-multiselect-panel').forEach((p) => { p.style.display = 'none'; });
-    panel.style.display = willOpen ? 'block' : 'none';
-  });
-
-  wrapper.appendChild(button);
-  wrapper.appendChild(panel);
-  updateButtonText();
-  renderPanelRows();
-  ensureMultiSelectOutsideClickHandler();
-
-  // 年度・コースは選択肢の取得(loadYearCourseOptions)が非同期のため、外部から
-  // 開閉状態を保ったまま選択肢一覧・読み込み中フラグを後から差し替えられるようにする
-  wrapper.oujSetOptions = (newOptions, newIsLoading = false) => {
-    currentOptions = newOptions;
-    currentIsLoading = newIsLoading;
-    updateButtonText();
-    renderPanelRows();
-  };
-
-  return wrapper;
-}
-
-// ドロップダウンの外側をクリックしたら開いているパネルを閉じる。パネルは
-// renderFilterBarのたびに作り直されるため、リスナーはページに1つだけ登録する
-function ensureMultiSelectOutsideClickHandler() {
-  if (window.__oujMultiSelectOutsideClickInit) return;
-  window.__oujMultiSelectOutsideClickInit = true;
-  document.addEventListener('mousedown', (event) => {
-    document.querySelectorAll('.ouj-multiselect-panel').forEach((panel) => {
-      if (panel.style.display === 'none') return;
-      const wrapper = panel.parentElement;
-      if (wrapper && wrapper.contains(event.target)) return;
-      panel.style.display = 'none';
-    });
-  }, true);
-}
-
-// 年度・コースの絞り込み行。選択肢はサイト全体の授業一覧(loadYearCourseOptions)から取得する。
-// 初回はキャッシュがまだ無いため非同期取得を待つ間「読み込み中」を出し、取得できた時点で
-// 差し替える。以降は再検索してもキャッシュを再利用するため即座に選択肢が揃う。複数選択可（OR条件）
-function buildYearCourseRow(list) {
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;margin-top:4px;';
-
-  const isLoaded = !!cachedYearCourseOptions;
-
-  const label = document.createElement('span');
-  label.textContent = '絞り込み:';
-  label.style.cssText = 'font-size:13px;color:#666;';
-  row.appendChild(label);
-
-  if (!Array.isArray(list.oujYearFilter)) list.oujYearFilter = [];
-  if (!Array.isArray(list.oujCourseFilter)) list.oujCourseFilter = [];
-
-  const yearDropdown = buildMultiSelectDropdown({
-    label: '年度',
-    options: isLoaded ? cachedYearCourseOptions.yearOptions : [],
-    selected: list.oujYearFilter,
-    onChange: applyFilters,
-    isLoading: !isLoaded,
-  });
-  yearDropdown.id = 'search-filter-year';
-  row.appendChild(yearDropdown);
-
-  const courseDropdown = buildMultiSelectDropdown({
-    label: 'コース',
-    options: isLoaded ? cachedYearCourseOptions.courseOptions : [],
-    selected: list.oujCourseFilter,
-    onChange: applyFilters,
-    isLoading: !isLoaded,
-  });
-  courseDropdown.id = 'search-filter-course';
-  row.appendChild(courseDropdown);
-
-  if (!isLoaded) {
-    loadYearCourseOptions().then((options) => {
-      if (yearDropdown.oujSetOptions) yearDropdown.oujSetOptions(options.yearOptions, false);
-      if (courseDropdown.oujSetOptions) courseDropdown.oujSetOptions(options.courseOptions, false);
-    });
-  }
-
-  return row;
-}
-
-// 「最近の検索」チップ行。クリックでそのキーワードの検索結果へ遷移する
-function buildSearchKeywordHistoryRow(list) {
-  const history = window.getSetting(SEARCH_KEYWORD_HISTORY_KEY, []);
-  if (!Array.isArray(history) || history.length === 0) return null;
-  // 現在表示中のキーワードは除いて表示する
-  const currentMatch = window.location.href.match(/[?&]se=([^&]+)/);
-  const currentRaw = currentMatch ? currentMatch[1] : '';
-  const others = history.filter((item) => item.raw !== currentRaw);
-  if (others.length === 0) return null;
-
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;width:100%;margin-top:4px;';
-
-  const label = document.createElement('span');
-  label.textContent = '最近の検索:';
-  label.style.cssText = 'font-size:13px;color:#666;margin-right:8px;';
-  row.appendChild(label);
-
-  others.forEach((item) => {
-    row.appendChild(
-      buildFilterChip(item.label, false, () => {
-        window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?se=${item.raw}`;
-      })
-    );
-  });
-
-  // 履歴のクリア
-  const clearChip = buildFilterChip('× 履歴を消す', false, () => {
-    window.saveSetting(SEARCH_KEYWORD_HISTORY_KEY, []);
-    renderFilterBar(list);
-  });
-  clearChip.style.color = '#999';
-  row.appendChild(clearChip);
-
-  return row;
-}
-
-// 並び替えチップ行。「未視聴を優先」「視聴途中を優先」は全項目の分類(サーバーリクエスト)が
-// 必要になるため、クリックされた時だけ非同期で分類してから並び替える
-function buildSortRow(list) {
-  const sortMode = list.oujSortMode || 'default';
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;width:100%;margin-top:4px;';
-
-  const label = document.createElement('span');
-  label.textContent = '並び替え:';
-  label.style.cssText = 'font-size:13px;color:#666;margin-right:8px;';
-  row.appendChild(label);
-
-  const sortOptions = [
-    { value: 'default', label: 'サイト表示順' },
-    { value: 'newest', label: '新しい順' },
-    { value: 'unwatched', label: '未視聴を優先' },
-    { value: 'partial', label: '視聴途中を優先' },
-  ];
-  sortOptions.forEach(({ value, label: optionLabel }) => {
-    row.appendChild(
-      buildFilterChip(optionLabel, sortMode === value, async () => {
-        if (list.oujSortMode === value && !list.oujSortLoading) return;
-        list.oujSortMode = value;
-        list.oujSortLoading = value === 'unwatched' || value === 'partial';
-        renderFilterBar(list);
-        await applySearchResultSort(list);
-        list.oujSortLoading = false;
-        renderFilterBar(list);
-      })
-    );
-  });
-
-  if (list.oujSortLoading) {
-    const loading = document.createElement('span');
-    loading.textContent = '並び替え中...';
-    loading.style.cssText = 'font-size:12px;color:#999;margin-left:8px;';
-    row.appendChild(loading);
-  }
-
-  return row;
-}
-
 function startSearchFilterObserver(context = 'search') {
   // SPA遷移(検索キーワード変更等)で#common-list-contentがまるごと再生成されるため、
   // 呼び出しのたびに古い監視インスタンス/ゲートを破棄して作り直す
@@ -779,7 +380,7 @@ function setupSearchFilterBarOnList(list, context) {
   list.oujSortLoading = false;
   const observer = startSearchFilterObserver(context);
   list.__oujFilterGate = observer.__oujGate;
-  renderFilterBar(list);
+  window.renderFilterBar(list);
   registerItemsForClassification(observer, list);
 
   // 無限スクロールで追加される項目にも監視対象を広げる。あわせて、このリストへの流し込みと
@@ -789,10 +390,10 @@ function setupSearchFilterBarOnList(list, context) {
   list.oujFilterObserverAttached = true;
   const mutationObserver = new MutationObserver(() => {
     if (!document.getElementById('search-result-filter-bar')) {
-      renderFilterBar(list);
+      window.renderFilterBar(list);
     }
     // 検索結果の流し込み・再描画のたびに純正の並び替えが復活しうるので隠し直す
-    hideNativeSortControl();
+    window.hideNativeSortControl();
     registerItemsForClassification(observer, list);
   });
   mutationObserver.observe(list, { childList: true });
@@ -838,18 +439,18 @@ function refreshSearchResultFilterUI() {
   if (!document.getElementById('search-result-filter-bar')) return;
   const list = querySearchResultList();
   if (!list) return;
-  renderFilterBar(list);
+  window.renderFilterBar(list);
   applyFilters();
 }
 
 window.initializeSearchResultFilters = initializeSearchResultFilters;
 window.refreshSearchResultFilterUI = refreshSearchResultFilterUI;
 window.updateSearchResultItemVisibility = updateSearchResultItemVisibility;
-// 検索ボックスのクイック絞り込みパネルから再利用する設定キー・履歴キー・チップ生成関数
+// page-search-result-filter-bar.js(フィルターバー描画)から呼ばれる判定・絞り込み・並び替え関数
+window.getSearchFilterState = getSearchFilterState;
+window.applyFilters = applyFilters;
+window.applySearchResultSort = applySearchResultSort;
+// 検索ボックスのクイック絞り込みパネルから再利用する設定キー・履歴キー
 window.OUJ_SEARCH_FILTER_KEYS = SEARCH_FILTER_SETTINGS_KEYS;
 window.OUJ_SEARCH_KEYWORD_HISTORY_KEY = SEARCH_KEYWORD_HISTORY_KEY;
-window.buildOujFilterChip = buildFilterChip;
-// page-course-select-filters.jsの年度絞り込み(複数選択)から再利用する
-window.buildOujMultiSelectDropdown = buildMultiSelectDropdown;
 window.getOujMediaFilterState = getMediaFilterState;
-window.OUJ_MEDIA_FILTER_CHIP_COLOR = MEDIA_FILTER_CHIP_COLOR;
