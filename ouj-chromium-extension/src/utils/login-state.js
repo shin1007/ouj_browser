@@ -139,6 +139,12 @@ async function invalidateOujCachesForState(newState) {
     await window.clearCachedCategoriesData(); // 授業一覧(cachedCategoriesData)
   }
   await clearOujUserScopedCaches(); // 視聴進捗(videoViewingStatus_*)
+  // 全科目絞り込みパネル(search-box-all-subjects-panel.js)が持つ、視聴状況のメモリ内キャッシュ。
+  // chrome.storage.local側(videoViewingStatus_*)とは別に、分類結果(watchState)自体を
+  // パネル内で使い回しているため、こちらも合わせて破棄しないとログイン前の判定が残り続ける
+  if (typeof window.clearOujAllSubjectsProgressCache === 'function') {
+    window.clearOujAllSubjectsProgressCache();
+  }
   await setStampedCategoriesLoginState(newState); // 次回取得はnewState向けである、と記録
 }
 
@@ -210,6 +216,52 @@ async function syncOujLoginStateAndInvalidate() {
   return current; // 切り替わった新しい状態
 }
 
+// vod系ページ(科目一覧・回一覧等)間の遷移だけでは、サイト自身(Angular)がログイン状態の
+// 再検証を行わない(実機・Playwrightで確認済み: 既にCookieレベルではログイン済みでも、
+// vod系ページを行き来している間はsessionStorageのClasstreamIsCasLogin_1もDOMのユーザーID
+// ラベルもいつまでも更新されない)。そのため、別タブでのログイン等により実際にはログイン
+// 済みになっていても、このタブのsyncOujLoginStateAndInvalidateは判定材料自体が更新されず
+// 検知しようがなく、拡張のカテゴリキャッシュがゲスト時点のまま延々と古くなる不具合が起きる。
+// 一方 #/navi/home への遷移では(理由不明だが)この再検証が実行されることを確認済みで、
+// sessionStorageのフラグ自体は一瞬(実測100ms程度)で更新される(ユーザーIDラベルのDOM描画は
+// もっと遅れて追従するが、カテゴリキャッシュの是正にはフラグの更新だけで足りる)。
+// この性質を利用し、拡張自身が起点となる別コースへの遷移の直前にだけ、一瞬homeを経由させて
+// からリダイレクトすることで、追加のサーバーリクエストを一切増やさずに解消できる
+// (サイト純正のリンククリックまでは検知・介入できないため対象外。ゲストのまま操作を続ける
+// 場合の方が多いため、頻繁に経由させるとちらつきが増える。ある程度の間隔を空けてスキップする)。
+const OUJ_GUEST_REVALIDATE_SS_KEY = 'oujLastGuestRevalidateAt';
+const OUJ_GUEST_REVALIDATE_DWELL_MS = 300;
+const OUJ_GUEST_REVALIDATE_INTERVAL_MS = 2 * 60 * 1000;
+
+function shouldBounceThroughHomeForGuestRevalidation() {
+  if (getOujLoginState() !== 'guest') return false; // 既にuser、または未確定(unknown)なら不要
+  let last = 0;
+  try { last = Number(window.sessionStorage.getItem(OUJ_GUEST_REVALIDATE_SS_KEY)) || 0; } catch (e) { /* noop */ }
+  return (Date.now() - last) >= OUJ_GUEST_REVALIDATE_INTERVAL_MS;
+}
+
+/**
+ * 拡張自身が起点の別コース等への遷移の直前に呼ぶ。ゲスト判定中かつ直近で経由済みでなければ、
+ * 一瞬 #/navi/home を経由してから本来の遷移先へ移動する(既にログイン済みだった場合、この
+ * 一瞬の経由でカテゴリキャッシュが最新化される)。それ以外は素通しでそのまま即座に遷移する。
+ * ホーム経由中は自動ログイン機能(utils/goToLoginPage.js)を1回だけ止め、ゲストのまま
+ * 遷移しようとしたユーザーが意図せずSSOログイン画面へ飛ばされないようにする。
+ * @param {string} targetUrl 本来の遷移先URL
+ */
+async function navigateWithOujGuestRevalidation(targetUrl) {
+  if (!shouldBounceThroughHomeForGuestRevalidation()) {
+    window.location.href = targetUrl;
+    return;
+  }
+  try { window.sessionStorage.setItem(OUJ_GUEST_REVALIDATE_SS_KEY, String(Date.now())); } catch (e) { /* noop */ }
+  window.__oujSkipAutoLoginOnce = true;
+  window.location.hash = '#/navi/home';
+  await new Promise((resolve) => setTimeout(resolve, OUJ_GUEST_REVALIDATE_DWELL_MS));
+  // 待機中に(ユーザー操作等で)別の遷移が既に起きていたら上書きしない
+  if (!window.location.href.includes('#/navi/home')) return;
+  window.location.href = targetUrl;
+}
+
 /**
  * ログイン状態の変化を監視する。切り替わりを検知したらキャッシュ破棄後に onChange を呼ぶ。
  * sessionStorage への同一ドキュメント内書き込みでは storage イベントが飛ばないため、
@@ -228,6 +280,16 @@ function startOujLoginStateWatcher(onChange) {
   // 起動直後に一度観測(初回は基準の記録のみ)し、以降ポーリングで変化を追う。
   check();
   setInterval(check, 500);
+
+  // バックグラウンドタブは500msポーリングがChromeに大幅スロットリングされる
+  // (数分以上非アクティブだと1分に1回程度まで間引かれる)。ログイン前のタブを
+  // 開いたまま別タブ/別操作でログインし、しばらくしてから元のタブへ戻ると、
+  // ポーリングが追いつくまでの間「ログイン済みなのにコース一覧が少ないまま」に
+  // 見え続ける不具合が起きうる。タブが前面に戻った瞬間はスロットリングされないため、
+  // visibilitychangeでも即座に1回チェックし、素早く追従させる
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') check();
+  });
 }
 
 // グローバル関数として公開
@@ -236,3 +298,4 @@ window.clearOujUserScopedCaches = clearOujUserScopedCaches;
 window.syncOujLoginStateAndInvalidate = syncOujLoginStateAndInvalidate;
 window.startOujLoginStateWatcher = startOujLoginStateWatcher;
 window.getStampedCategoriesLoginState = getStampedCategoriesLoginState;
+window.navigateWithOujGuestRevalidation = navigateWithOujGuestRevalidation;

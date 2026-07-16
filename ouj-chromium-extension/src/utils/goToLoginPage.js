@@ -1,5 +1,13 @@
 // ホームページの自動ログイン処理
 async function handleHomePageAutoLogin() {
+  // login-state.jsのnavigateWithOujGuestRevalidationが、ゲスト判定の裏取りのために
+  // 一瞬だけhomeを経由してから本来の遷移先へリダイレクトすることがある。この経由中に
+  // 自動ログインが反応してSSOログイン画面へ飛ばしてしまうと、ゲストのまま操作したかった
+  // ユーザーの遷移を意図せず妨げてしまうため、その1回分だけ自動ログインを止める
+  if (window.__oujSkipAutoLoginOnce) {
+    window.__oujSkipAutoLoginOnce = false;
+    return;
+  }
   if (!chrome.storage || !chrome.storage.sync) {
     console.warn('[OUJ拡張] chrome.storage.sync が未定義のため、自動でログイン画面に遷移します。');
   } else {

@@ -24,6 +24,15 @@ function getOujAllSubjectsProgressGate() {
   return oujAllSubjectsProgressGate;
 }
 
+// ログイン/ログアウトが切り替わると視聴状況(誰の分か)が変わるため、login-state.jsの
+// invalidateOujCachesForStateから呼んでもらいキャッシュを破棄する(page-course-select-filters.js
+// のoujBrowseDataPromiseと同じ理由。以前はここにフックが無く、ゲスト時点で分類済みの
+// 「未着手」表示がログイン後もそのまま残る不具合があった)
+function clearOujAllSubjectsProgressCache() {
+  oujAllSubjectsProgressCache = new Map();
+}
+window.clearOujAllSubjectsProgressCache = clearOujAllSubjectsProgressCache;
+
 // 全科目(=他の科目の親として使われていない末端カテゴリ)を、重複登録(同じ講義が複数コースに
 // 登録されているもの)を除いて返す。判定基準はutils/year.jsのcreateYearListDataと同じ
 async function getAllSubjectItems() {
@@ -205,7 +214,14 @@ function renderAllSubjectsPanel(overlay) {
         const categoryId = btn.getAttribute('data-category-id');
         if (!categoryId) return;
         window.removeNativeOverlay();
-        window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=${categoryId}`;
+        const targetUrl = `https://v.ouj.ac.jp/view/ouj/#/navi/vod?ca=${categoryId}`;
+        // ゲスト判定中に別コースへ移動する場合のみ、login-state.jsが一瞬homeを経由させて
+        // ログイン状態の裏取りをする(utils/login-state.jsのnavigateWithOujGuestRevalidation)
+        if (typeof window.navigateWithOujGuestRevalidation === 'function') {
+          window.navigateWithOujGuestRevalidation(targetUrl);
+        } else {
+          window.location.href = targetUrl;
+        }
       });
     });
   }

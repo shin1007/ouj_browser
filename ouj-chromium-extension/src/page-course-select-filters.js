@@ -578,7 +578,14 @@ function buildBrowseSection() {
       // 年度も選ばれていれば、遷移先の科目一覧をその年度で初期絞り込みするための一時フラグ。
       // 同一ドキュメント内のハッシュ遷移なのでwindow変数で受け渡せる（遷移先で読み取り後にクリア）
       window.__oujPendingCourseYear = yearSelect.value || '';
-      window.location.href = `${OUJ_VOD_BASE_URL}?ca=${categoryId}`;
+      const targetUrl = `${OUJ_VOD_BASE_URL}?ca=${categoryId}`;
+      // ゲスト判定中に別コースへ移動する場合のみ、login-state.jsが一瞬homeを経由させて
+      // ログイン状態の裏取りをする(navigateWithOujGuestRevalidationのコメント参照)
+      if (typeof window.navigateWithOujGuestRevalidation === 'function') {
+        window.navigateWithOujGuestRevalidation(targetUrl);
+      } else {
+        window.location.href = targetUrl;
+      }
     });
   });
 

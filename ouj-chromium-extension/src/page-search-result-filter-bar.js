@@ -244,10 +244,31 @@ function ensureMultiSelectOutsideClickHandler() {
 // 両パネルで選択肢が一致する
 let cachedYearCourseOptions = null; // { yearOptions, courseOptions } (両方揃ってから確定)
 let yearCourseOptionsPromise = null;
+// cachedYearCourseOptionsを取得した時点のログイン状態スタンプ(page-course-select-filters.js の
+// getBrowseDataと同じ方式)。ログイン/ログアウトで取得できる科目数が変わる(login-state.js)ため、
+// これが前回取得時から変わっていればキャッシュを作り直す。以前はスタンプ比較が無く、一度
+// 選択肢を取得すると(ページ内でSPA遷移が続く限り)ログイン後もゲスト時点の少ない選択肢の
+// ままになる不具合があった(実際に報告されたバグ: ログイン済みなのに検索結果の年度・コース
+// 絞り込みの選択肢が数件しか出ないことがある)
+let yearCourseOptionsStamp = null;
 
-function loadYearCourseOptions() {
-  if (cachedYearCourseOptions) return Promise.resolve(cachedYearCourseOptions);
+// page-course-select-filters.jsのgetBrowseDataと同じ構造: スタンプ比較自体は呼ばれるたびに
+// 毎回行い(古いPromiseを使い回しているだけでは変化に気付けないため)、実際のカテゴリ取得
+// (yearCourseOptionsPromise)だけをスタンプが一致する間再利用する
+async function loadYearCourseOptions() {
+  if (typeof window.syncOujLoginStateAndInvalidate === 'function') {
+    await window.syncOujLoginStateAndInvalidate();
+  }
+  const currentStamp = (typeof window.getStampedCategoriesLoginState === 'function')
+    ? await window.getStampedCategoriesLoginState()
+    : null;
+  if (yearCourseOptionsPromise && currentStamp && currentStamp !== yearCourseOptionsStamp) {
+    yearCourseOptionsPromise = null;
+    cachedYearCourseOptions = null;
+  }
   if (yearCourseOptionsPromise) return yearCourseOptionsPromise;
+
+  yearCourseOptionsStamp = currentStamp;
   yearCourseOptionsPromise = (async () => {
     let yearOptions = [];
     let courseOptions = [];
@@ -321,12 +342,13 @@ function buildYearCourseRow(list) {
   courseDropdown.id = 'search-filter-course';
   row.appendChild(courseDropdown);
 
-  if (!isLoaded) {
-    loadYearCourseOptions().then((options) => {
-      if (yearDropdown.oujSetOptions) yearDropdown.oujSetOptions(options.yearOptions, false);
-      if (courseDropdown.oujSetOptions) courseDropdown.oujSetOptions(options.courseOptions, false);
-    });
-  }
+  // isLoadedがtrueの間も毎回呼ぶ。ログイン状態がキャッシュ取得時点から変わっていないかは
+  // loadYearCourseOptions内のスタンプ比較で都度確認しており、変化が無ければ既存のPromiseを
+  // 再利用するだけなので軽量(選択肢を取り直した場合のみoujSetOptionsの内容が実際に変わる)
+  loadYearCourseOptions().then((options) => {
+    if (yearDropdown.oujSetOptions) yearDropdown.oujSetOptions(options.yearOptions, false);
+    if (courseDropdown.oujSetOptions) courseDropdown.oujSetOptions(options.courseOptions, false);
+  });
 
   return row;
 }
