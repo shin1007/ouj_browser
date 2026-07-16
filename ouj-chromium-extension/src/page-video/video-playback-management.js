@@ -53,18 +53,25 @@ function updateRemainingTimeDisplay(video) {
 // オープニングの自動スキップ。科目別の「動画の最初をスキップ」秒数が設定されていて、
 // かつ再生がほぼ先頭から始まった場合のみシークする。
 // サーバー側のレジューム（前回の続きから再生）が働いた場合は、その位置を尊重して何もしない
-// TODO: 同一動画への二重登録は防いでいるが、動画切り替え時に前の動画用の
-// handlerがすぐには外れない(次のtimeupdateでdone===trueの時だけ自己解除する)。
-// 前の動画がdone=falseのまま切り替わった場合(再生開始直後に次の動画へ遷移した等)、
-// 新しい動画のtimeupdateに対して前のhandlerがそのまま反応し、意図しないシークを
-// 行う可能性がある。実害は稀だが、video-ab-repeat.jsのように動画切り替え時に
-// 即座にremoveEventListenerする方式に揃えるとより安全。
+let oujOpeningSkipVideo = null;
+let oujOpeningSkipHandler = null;
+
 function armOpeningSkip(video) {
   const contentId = window.getCurrentVideoId ? window.getCurrentVideoId() : null;
   if (!contentId) return;
   // 同じ動画に対して二重にリスナーを張らない
   if (video.dataset.oujOpeningSkipFor === String(contentId)) return;
   video.dataset.oujOpeningSkipFor = String(contentId);
+
+  // 前の動画用のhandlerがdone===trueになる(自己解除される)のを待たず、
+  // 動画切り替え時に即座に外す。SPA内でvideoタグが使い回された場合、外し忘れると
+  // 前のhandlerが新しい動画のtimeupdateに反応して意図しないシークを行いうる
+  // (video-ab-repeat.jsと同じ方式に揃えた)
+  if (oujOpeningSkipVideo && oujOpeningSkipHandler) {
+    oujOpeningSkipVideo.removeEventListener('timeupdate', oujOpeningSkipHandler);
+    oujOpeningSkipVideo = null;
+    oujOpeningSkipHandler = null;
+  }
 
   const categoryId = window.getCurrentCategoryId ? window.getCurrentCategoryId() : null;
   const skipStart = Number(window.getPerCourseSetting ? window.getPerCourseSetting('skipStartSeconds', categoryId, 0) : 0);
@@ -92,6 +99,8 @@ function armOpeningSkip(video) {
       done = true;
     }
   };
+  oujOpeningSkipVideo = video;
+  oujOpeningSkipHandler = handler;
   video.addEventListener('timeupdate', handler);
 }
 
