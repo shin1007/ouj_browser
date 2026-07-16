@@ -18,6 +18,9 @@ function createCourseProgressBadgePlaceholder(categoryId) {
   badge.style.cssText = `
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-width: 110px;
     margin-left: 8px;
     padding: 2px 10px;
     border-radius: 12px;
@@ -27,6 +30,31 @@ function createCourseProgressBadgePlaceholder(categoryId) {
     white-space: nowrap;
   `;
   return badge;
+}
+
+// 「▶続き」ボタンの場所を、視聴状況の取得(classifyCourseProgress)が終わるより前から
+// 確保しておくプレースホルダー。バッジが空欄→実データに変わる瞬間、および「続き」ボタンが
+// 後から挿入される瞬間の2回、幅が変わってお気に入り星など右側の要素が左右にずれる不具合が
+// 実機で報告された。visibility:hiddenでレイアウト上の幅だけ最初から確定させておき、
+// classifyCourseProgressは中身を書き換えるだけ(要素の追加・削除はしない)にすることで解消する
+function createCourseContinuePlaceholder() {
+  const btn = document.createElement('span');
+  btn.className = 'course-continue-btn';
+  btn.textContent = '▶ 続き';
+  btn.style.cssText = `
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 2px 10px;
+    border: 1px solid #1976d2;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #1976d2;
+    background: transparent;
+    white-space: nowrap;
+    visibility: hidden;
+  `;
+  return btn;
 }
 
 // 直近2週間の視聴ペース（履歴ベース）から修了までの目安を計算する。
@@ -48,6 +76,9 @@ function estimateCompletionPace(videoList, finishedCount) {
 }
 
 async function classifyCourseProgress(categoryId, badge, gate) {
+  // 続きボタンの場所はaddProgressBadgesToCategoryListの時点で既に確保済み(visibility:hidden)。
+  // ここでは中身を書き換えるだけで、要素の追加・削除はしない(幅を変えないため)
+  const continuePlaceholder = badge.parentNode.querySelector('.course-continue-btn');
   try {
     // 科目一覧の取得・各動画の視聴状況取得は、この科目に関する全リクエストを
     // ページ共有ゲート経由にする。IntersectionObserverが同時に多数の科目フォルダを
@@ -55,6 +86,9 @@ async function classifyCourseProgress(categoryId, badge, gate) {
     // 個別の並列数を持たせると合計が際限なく増えるため)
     const progress = await window.getCategoryProgress(categoryId, gate);
     if (!progress) {
+      // バッジ自体は消すが(表示できる情報が無い)、続きボタンの予約スペースは残したままにする。
+      // ここで一緒に消すと、他の行のバッジ確定タイミングと重なった時にレイアウト幅が変わり、
+      // 結局この不具合の原因だった「左右にずれる」が別の形で再発するため
       badge.remove();
       return;
     }
@@ -74,43 +108,29 @@ async function classifyCourseProgress(categoryId, badge, gate) {
       badge.title = `あと${pace.remaining}回。直近2週間の視聴ペース（週${pace.perWeek}回）が続けば約${pace.weeks}週間で見終わります`;
     }
 
-    // 「▶続き」ボタン: 最初の未視聴回へ直行する（未視聴回がある場合のみ）
-    if (finishedCount < videoList.length && !badge.parentNode.querySelector('.course-continue-btn')) {
+    // 「▶続き」ボタン: 最初の未視聴回へ直行する（未視聴回がある場合のみ）。予約済みの
+    // プレースホルダーの中身を書き換えて見せるだけで、要素は追加しない(幅を変えないため)
+    if (finishedCount < videoList.length && continuePlaceholder) {
       const firstUnfinishedIndex = statuses.findIndex((s) => !s || !s.isFinished);
       const target = firstUnfinishedIndex >= 0 ? videoList[firstUnfinishedIndex] : null;
       if (target) {
-        const contBtn = document.createElement('span');
-        contBtn.className = 'course-continue-btn';
-        contBtn.setAttribute('role', 'button');
-        contBtn.setAttribute('tabindex', '0');
-        contBtn.title = `続きから再生: ${target.title || ''}`;
-        contBtn.textContent = '▶ 続き';
-        contBtn.style.cssText = `
-          display: inline-flex;
-          align-items: center;
-          margin-left: 6px;
-          padding: 2px 10px;
-          border: 1px solid #1976d2;
-          border-radius: 12px;
-          font-size: 12px;
-          color: #1976d2;
-          background: transparent;
-          cursor: pointer;
-          white-space: nowrap;
-        `;
+        continuePlaceholder.setAttribute('role', 'button');
+        continuePlaceholder.setAttribute('tabindex', '0');
+        continuePlaceholder.title = `続きから再生: ${target.title || ''}`;
+        continuePlaceholder.style.visibility = 'visible';
+        continuePlaceholder.style.cursor = 'pointer';
         const onContinue = (event) => {
           event.stopPropagation();
           event.preventDefault();
           window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${target.contentId}&ct=V&ca=${categoryId}`;
         };
-        contBtn.addEventListener('click', onContinue);
-        contBtn.addEventListener('keydown', (event) => {
+        continuePlaceholder.addEventListener('click', onContinue);
+        continuePlaceholder.addEventListener('keydown', (event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             onContinue(event);
           }
         });
-        badge.parentNode.insertBefore(contBtn, badge.nextSibling);
       }
     }
   } catch (error) {
@@ -167,6 +187,7 @@ async function addProgressBadgesToCategoryList() {
     const category = childCategories[i];
     const badge = createCourseProgressBadgePlaceholder(category.categoryId);
     item.parentNode.appendChild(badge);
+    item.parentNode.appendChild(createCourseContinuePlaceholder());
     observer.observe(badge);
   }
 }
