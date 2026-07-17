@@ -41,6 +41,53 @@ function oujStateBadgeStyleText() {
   return `display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:${OUJ_STATE_BADGE_MIN_WIDTH}px;margin-left:8px;padding:2px 10px;border-radius:12px;font-size:12px;color:#666;background:#eee;white-space:nowrap;`;
 }
 
+// 科目一覧の1行(サイト純正の.icon-textフレックス行)に、拡張が追加するお気に入り星・
+// 視聴進捗バッジ・「▶続き」ボタンを差し込むための共通レイアウト処理。
+//
+// 3要素の合計幅(お気に入り約51px＋バッジ最小110px＋続きボタン約70px)が、モバイル幅や
+// 科目名が長い場合にサイト純正の科目名(.text-area)を圧迫し、科目名が1文字ずつ折り返されて
+// 行全体が縦に大きく間延びする不具合が実機で見つかった(flexの既定align-itemsにより、
+// 追加要素も伸びた行の高さいっぱいに引き伸ばされてしまう)。対策として、
+// (1) 行自体をflex-wrapさせ、(2) 科目名は2行までに制限してそれ以上は省略し、
+// (3) お気に入り/バッジ/続きボタンは共有のラッパー1つにまとめることで、幅が足りない時に
+// バラバラにではなく「まとまって」2行目へ折り返す。
+// page-course-select.js(お気に入り星)とpage-course-select-progress.js(バッジ・続き
+// ボタン)の両方から呼ばれる(呼び出し順は問わない・何度呼んでも安全)。
+function ensureOujCourseRowWrapLayout(row) {
+  if (row.dataset.oujRowLayoutApplied) return;
+  row.dataset.oujRowLayoutApplied = '1';
+  row.style.flexWrap = 'wrap';
+  row.style.rowGap = '4px';
+  const textArea = row.querySelector(':scope > .text-area');
+  if (textArea) {
+    // サイト純正CSSが.text-areaに width:100% を指定しており、flex-basis:autoはこの
+    // widthを基準に解決されるため、widthを明示的に上書きしないと常に行の全幅を要求してしまい
+    // (十分な余白があってもお気に入り等が2行目に落ちてしまう)、幅に応じた折り返しにならない
+    textArea.style.width = 'auto';
+    textArea.style.flex = '1 1 auto';
+    textArea.style.minWidth = '120px';
+    textArea.style.display = '-webkit-box';
+    textArea.style.webkitLineClamp = '2';
+    textArea.style.webkitBoxOrient = 'vertical';
+    textArea.style.overflow = 'hidden';
+  }
+}
+
+const OUJ_COURSE_ROW_ACTIONS_CLASS = 'course-row-actions';
+
+// お気に入り星・進捗バッジ・続きボタンをまとめて追加するための共有コンテナ。無ければ作る。
+function getOujCourseRowActions(row) {
+  ensureOujCourseRowWrapLayout(row);
+  let actions = row.querySelector(`:scope > .${OUJ_COURSE_ROW_ACTIONS_CLASS}`);
+  if (actions) return actions;
+  actions = document.createElement('span');
+  actions.className = OUJ_COURSE_ROW_ACTIONS_CLASS;
+  actions.style.cssText = 'display:inline-flex;align-items:center;flex-wrap:nowrap;flex:0 0 auto;';
+  row.appendChild(actions);
+  return actions;
+}
+
 window.oujProgressBadgeStyleText = oujProgressBadgeStyleText;
 window.fillProgressCountBadge = fillProgressCountBadge;
 window.oujStateBadgeStyleText = oujStateBadgeStyleText;
+window.getOujCourseRowActions = getOujCourseRowActions;

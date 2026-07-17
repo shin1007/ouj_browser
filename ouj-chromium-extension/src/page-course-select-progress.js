@@ -165,9 +165,14 @@ async function addProgressBadgesToCategoryList() {
   for (let i = 0; i < minLength; i++) {
     const item = items[i];
     const category = childCategories[i];
+    // お気に入り星・進捗バッジ・続きボタンをまとめる共有コンテナ(utils/progress-badge.js)。
+    // 幅が足りない時にこれらがバラバラにではなく「まとまって」2行目へ折り返されるようにする
+    const actions = typeof window.getOujCourseRowActions === 'function'
+      ? window.getOujCourseRowActions(item.parentNode)
+      : item.parentNode;
     const badge = createCourseProgressBadgePlaceholder(category.categoryId);
-    item.parentNode.appendChild(badge);
-    item.parentNode.appendChild(createCourseContinuePlaceholder());
+    actions.appendChild(badge);
+    actions.appendChild(createCourseContinuePlaceholder());
     observer.observe(badge);
   }
 }

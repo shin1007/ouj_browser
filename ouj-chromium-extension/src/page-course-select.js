@@ -31,6 +31,12 @@ async function addFavoriteButtonsToCategoryList() {
     if (item.parentNode.querySelector('.favorite-btn')) {
       continue;
     }
+
+    // お気に入り星・進捗バッジ・続きボタンをまとめる共有コンテナ(utils/progress-badge.js)。
+    // 幅が足りない時にこれらがバラバラにではなく「まとまって」2行目へ折り返されるようにする
+    const actions = typeof window.getOujCourseRowActions === 'function'
+      ? window.getOujCourseRowActions(item.parentNode)
+      : item.parentNode;
     
     // お気に入りボタン作成
     const favBtn = document.createElement('button');
@@ -72,7 +78,7 @@ async function addFavoriteButtonsToCategoryList() {
     });
     
     // タイトルの右側に追加
-    item.parentNode.appendChild(favBtn);
+    actions.appendChild(favBtn);
   }
 }
 
