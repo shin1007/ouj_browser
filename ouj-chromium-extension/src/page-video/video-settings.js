@@ -92,7 +92,7 @@ function insertSettingsPanel(targetElement) {
           <label for="playback-speed-control-enabled" style="margin-left: 5px; cursor: pointer; color: #333;">再生速度を調整する</label>
         </div>
         <div id="playback-speed-container" style="margin-bottom: 8px; display: flex; align-items: center; ${playbackSpeedControlEnabled ? '' : 'display: none;'}">
-          <label for="playback-speed" style="width: 250px; color: #333;">再生速度（科目ごとに記憶）</label>
+          <label for="playback-speed" style="width: 300px; margin-right: 8px; color: #333;">再生速度（科目ごとに記憶）</label>
           <select id="playback-speed" style="flex: 1;">
             ${speedOptions}
           </select>
@@ -143,7 +143,7 @@ function insertSettingsPanel(targetElement) {
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
         <div style="margin-bottom: 8px; display: flex; align-items: center;">
-          <label for="skip-start" style="width: 250px; color: #333;">動画の最初をスキップ（科目ごとに記憶）</label>
+          <label for="skip-start" style="width: 300px; margin-right: 8px; color: #333; white-space: nowrap;">動画の最初をスキップ（科目ごとに記憶）</label>
           <select id="skip-start">
             <option value="0" ${skipStart == 0 ? 'selected' : ''}>なし</option>
             <option value="15" ${skipStart == 15 ? 'selected' : ''}>15秒</option>
@@ -157,7 +157,7 @@ function insertSettingsPanel(targetElement) {
           </select>
         </div>
         <div style="margin-bottom: 8px; display: flex; align-items: center;">
-          <label for="skip-end" style="width: 250px; color: #333;">動画の最後をスキップ（科目ごとに記憶）</label>
+          <label for="skip-end" style="width: 300px; margin-right: 8px; color: #333; white-space: nowrap;">動画の最後をスキップ（科目ごとに記憶）</label>
           <select id="skip-end">
             <option value="0" ${skipEnd == 0 ? 'selected' : ''}>なし</option>
             <option value="15" ${skipEnd == 15 ? 'selected' : ''}>15秒</option>
@@ -173,7 +173,7 @@ function insertSettingsPanel(targetElement) {
         <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
 
         <div style="margin-bottom: 8px; display: flex; align-items: center;">
-          <label for="playlog-interval" style="width: 250px; color: #333;">再生ログ保存頻度(一瞬止まるかも)</label>
+          <label for="playlog-interval" style="width: 300px; margin-right: 8px; color: #333;">再生ログ保存頻度(一瞬止まるかも)</label>
           <select id="playlog-interval">
             <option value="3" ${playlogIntervalMinutes == 3 ? 'selected' : ''}>3分</option>
             <option value="5" ${playlogIntervalMinutes == 5 ? 'selected' : ''}>5分</option>
@@ -188,7 +188,7 @@ function insertSettingsPanel(targetElement) {
           <label for="screen-wake-lock" style="margin-left: 5px; cursor: pointer; color: #333;">再生中に画面が自動でロックされないようにする</label>
         </div>
         <div style="margin-bottom: 8px; display: flex; align-items: center;">
-          <label for="sleep-timer" style="width: 250px; color: #333;">スリープタイマー</label>
+          <label for="sleep-timer" style="width: 300px; margin-right: 8px; color: #333;">スリープタイマー</label>
           <select id="sleep-timer">
             <option value="0">オフ</option>
             <option value="episode-end" ${window.isSleepAtEpisodeEnd && window.isSleepAtEpisodeEnd() ? 'selected' : ''}>この回の終わりまで</option>
