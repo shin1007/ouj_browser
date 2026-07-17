@@ -403,6 +403,10 @@ function renderCourseFilterBar() {
       onChange: applyCourseFilters,
     });
     yearDropdown.id = 'course-filter-year';
+    // 絞り込みチップ(makeCourseChip)はmargin:0 8px 8px 0を持つため、これが無いままだと
+    // 同じ行のalign-items:centerでの中心位置がチップ側と数px(実測約4px)ずれて見える。
+    // チップと同じ余白を持たせて中心が揃うようにする
+    yearDropdown.style.margin = '0 8px 8px 0';
     bar.appendChild(yearDropdown);
   }
 
