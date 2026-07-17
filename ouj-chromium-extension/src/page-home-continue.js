@@ -69,42 +69,57 @@ function buildContinueCardHtml(item) {
 
 async function insertHomeContinuePanel() {
   if (typeof window.waitForElement !== 'function') return;
+
+  // 以前はcollectContinueWatchingItems()(履歴の視聴状況をAPIに問い合わせる、
+  // 数百ms〜数秒かかりうる処理)を待ってからwaitForElementを呼んでいた。
+  // waitForElementは「呼び出した時点のURLから変わったら打ち切り、かつ最大
+  // 試行回数(旧: 5秒分)に達したらリトライせず諦める」仕様のため、他ページから
+  // ホームへ遷移した直後にデータ取得が長引くと、実質的な猶予がその分減って
+  // しまい、パネルが挿入されないまま終わることがあった。データ取得と要素の
+  // 待機を並行して始め、かつ待機上限を大きく延ばすことでこの余地を減らす。
+  const scrollContentPromise = new Promise((resolve) => {
+    window.waitForElement('#home-main-content .scroll-content', resolve, 100, 150); // 最大約15秒待つ
+  });
+
   const items = await collectContinueWatchingItems();
   if (items.length === 0) return;
 
-  window.waitForElement('#home-main-content .scroll-content', (scrollContent) => {
-    // SPA遷移対策: 既にパネルがあれば作り直す
-    const old = document.getElementById(HOME_CONTINUE_PANEL_ID);
-    if (old) old.remove();
+  const scrollContent = await scrollContentPromise;
+  // 要素の待機がURL変化やタイムアウトで打ち切られた場合、あるいは取得完了までの
+  // 間にホームから離脱してDOMが破棄された場合はここで諦める
+  if (!scrollContent || !scrollContent.isConnected) return;
 
-    const panel = document.createElement('div');
-    panel.id = HOME_CONTINUE_PANEL_ID;
-    panel.style.cssText = 'padding: 12px 16px 4px 16px;';
-    panel.innerHTML = `
-      <div style="font-size:15px;font-weight:bold;color:#1565c0;margin-bottom:8px;">▶ 続きから見る</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        ${items.map(buildContinueCardHtml).join('')}
-      </div>
-    `;
-    scrollContent.insertBefore(panel, scrollContent.firstChild);
+  // SPA遷移対策: 既にパネルがあれば作り直す
+  const old = document.getElementById(HOME_CONTINUE_PANEL_ID);
+  if (old) old.remove();
 
-    panel.querySelectorAll('.ouj-continue-card').forEach((card) => {
-      const go = () => {
-        const contentId = card.dataset.contentId;
-        const categoryId = card.dataset.categoryId;
-        window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${contentId}&ct=V&ca=${categoryId}`;
-      };
-      card.addEventListener('click', go);
-      card.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          go();
-        }
-      });
-      card.addEventListener('mouseenter', () => { card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; });
-      card.addEventListener('mouseleave', () => { card.style.boxShadow = 'none'; });
+  const panel = document.createElement('div');
+  panel.id = HOME_CONTINUE_PANEL_ID;
+  panel.style.cssText = 'padding: 12px 16px 4px 16px;';
+  panel.innerHTML = `
+    <div style="font-size:15px;font-weight:bold;color:#1565c0;margin-bottom:8px;">▶ 続きから見る</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      ${items.map(buildContinueCardHtml).join('')}
+    </div>
+  `;
+  scrollContent.insertBefore(panel, scrollContent.firstChild);
+
+  panel.querySelectorAll('.ouj-continue-card').forEach((card) => {
+    const go = () => {
+      const contentId = card.dataset.contentId;
+      const categoryId = card.dataset.categoryId;
+      window.location.href = `https://v.ouj.ac.jp/view/ouj/#/navi/player?co=${contentId}&ct=V&ca=${categoryId}`;
+    };
+    card.addEventListener('click', go);
+    card.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        go();
+      }
     });
-  }, 100, 50); // 最大約5秒待つ（ホームの描画が遅い場合に備える）
+    card.addEventListener('mouseenter', () => { card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; });
+    card.addEventListener('mouseleave', () => { card.style.boxShadow = 'none'; });
+  });
 }
 
 window.insertHomeContinuePanel = insertHomeContinuePanel;
