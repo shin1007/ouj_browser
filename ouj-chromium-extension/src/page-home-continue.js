@@ -1,10 +1,10 @@
 // ホーム画面の「続きから見る」パネル
-// 視聴履歴のうち「途中まで見た」動画を最大4件、ホーム画面の最上部にカード表示する。
+// 視聴履歴の先頭6件のうち「途中まで見た」動画を、ホーム画面の最上部にカード表示する。
 // ホームを開いてワンクリックで学習を再開できるようにするのが目的。
 
 const HOME_CONTINUE_PANEL_ID = 'ouj-home-continue-panel';
-const HOME_CONTINUE_MAX_CARDS = 4;
-const HOME_CONTINUE_SCAN_LIMIT = 12; // 履歴の先頭から何件までを調べるか
+const HOME_CONTINUE_MAX_CARDS = 6;
+const HOME_CONTINUE_SCAN_LIMIT = 6; // 履歴の先頭から何件までを調べるか
 
 // 履歴から「視聴途中」の動画を集める
 async function collectContinueWatchingItems() {
