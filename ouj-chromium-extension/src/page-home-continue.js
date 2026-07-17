@@ -55,7 +55,7 @@ function buildContinueCardHtml(item) {
       <div style="position:relative;aspect-ratio:16/9;background:#000;">
         <img src="${thumb}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none';">
         <div style="position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,0.4);">
-          <div style="height:100%;width:${percent}%;background:#0091d9;"></div>
+          <div style="height:100%;width:${percent}%;background:linear-gradient(90deg, #ff0000, #ff4444);"></div>
         </div>
         <div style="position:absolute;right:6px;bottom:8px;background:rgba(0,0,0,0.75);color:#fff;font-size:11px;padding:1px 6px;border-radius:3px;">${percent}%まで視聴</div>
       </div>
