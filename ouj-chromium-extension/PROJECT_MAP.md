@@ -71,6 +71,7 @@
 | [menu/menu-whats-new.js](src/menu/menu-whats-new.js) | お知らせ/変更点（NEWバッジ）。**★リリース時は `OUJ_CHANGELOG_ENTRIES` 先頭に追記** | `handleWhatsNewPanelOpen`, `updateWhatsNewBadge` |
 | [menu/menu-header-darkmode.js](src/menu/menu-header-darkmode.js) | ヘッダーのテーマ切替ボタン | `insertHeaderDarkModeToggle` |
 | [menu/menu-header-collapse.js](src/menu/menu-header-collapse.js) | ヘッダー行の折りたたみ | `insertHeaderCollapseToggle` |
+| [menu/menu-header-wakaba.js](src/menu/menu-header-wakaba.js) | ヘッダーのシステムWAKABAリンク | `insertHeaderWakabaLink` |
 
 ## page-video/ — 動画再生ページ（player）
 

@@ -36,6 +36,7 @@ async function main() {
   window.insertLeftMenu();
   window.insertHeaderDarkModeToggle();
   window.insertHeaderCollapseToggle();
+  window.insertHeaderWakabaLink();
   window.startMenuOpeningMutationObserver();
   restoreOujOpenNativePanelIfAny();
   // 検索ボックス(#searchText)フォーカス時のクイック絞り込みパネル（全ページ共通）

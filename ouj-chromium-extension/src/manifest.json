@@ -68,6 +68,7 @@
         "menu/menu.js",
         "menu/menu-header-darkmode.js",
         "menu/menu-header-collapse.js",
+        "menu/menu-header-wakaba.js",
         "page-video/video-ending.js",
         "page-video/video-wake-lock.js",
         "page-video/video-sleep-timer.js",
