@@ -68,10 +68,56 @@ function addPipButton(titleElement) {
         await video.requestPictureInPicture();
       }
     } catch (e) {
-      window.showErrorNotification('小窓表示に失敗しました');
+      // ラジオ番組(音声のみ)は動画トラックが無く、ブラウザのPiP APIが構造的に
+      // 使えない(InvalidStateError)。原因不明の失敗と区別し、対応不可であることを伝える
+      if (e.name === 'InvalidStateError' && video.videoWidth === 0) {
+        window.showErrorNotification('ラジオ番組（映像のない音声のみのコンテンツ）は小窓表示に対応していません');
+      } else {
+        window.showErrorNotification('小窓表示に失敗しました');
+      }
     }
   });
   titleElement.appendChild(button);
+}
+
+// 再生中の動画があれば小窓(PiP)に切り替える。PiPが使えない場合(ラジオ番組など動画
+// トラックが無い場合や、その他PiP自体に失敗した場合)は一時停止にフォールバックする。
+// メニューのオーバーレイパネル(menu-native-shell.js)が動画を覆い隠す直前に呼ばれ、
+// 「見えない場所で操作不能なまま再生され続ける」不具合を防ぐための共通処理。
+async function pipOrPauseCurrentVideoIfPlaying() {
+  const video = document.querySelector('video');
+  if (!video || video.paused) return;
+  if (document.pictureInPictureElement === video) return; // 既に小窓なら何もしない
+  if (document.pictureInPictureEnabled) {
+    try {
+      await video.requestPictureInPicture();
+      return;
+    } catch (e) {
+      // PiP不可(ラジオ番組等、動画トラックが無いコンテンツ)の場合は下の一時停止に
+      // フォールバックする。無言で止めるとユーザーが「なぜ止まったか」分からず
+      // 混乱するため、理由を通知する
+    }
+  }
+  video.pause();
+  if (typeof window.showInfoNotification === 'function') {
+    window.showInfoNotification('ラジオ番組など小窓表示に対応していないコンテンツのため、動画を一時停止しました（閉じると続きから再生できます）');
+  }
+}
+
+// PiP中に他ページへ実際に遷移すると、遷移先はAngular側が動画コンポーネントを
+// 破棄してしまい、動画自体の再生は止まる(実機検証で確認: currentTimeが0に
+// リセットされ再生も止まる)のに、PiPウィンドウの見た目だけが「開いたまま」
+// 残ってしまう不具合があった。同一ページ内でオーバーレイパネルを開くだけなら
+// 動画は生き続けるため無関係(pipOrPauseCurrentVideoIfPlaying側で対応済み)だが、
+// URLが変わる本当のページ遷移が起きたら、中身の伴わないPiPウィンドウを残さない
+// よう明示的に閉じる。content.jsがURL変化のたびに発行する汎用イベントを使う
+if (!window.oujPipAutoExitOnNavigateAdded) {
+  window.oujPipAutoExitOnNavigateAdded = true;
+  window.addEventListener('ouj:locationchange', () => {
+    if (document.pictureInPictureElement) {
+      document.exitPictureInPicture().catch(() => {});
+    }
+  });
 }
 
 // しおりボタン
@@ -191,6 +237,7 @@ window.removeBookmark = removeBookmark;
 window.formatBookmarkTime = formatBookmarkTime;
 window.addPlayerActionButtons = addPlayerActionButtons;
 window.applyPendingSeekIfAny = applyPendingSeekIfAny;
+window.pipOrPauseCurrentVideoIfPlaying = pipOrPauseCurrentVideoIfPlaying;
 window.setPendingSeek = (contentId, time) => {
   window.saveSetting(PENDING_SEEK_STORAGE_KEY, { contentId: String(contentId), time, setAt: Date.now() });
 };

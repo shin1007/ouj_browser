@@ -55,6 +55,14 @@ function removeNativeOverlay() {
  * @param {string} [panelId] - 画面更新後の復元用に記録するパネルID（省略時は復元しない）
  */
 function openNativeOverlay(render, panelId) {
+  // このオーバーレイは#main全体を覆うため、再生ページで開くと動画(と操作ボタン)が
+  // 見えなくなる。再生中の動画があれば覆い隠す前に小窓(PiP)へ切り替え、PiPが
+  // 使えない場合(ラジオ番組等)は一時停止して、見えない場所で操作不能なまま
+  // 再生され続ける不具合を防ぐ。PiP APIはユーザー操作(このオーバーレイを開いた
+  // クリック)起点でなければ動かないため、await前に同期的に呼び出す必要がある
+  if (typeof window.pipOrPauseCurrentVideoIfPlaying === 'function') {
+    window.pipOrPauseCurrentVideoIfPlaying();
+  }
   removeNativeOverlay();
   const mainEl = document.getElementById('main');
   if (!mainEl) return null;
