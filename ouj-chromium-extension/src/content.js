@@ -64,6 +64,12 @@ async function main() {
     if (typeof window.insertHomeContinuePanel === 'function') {
       window.insertHomeContinuePanel();
     }
+    // ヘッダーロゴクリック等、URLが変化しない「ホームの作り直し」でパネルが
+    // 消えたままにならないよう監視する(内部で多重起動防止済み、詳細は
+    // page-home-continue.js参照)
+    if (typeof window.startHomeContinuePanelObserver === 'function') {
+      window.startHomeContinuePanelObserver();
+    }
     await window.handleHomePageAutoLogin();
   } else if (pageType.page === 'search-result') {
     window.initializeSearchResultFilters();

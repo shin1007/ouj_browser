@@ -122,4 +122,58 @@ async function insertHomeContinuePanel() {
   });
 }
 
+// ヘッダーロゴをクリックすると、サイト側は(ホームに既にいる場合でも)ホームの
+// データを作り直す「更新」動作を行う。この際URLのハッシュ自体は変化しないため、
+// content.js側のURL変化検知(hashchange/popstate/pushStateフック)がどれも
+// 発火せず、insertHomeContinuePanel()が再実行されないままDOMだけ丸ごと
+// (#home-main-content ごと)作り直されてしまい、手動で挿入していたこのパネルだけ
+// 復元されずに消えたままになる不具合があった(お気に入り等のパネルを開いた状態から
+// ヘッダーロゴでホームに戻る操作で再現・実機検証済み)。URL変化に頼らず、DOM構造の
+// 変化そのものを監視し、ホーム表示中にパネルが消えていたら再挿入する(監視対象に
+// ついてはstartHomeContinuePanelObserver参照)。
+//
+// この作り直しは単発のイベントではなく、各ウィジェット(お知らせ・おすすめ等)が
+// 非同期にロードされるたびに#home-main-content配下が何度も作り直される、数百ms〜
+// 数秒続く一連の変化として起こる(実機検証で確認)。検知した瞬間に即座に挿入すると、
+// その直後の別ウィジェット読み込みによる作り直しでまた消されてしまうことがあるため、
+// DOM変化が一定時間(500ms)止まってから挿入することで再構築が落ち着くのを待つ。それでも
+// 挿入処理(内部でAPI通信があり数百ms〜かかる)の実行中にさらに作り直しが起きることが
+// あり、その変化はpending中のため素通りしてしまう。以降トリガーとなる変化が起きなければ
+// 復旧できないまま終わるため、挿入処理が完了するたびに必ずもう一度チェックを予約し、
+// 実行中に取りこぼした変化もここで拾い直す。
+let oujHomeContinuePanelInsertPending = false;
+function maybeReinsertHomeContinuePanel() {
+  if (!window.location.href.includes('/navi/home')) return;
+  if (oujHomeContinuePanelInsertPending) return;
+  if (document.getElementById(HOME_CONTINUE_PANEL_ID)) return;
+  if (!document.querySelector('#home-main-content .scroll-content')) return;
+  oujHomeContinuePanelInsertPending = true;
+  insertHomeContinuePanel().finally(() => {
+    oujHomeContinuePanelInsertPending = false;
+    scheduleReinsertCheck();
+  });
+}
+
+let oujHomeContinuePanelDebounceTimer = null;
+function scheduleReinsertCheck() {
+  if (oujHomeContinuePanelDebounceTimer) clearTimeout(oujHomeContinuePanelDebounceTimer);
+  oujHomeContinuePanelDebounceTimer = setTimeout(() => {
+    oujHomeContinuePanelDebounceTimer = null;
+    maybeReinsertHomeContinuePanel();
+  }, 500);
+}
+
+let oujHomeContinuePanelObserver = null;
+function startHomeContinuePanelObserver() {
+  if (oujHomeContinuePanelObserver) return;
+  // #mainを監視対象にしていたところ、ホームの作り直し時に#main自体が別ノードに
+  // 差し替えられることがあり(常にではなく実機検証でも再現率にばらつきがあった)、
+  // その場合古い#mainを監視し続けたままとなり以降の変化を一切検知できなくなる
+  // 不具合があった。document.bodyはSPAのライフタイム中に差し替わることが無いため、
+  // これを監視対象にする。
+  oujHomeContinuePanelObserver = new MutationObserver(() => { scheduleReinsertCheck(); });
+  oujHomeContinuePanelObserver.observe(document.body, { childList: true, subtree: true });
+}
+
 window.insertHomeContinuePanel = insertHomeContinuePanel;
+window.startHomeContinuePanelObserver = startHomeContinuePanelObserver;
