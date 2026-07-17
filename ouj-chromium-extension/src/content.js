@@ -4,13 +4,17 @@ async function main() {
 
   // 画面種別を判定して処理を分岐
   const pageType = await window.detectOujPageType(window.location.href);
-  
+
   if (pageType.subDomain === 'sso') {
     // ログイン画面の処理
     await window.waitForPasswordAndLogin();
     // ログイン成功している場合はホームページに遷移
-    // HTML内に「ログインしました」があれば成功しているとして扱う
-    if (document.body.innerHTML.includes('ログインしました')) {
+    // HTML内に「ログインしました」があれば成功しているとして扱う。
+    // ただし遷移先(referTo)がv.ouj.ac.jp以外(システムWAKABA等)の場合にまで
+    // ここでv.ouj.ac.jpへ強制遷移すると、CAS自身のservice遷移(本来の行き先)を
+    // 横取りしてしまうため、v.ouj.ac.jp向けログインの場合のみ行う。
+    if (pageType.referTo && pageType.referTo.subDomain === 'v'
+        && document.body.innerHTML.includes('ログインしました')) {
       window.location.href = 'https://v.ouj.ac.jp/view/ouj/#/navi/home';
     }
     return;

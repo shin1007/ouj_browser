@@ -4,7 +4,10 @@
 // システムWAKABA（学生ポータル）を新規タブで開くアイコンを挿入する。
 // =========================
 const HEADER_WAKABA_LINK_CLASS = 'ouj-header-wakaba-link';
-const HEADER_WAKABA_URL = 'https://www.wakaba.ouj.ac.jp/portal/home/home/display';
+// /portal/home/home/display は認証済みセッションが前提のURLで、未ログイン状態で開くと
+// 「不正な操作が行われたため、処理を続けることができません」エラーになる。
+// ポータルトップ（未ログインでもログインボタンから遷移できる）にリンクする。
+const HEADER_WAKABA_URL = 'https://www.wakaba.ouj.ac.jp/portal/';
 
 function insertHeaderWakabaLink() {
   if (typeof window.waitForElement !== 'function') {
