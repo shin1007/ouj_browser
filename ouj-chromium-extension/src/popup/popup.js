@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 大きな放送大学ページボタン
     const openOujHomeButton = document.getElementById('open-ouj-home');
 
+    // システムWAKABAボタン
+    const openWakabaButton = document.getElementById('open-wakaba');
+
     // 自動ログインのチェックボックス
     const autoLoginCheckbox = document.getElementById('auto-login-checkbox');
 
@@ -58,6 +61,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('タブ作成エラー:', chrome.runtime.lastError);
             } else {
                 // ポップアップを閉じる
+                window.close();
+            }
+        });
+    });
+
+    // システムWAKABA（学生ポータル）を開く
+    openWakabaButton.addEventListener('click', function() {
+        // /portal/home/home/display は認証済みセッションが前提のURLで、未ログイン状態で
+        // 開くとエラーになるため、未ログインでもログインボタンから遷移できるポータル
+        // トップにリンクする（src/menu/menu-header-wakaba.jsと同じURL）。
+        const targetUrl = "https://www.wakaba.ouj.ac.jp/portal/";
+
+        chrome.tabs.create({
+            url: targetUrl,
+            active: true
+        }, (newTab) => {
+            if (chrome.runtime.lastError) {
+                console.error('タブ作成エラー:', chrome.runtime.lastError);
+            } else {
                 window.close();
             }
         });

@@ -50,9 +50,22 @@ function createTitleActionButton({ className, title, html }) {
 }
 
 // PiPボタン
-function addPipButton(titleElement) {
+// ラジオ番組(音声のみ)は動画トラックが無く、ブラウザのPiP APIが構造的に使えない
+// (クリックすると必ずInvalidStateErrorで失敗する)ため、判定できる場合はボタン自体を出さない
+async function addPipButton(titleElement) {
+  // titleElementはSPA内で動画が切り替わっても同じDOMノードが使い回されることがある。
+  // 前の動画(テレビ番組)で追加したボタンが、ラジオ番組への切り替え後も残らないよう、
+  // 判定前に一旦取り除く(あればaddBookmarkButton等と同様に作り直す)
+  const existing = titleElement.querySelector('.video-pip-button');
+  if (existing) existing.remove();
   if (!document.pictureInPictureEnabled) return;
-  if (titleElement.querySelector('.video-pip-button')) return;
+  const startUrl = window.location.href;
+  const isRadio = typeof window.isRadioProgram === 'function' && await window.isRadioProgram();
+  // 判定待ち(最大5秒程度)の間に別の動画/ページへ遷移していたら、古い判定結果で
+  // 今のtitleElementにボタンを挿入しない
+  if (window.location.href !== startUrl) return;
+  if (isRadio) return;
+  if (titleElement.querySelector('.video-pip-button')) return; // 判定待ちの間に他経路で追加済み
   const button = createTitleActionButton({
     className: 'video-pip-button',
     title: 'ピクチャーインピクチャー（小窓）で再生',
@@ -68,8 +81,9 @@ function addPipButton(titleElement) {
         await video.requestPictureInPicture();
       }
     } catch (e) {
-      // ラジオ番組(音声のみ)は動画トラックが無く、ブラウザのPiP APIが構造的に
-      // 使えない(InvalidStateError)。原因不明の失敗と区別し、対応不可であることを伝える
+      // 上のisRadioProgram判定をすり抜けたケース(判定失敗時など)への保険。
+      // ラジオ番組は動画トラックが無くPiP自体が構造的に使えない(InvalidStateError)ため、
+      // 原因不明の失敗と区別して対応不可であることを伝える
       if (e.name === 'InvalidStateError' && video.videoWidth === 0) {
         window.showErrorNotification('ラジオ番組（映像のない音声のみのコンテンツ）は小窓表示に対応していません');
       } else {

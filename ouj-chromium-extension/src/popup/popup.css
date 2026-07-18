@@ -70,6 +70,37 @@ h2 {
     line-height: 1.2;
 }
 
+/* システムWAKABAボタン（メインボタンより控えめな見た目のセカンダリボタン） */
+.wakaba-button {
+    width: 100%;
+    height: 44px;
+    background-color: white;
+    color: #0075C1;
+    border: 1px solid #0075C1;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.wakaba-button .button-icon {
+    font-size: 16px;
+    margin-bottom: 0;
+}
+
+.wakaba-button:hover {
+    background-color: #eaf5fc;
+}
+
+.wakaba-button:active {
+    background-color: #d7ecf9;
+}
+
 /* 自動ログイン設定 */
 #auto-login-section {
     margin-top: 15px;
